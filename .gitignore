@@ -1,0 +1,94 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints
+
+# Data files (중요: 대용량 데이터 제외)
+data/raw/
+data/external/
+data/interim/*.parquet
+data/interim/*.csv
+data/processed/
+!data/interim/*__meta.json
+
+# Artifacts
+artifacts/models/
+artifacts/reports/
+artifacts/rankings/
+artifacts/backtests/
+!artifacts/reports/*.md
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+
+# Cursor specific
+.cursor/
+
+# Base dir placeholder
+{base_dir}/
+
+# Large files
+*.zip
+*.tar.gz
+*.pkl
+*.pickle
+
+# Keep directory structure but ignore contents
+!data/interim/.gitkeep
+!data/raw/.gitkeep
+!data/external/.gitkeep
+!data/processed/.gitkeep
+!artifacts/models/.gitkeep
+!artifacts/reports/.gitkeep
+
