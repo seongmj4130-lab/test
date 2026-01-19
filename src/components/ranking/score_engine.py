@@ -18,7 +18,6 @@ from pathlib import Path
 from src.utils.feature_groups import (
     load_feature_groups,
     get_feature_groups,  # [개선안 14번] feature_groups.yaml 파싱 버그 수정: 그룹->피처 리스트 추출
-    get_group_target_weights,  # [Phase 4.5] target_weight 추출
     calculate_feature_group_balance,
 )
 
@@ -180,13 +179,11 @@ def build_score_total(
     if feature_groups_config is not None and Path(feature_groups_config).exists():
         # [개선안 14번] feature_groups.yaml 스키마는 최상위에 feature_groups/balancing 키가 있음.
         # 기존 구현은 load_feature_groups() 반환(dict)의 최상위 키를 그대로 iterate하여 그룹 가중치가 사실상 무시되는 버그가 있었다.
-        # [Phase 4.5] target_weight를 사용하도록 수정
         cfg_groups = load_feature_groups(feature_groups_config)
         feature_groups = get_feature_groups(cfg_groups)
-        target_weights = get_group_target_weights(cfg_groups)  # target_weight 추출
         group_weights = {}
         
-        # 실제 사용되는 그룹 찾기
+        # 그룹별 균등 가중치 (그룹 합 = 1)
         group_names = set()
         for feat in feature_cols:
             for group_name, group_features in feature_groups.items():
@@ -194,31 +191,10 @@ def build_score_total(
                     group_names.add(group_name)
                     break
         
-        # target_weight 사용 (있는 경우), 없으면 균등 가중치
         if len(group_names) > 0:
-            # target_weight가 있는 그룹만 사용
-            groups_with_target = {g: target_weights.get(g, 0.0) for g in group_names if target_weights.get(g, 0.0) > 0}
-            
-            if len(groups_with_target) > 0:
-                # target_weight 합계로 정규화
-                total_target_weight = sum(groups_with_target.values())
-                if total_target_weight > 0:
-                    for group_name in group_names:
-                        if group_name in groups_with_target:
-                            group_weights[group_name] = groups_with_target[group_name] / total_target_weight
-                        else:
-                            # target_weight가 없는 그룹은 0 가중치
-                            group_weights[group_name] = 0.0
-                else:
-                    # 모든 target_weight가 0이면 균등 가중치
-                    weight_per_group = 1.0 / len(group_names)
-                    for group_name in group_names:
-                        group_weights[group_name] = weight_per_group
-            else:
-                # target_weight가 전혀 없으면 균등 가중치
-                weight_per_group = 1.0 / len(group_names)
-                for group_name in group_names:
-                    group_weights[group_name] = weight_per_group
+            weight_per_group = 1.0 / len(group_names)
+            for group_name in group_names:
+                group_weights[group_name] = weight_per_group
         
         # 피처별 가중치 계산 (그룹 내 균등)
         feature_weights = {}

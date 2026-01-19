@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 def run_track_a_pipeline(
     config_path: str = "configs/config.yaml",
     force_rebuild: bool = False,
+    run_ui_payload: bool = False,
 ) -> Dict:
     """
     Track A 전체 파이프라인을 실행합니다.
@@ -58,18 +59,21 @@ def run_track_a_pipeline(
     
     # L3: 패널 데이터
     panel_path = interim_dir / "panel_merged_daily"
-    if artifact_exists(panel_path) and not force_rebuild:
+    # [개선안 41번] force_rebuild 의미 정리:
+    # - 입력(공통 캐시)은 항상 로드 가능해야 한다. (L0~L4는 별도 파이프라인이 담당)
+    # - force_rebuild는 Track A의 "출력(랭킹)"을 재생성할지 여부로만 사용한다.
+    if artifact_exists(panel_path):
         artifacts["panel_merged_daily"] = load_artifact(panel_path)
         artifacts_path["panel"] = str(panel_path)
         logger.info(f"  ✓ 패널 데이터 로드: {len(artifacts['panel_merged_daily']):,}행")
     else:
         logger.warning("  ✗ 패널 데이터가 없습니다. L0~L3까지 실행이 필요합니다.")
-        logger.warning("  python scripts/run_pipeline_l0_l7.py 를 먼저 실행하세요.")
+        logger.warning("  python -m src.tools.run_two_track_and_export --force-shared  (또는 DataCollectionPipeline) 를 먼저 실행하세요.")
         raise FileNotFoundError("panel_merged_daily not found")
     
     # L4: CV 분할 (랭킹 엔진은 dataset_daily 사용 가능)
     dataset_path = interim_dir / "dataset_daily"
-    if artifact_exists(dataset_path) and not force_rebuild:
+    if artifact_exists(dataset_path):
         artifacts["dataset_daily"] = load_artifact(dataset_path)
         artifacts_path["dataset"] = str(dataset_path)
         logger.info(f"  ✓ 데이터셋 로드: {len(artifacts['dataset_daily']):,}행")
@@ -122,32 +126,36 @@ def run_track_a_pipeline(
         logger.info(f"  ✓ 생성 완료: 단기 {len(artifacts['ranking_short_daily']):,}행, 장기 {len(artifacts['ranking_long_daily']):,}행")
     
     # L11: UI Payload Builder (선택적)
-    logger.info("[L11] UI Payload Builder 실행 (선택적)")
-    try:
-        from src.tracks.track_a.stages.ranking.ui_payload_builder import run_L11_ui_payload
-        
-        ohlcv_path = interim_dir / "ohlcv_daily"
-        if artifact_exists(ohlcv_path):
-            ohlcv_daily = load_artifact(ohlcv_path)
-            # ranking_daily는 단기/장기 중 하나를 선택하거나 통합해야 함
-            # 일단 단기 랭킹을 사용 (필요시 통합 랭킹 생성 가능)
-            ranking_daily = artifacts["ranking_short_daily"].copy()
+    # [개선안 41번] L11은 외부 API(지수/벤치마크 등) 의존이 있어 기본 OFF로 둔다.
+    if run_ui_payload:
+        logger.info("[L11] UI Payload Builder 실행 (선택적)")
+        try:
+            from src.tracks.track_a.stages.ranking.ui_payload_builder import run_L11_ui_payload
             
-            outputs, warns = run_L11_ui_payload(
-                cfg=cfg,
-                artifacts={
-                    "ranking_daily": ranking_daily,
-                    "ohlcv_daily": ohlcv_daily,
-                },
-                force=force_rebuild,
-            )
-            artifacts["ui_payload"] = outputs
-            logger.info("  ✓ UI Payload 생성 완료")
-        else:
-            logger.warning("  ⚠ ohlcv_daily가 없어 UI Payload를 건너뜁니다.")
+            ohlcv_path = interim_dir / "ohlcv_daily"
+            if artifact_exists(ohlcv_path):
+                ohlcv_daily = load_artifact(ohlcv_path)
+                # ranking_daily는 단기/장기 중 하나를 선택하거나 통합해야 함
+                # 일단 단기 랭킹을 사용 (필요시 통합 랭킹 생성 가능)
+                ranking_daily = artifacts["ranking_short_daily"].copy()
+                
+                outputs, warns = run_L11_ui_payload(
+                    cfg=cfg,
+                    artifacts={
+                        "ranking_daily": ranking_daily,
+                        "ohlcv_daily": ohlcv_daily,
+                    },
+                    force=force_rebuild,
+                )
+                artifacts["ui_payload"] = outputs
+                logger.info("  ✓ UI Payload 생성 완료")
+            else:
+                logger.warning("  ⚠ ohlcv_daily가 없어 UI Payload를 건너뜁니다.")
+                artifacts["ui_payload"] = None
+        except Exception as e:
+            logger.warning(f"  ⚠ UI Payload Builder 실행 실패: {e}")
             artifacts["ui_payload"] = None
-    except Exception as e:
-        logger.warning(f"  ⚠ UI Payload Builder 실행 실패: {e}")
+    else:
         artifacts["ui_payload"] = None
     
     logger.info("=" * 80)

@@ -14,7 +14,14 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Ridge
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import GridSearchCV
+try:
+    from xgboost import XGBRegressor
+    XGBOOST_AVAILABLE = True
+except ImportError:
+    XGBOOST_AVAILABLE = False
 from sklearn.metrics import r2_score
+import yaml
 
 # [Stage6] 피처 그룹 밸런싱 유틸리티
 from src.utils.feature_groups import (
@@ -267,7 +274,45 @@ def _build_model(cfg: dict, alpha: float = None) -> Tuple[Pipeline, str]:
             ("scaler", StandardScaler(with_mean=True)),
             ("model", Ridge(alpha=ridge_alpha)),
         ])
-        return pipe, f"ridge(alpha={ridge_alpha}, target_transform={tf})"
+    return pipe, f"ridge(alpha={ridge_alpha}, target_transform={tf})"
+
+    if model_type == "ensemble":
+        # [앙상블 모드] 여러 모델 결합
+        models = {}
+
+        # Ridge 모델
+        ridge_model = Pipeline([
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler(with_mean=True)),
+            ("model", Ridge(alpha=ridge_alpha)),
+        ])
+        models['ridge'] = ridge_model
+
+        # XGBoost 모델 (사용 가능한 경우)
+        if XGBOOST_AVAILABLE:
+            xgboost_model = Pipeline([
+                ("imputer", SimpleImputer(strategy="median")),
+                ("scaler", StandardScaler(with_mean=True)),
+                ("model", XGBRegressor(n_estimators=300, max_depth=5, learning_rate=0.03, random_state=42, subsample=0.9, colsample_bytree=0.9, gamma=0.1)),
+            ])
+            models['xgboost'] = xgboost_model
+
+        # Grid Search 모델 (간단한 버전)
+        grid_model = Pipeline([
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler(with_mean=True)),
+            ("model", Ridge(alpha=ridge_alpha)),  # 일단 Ridge로 구현
+        ])
+        models['grid'] = grid_model
+
+        # Random Forest 모델
+        rf_model = Pipeline([
+            ("imputer", SimpleImputer(strategy="median")),
+            ("model", RandomForestRegressor(n_estimators=100, max_depth=5, random_state=42)),
+        ])
+        models['rf'] = rf_model
+
+        return models, f"ensemble(models={list(models.keys())}, target_transform={tf})"
 
     if model_type in ("rf", "random_forest", "randomforest"):
         n_estimators = int(l5.get("rf_n_estimators", 400))
@@ -507,6 +552,33 @@ def train_oos_predictions(
     # [Phase 6] horizon 정보를 _pick_feature_cols에 전달
     feature_cols = _pick_feature_cols(df, target_col=target_col, cfg=cfg, horizon=horizon)
     fold_specs_all = _standardize_folds(cv_folds)
+    
+    # [피쳐 가중치 적용] 피쳐별 가중치 로드 (horizon별)
+    feature_weights = None
+    l5_cfg = _get_l5_cfg(cfg)
+    
+    # horizon에 따라 다른 가중치 파일 사용
+    if horizon == 20:
+        feature_weights_config = l5_cfg.get("feature_weights_config_short")
+    elif horizon == 120:
+        feature_weights_config = l5_cfg.get("feature_weights_config_long")
+    else:
+        feature_weights_config = l5_cfg.get("feature_weights_config")
+    
+    if feature_weights_config:
+        try:
+            base_dir = Path(cfg.get("paths", {}).get("base_dir", "."))
+            weights_path = base_dir / feature_weights_config
+            
+            if weights_path.exists():
+                with open(weights_path, 'r', encoding='utf-8') as f:
+                    weights_data = yaml.safe_load(f) or {}
+                    feature_weights = weights_data.get("feature_weights", {})
+                    warns.append(f"[L5 피쳐 가중치] 로드 완료: {len(feature_weights)}개 피쳐, horizon={horizon} ({weights_path})")
+            else:
+                warns.append(f"[L5 피쳐 가중치] 파일 없음: {weights_path}")
+        except Exception as e:
+            warns.append(f"[L5 피쳐 가중치] 로드 실패: {e}")
 
     l5_cfg = _get_l5_cfg(cfg)
     export_feature_importance = bool(l5_cfg.get("export_feature_importance", False))
@@ -562,6 +634,16 @@ def train_oos_predictions(
         X_train = dtrain[use_cols].to_numpy(dtype=np.float32, copy=False)
         X_test = dtest[use_cols].to_numpy(dtype=np.float32, copy=False)
 
+        # [피쳐 가중치 적용] 피쳐 값에 가중치 곱하기
+        if feature_weights:
+            weight_array = np.array([feature_weights.get(col, 1.0) for col in use_cols], dtype=np.float32)
+            # 가중치 정규화 (합=1.0)
+            weight_sum = weight_array.sum()
+            if weight_sum > 0:
+                weight_array = weight_array / weight_sum * len(use_cols)  # 평균 가중치를 1.0으로 유지
+            X_train = X_train * weight_array[np.newaxis, :]
+            X_test = X_test * weight_array[np.newaxis, :]
+
         y_train_raw = dtrain[target_col].to_numpy(dtype=np.float32, copy=False)
         y_test_raw = dtest[target_col].to_numpy(dtype=np.float32, copy=False)
 
@@ -588,19 +670,81 @@ def train_oos_predictions(
 
         # 최종 모델 학습 (ridge_alpha 사용)
         model, model_name = _build_model(cfg, alpha=ridge_alpha)
-        # [Phase 6] 전처리 fit 범위 확인: train만 fit, test는 transform만
-        train_date_range = f"{dtrain['date'].min().date()} ~ {dtrain['date'].max().date()}"
-        test_date_range = f"{dtest['date'].min().date()} ~ {dtest['date'].max().date()}"
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.debug(f"[L5 Phase 6] fold={fs.fold_id}: train={train_date_range}, test={test_date_range}")
-        
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test).astype(np.float32)
+
+        # [앙상블 모드] 여러 모델 결합
+        if isinstance(model, dict) and model_name.startswith("ensemble"):
+            # 앙상블 가중치 로드 (l6r에서 로드)
+            ensemble_weights_cfg = cfg.get("l6r", {}).get("ensemble_weights", {})
+            if horizon == 20:
+                ensemble_weights = ensemble_weights_cfg.get("short", {})
+            else:  # horizon == 120
+                ensemble_weights = ensemble_weights_cfg.get("long", {})
+
+            # 디버그 로그
+            warns.append(f"[L5 앙상블 디버그] horizon={horizon}, ensemble_weights_cfg 키: {list(ensemble_weights_cfg.keys()) if ensemble_weights_cfg else 'None'}")
+            warns.append(f"[L5 앙상블 디버그] 선택된 가중치: {ensemble_weights}")
+
+            # 각 모델 학습 및 예측
+            ensemble_predictions = {}
+            for model_name_key, model_obj in model.items():
+                if model_name_key in ensemble_weights and ensemble_weights[model_name_key] > 0:
+                    try:
+                        model_obj.fit(X_train, y_train)
+                        pred = model_obj.predict(X_test).astype(np.float32)
+                        ensemble_predictions[model_name_key] = pred
+                        warns.append(f"[L5 앙상블] {model_name_key} 모델 학습 완료")
+                    except Exception as e:
+                        warns.append(f"[L5 앙상블] {model_name_key} 모델 학습 실패: {e}")
+
+            # 가중치 기반 예측 결합
+            if ensemble_predictions:
+                y_pred = np.zeros_like(list(ensemble_predictions.values())[0])
+                total_weight = 0
+                weight_details = []
+                for model_name_key, pred in ensemble_predictions.items():
+                    weight = ensemble_weights.get(model_name_key, 0)
+                    y_pred += weight * pred
+                    total_weight += weight
+                    weight_details.append(f"{model_name_key}:{weight:.2f}")
+
+                if total_weight > 0:
+                    y_pred = y_pred / total_weight  # 정규화
+                else:
+                    # 가중치 합이 0이면 평균 사용
+                    y_pred = np.mean(list(ensemble_predictions.values()), axis=0)
+
+                warns.append(f"[L5 앙상블] {len(ensemble_predictions)}개 모델 예측 결합 완료")
+                warns.append(f"[L5 앙상블] 가중치 상세: {' + '.join(weight_details)} = {total_weight:.2f}")
+                warns.append(f"[L5 앙상블] horizon={horizon}, total_weight={total_weight:.3f}")
+            else:
+                # 앙상블 예측 실패 시 기본 모델 사용
+                default_model = model.get('ridge', list(model.values())[0])
+                default_model.fit(X_train, y_train)
+                y_pred = default_model.predict(X_test).astype(np.float32)
+                warns.append(f"[L5 앙상블] 앙상블 실패로 기본 Ridge 모델 사용 (horizon={horizon})")
+
+            model_for_coef = model.get('ridge', list(model.values())[0])  # 계수 추출용
+        else:
+            # 기존 단일 모델 로직
+            # [Phase 6] 전처리 fit 범위 확인: train만 fit, test는 transform만
+            train_date_range = f"{dtrain['date'].min().date()} ~ {dtrain['date'].max().date()}"
+            test_date_range = f"{dtest['date'].min().date()} ~ {dtest['date'].max().date()}"
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.debug(f"[L5 Phase 6] fold={fs.fold_id}: train={train_date_range}, test={test_date_range}")
+
+            model.fit(X_train, y_train)
+            y_pred = model.predict(X_test).astype(np.float32)
+            model_for_coef = model
 
         # [Stage 2] 계수/중요도 추출 및 저장
         if export_feature_importance:
-            base_model = model.named_steps.get("model", None)
+            # 앙상블 모드일 때는 Ridge 모델의 계수 사용
+            if isinstance(model, dict):
+                base_model = model_for_coef.named_steps.get("model", None)
+            else:
+                base_model = model.named_steps.get("model", None)
+
             # [개선안 24번] Ridge 외 모델(RandomForest/XGBoost)은 coef_가 없을 수 있음 -> 안전 분기
             if base_model is None:
                 warns.append("[L5 Stage2] model.named_steps['model'] not found -> skip importance export")

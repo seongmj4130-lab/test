@@ -166,10 +166,14 @@ def run_bt20_pipeline(
     from src.tracks.track_b.stages.backtest.l7_backtest import run_backtest, BacktestConfig
     
     # BacktestConfig 생성
+    # [개선안 37번] l7_bt20_* 설정 전달 누락(regime/overlapping/slippage/diversify) 보완
+    l7_regime = (l7_cfg.get("regime", {}) or {}) if isinstance(l7_cfg.get("regime", {}), dict) else {}
+    l7_div = (l7_cfg.get("diversify", {}) or {}) if isinstance(l7_cfg.get("diversify", {}), dict) else {}
     bt_cfg = BacktestConfig(
         holding_days=int(l7_cfg.get("holding_days", 20)),
         top_k=int(l7_cfg.get("top_k", 12)),
         cost_bps=float(l7_cfg.get("cost_bps", 10.0)),
+        slippage_bps=float(l7_cfg.get("slippage_bps", 0.0)),
         score_col=str(l7_cfg.get("score_col", "score_total_short" if strategy == "short" else "score_ens")),
         ret_col=str(l7_cfg.get("return_col", "true_short")),
         weighting=str(l7_cfg.get("weighting", "equal")),
@@ -187,6 +191,28 @@ def run_bt20_pipeline(
         risk_scaling_bear_multiplier=float(l7_cfg.get("risk_scaling_bear_multiplier", 0.8)),
         risk_scaling_neutral_multiplier=float(l7_cfg.get("risk_scaling_neutral_multiplier", 1.0)),
         risk_scaling_bull_multiplier=float(l7_cfg.get("risk_scaling_bull_multiplier", 1.0)),
+        overlapping_tranches_enabled=bool(l7_cfg.get("overlapping_tranches_enabled", False)),
+        tranche_holding_days=int(l7_cfg.get("tranche_holding_days", 120)),
+        tranche_max_active=int(l7_cfg.get("tranche_max_active", 4)),
+        tranche_allocation_mode=str(l7_cfg.get("tranche_allocation_mode", "fixed_equal")),
+        diversify_enabled=bool(l7_div.get("enabled", False)),
+        group_col=str(l7_div.get("group_col", "sector_name")),
+        max_names_per_group=int(l7_div.get("max_names_per_group", 4)),
+        regime_enabled=bool(l7_regime.get("enabled", False)),
+        regime_top_k_bull_strong=(int(l7_regime["top_k_bull_strong"]) if "top_k_bull_strong" in l7_regime else None),
+        regime_top_k_bull_weak=(int(l7_regime["top_k_bull_weak"]) if "top_k_bull_weak" in l7_regime else None),
+        regime_top_k_bear_strong=(int(l7_regime["top_k_bear_strong"]) if "top_k_bear_strong" in l7_regime else None),
+        regime_top_k_bear_weak=(int(l7_regime["top_k_bear_weak"]) if "top_k_bear_weak" in l7_regime else None),
+        regime_top_k_neutral=(int(l7_regime["top_k_neutral"]) if "top_k_neutral" in l7_regime else None),
+        regime_exposure_bull_strong=(float(l7_regime["exposure_bull_strong"]) if "exposure_bull_strong" in l7_regime else None),
+        regime_exposure_bull_weak=(float(l7_regime["exposure_bull_weak"]) if "exposure_bull_weak" in l7_regime else None),
+        regime_exposure_bear_strong=(float(l7_regime["exposure_bear_strong"]) if "exposure_bear_strong" in l7_regime else None),
+        regime_exposure_bear_weak=(float(l7_regime["exposure_bear_weak"]) if "exposure_bear_weak" in l7_regime else None),
+        regime_exposure_neutral=(float(l7_regime["exposure_neutral"]) if "exposure_neutral" in l7_regime else None),
+        regime_top_k_bull=(int(l7_regime["top_k_bull"]) if "top_k_bull" in l7_regime else None),
+        regime_top_k_bear=(int(l7_regime["top_k_bear"]) if "top_k_bear" in l7_regime else None),
+        regime_exposure_bull=(float(l7_regime["exposure_bull"]) if "exposure_bull" in l7_regime else None),
+        regime_exposure_bear=(float(l7_regime["exposure_bear"]) if "exposure_bear" in l7_regime else None),
     )
     
     # 시장 국면 데이터 (regime_enabled일 때)

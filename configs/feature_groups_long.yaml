@@ -1,0 +1,40 @@
+feature_groups:
+  technical:
+    target_weight: 0.41
+    features:
+      - volatility_60d
+      - volatility_20d
+      - volatility
+      - downside_volatility_60d
+      - max_drawdown_60d
+      - price_momentum_60d
+      - price_momentum
+      - momentum_6m
+      - momentum_rank
+      - turnover
+  value:
+    target_weight: 0.26
+    features:
+      - total_liabilities
+      - debt_ratio
+  profitability:
+    target_weight: 0.21
+    features:
+      - net_income
+      - roe
+  news:
+    target_weight: 0.02
+    features:
+      - news_sentiment_ewm20
+  esg:
+    target_weight: 0.10
+    features:
+      - esg_score
+      - environmental_score
+      - social_score
+      - governance_score
+
+
+
+
+

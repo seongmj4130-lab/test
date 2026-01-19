@@ -79,6 +79,63 @@ def generate_rankings(
     }
 
 
+def inspect_holdout_day_rankings(
+    as_of: str,
+    *,
+    topk: int = 10,
+    horizon: str = "both",
+    config_path: str = "configs/config.yaml",
+) -> dict:
+    """
+    [개선안 36번] Track A Holdout 기간 중 특정 날짜(as_of)에 대해
+    TopK 랭킹 + 팩터셋(그룹) 기여도 Top3를 반환하는 서비스 함수 (UI/분석용).
+    
+    Args:
+        as_of: 기준 날짜 (예: "2024-12-30")
+        topk: TopK 종목 수
+        horizon: "short" | "long" | "both"
+        config_path: 설정 파일 경로
+    
+    Returns:
+        dict:
+        {
+          "meta": {"date": "...", "holdout_start": "...", "holdout_end": "..."},
+          "short": DataFrame | None,
+          "long": DataFrame | None,
+        }
+    """
+    from src.utils.io import load_artifact
+    from src.tracks.track_a.stages.ranking.holdout_day_inspector import inspect_holdout_day
+
+    cfg = load_config(config_path)
+    interim_dir = Path(cfg["paths"]["data_interim"])
+
+    # 캐시 기반 로드 (Track A 결과가 있어야 함)
+    dataset_daily = load_artifact(interim_dir / "dataset_daily")
+    ranking_short_daily = load_artifact(interim_dir / "ranking_short_daily")
+    ranking_long_daily = load_artifact(interim_dir / "ranking_long_daily")
+
+    result = inspect_holdout_day(
+        cfg=cfg,
+        date=as_of,
+        dataset_daily=dataset_daily,
+        ranking_short_daily=ranking_short_daily,
+        ranking_long_daily=ranking_long_daily,
+        topk=topk,
+        horizon=horizon,  # type: ignore[arg-type]
+    )
+
+    return {
+        "meta": {
+            "date": str(result.date.date()),
+            "holdout_start": str(result.holdout_start.date()),
+            "holdout_end": str(result.holdout_end.date()),
+        },
+        "short": result.short,
+        "long": result.long,
+    }
+
+
 if __name__ == "__main__":
     import sys
     logging.basicConfig(

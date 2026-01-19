@@ -165,12 +165,94 @@ def add_price_based_features(
         out = out.drop(columns=["cumret", "rolling_max", "drawdown", "ret_negative"], errors="ignore")
     
     # -------------------------
-    # 6) 정리: ret_daily는 중간 계산용이므로 제거 (필요시 주석 해제)
+    # 6) 데이터 클리닝 및 검증
+    # -------------------------
+    out, cleaning_warns = clean_feature_data(out)
+    warns.extend(cleaning_warns)
+
+    # -------------------------
+    # 7) 정리: ret_daily는 중간 계산용이므로 제거 (필요시 주석 해제)
     # -------------------------
     # out = out.drop(columns=["ret_daily"], errors="ignore")
-    
+
     # ticker-date 정렬 유지
     out = out.sort_values(["ticker", "date"]).reset_index(drop=True)
-    
+
+    return out, warns
+
+
+def clean_feature_data(df: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
+    """
+    피처 데이터 클리닝: 결측치 보간, 이상치 처리, 데이터 검증
+
+    Args:
+        df: 피처가 추가된 데이터프레임
+
+    Returns:
+        (cleaned_df, warnings) 튜플
+    """
+    warns: list[str] = []
+    out = df.copy()
+
+    # 피처 컬럼들 식별 (수치형 피처만 대상)
+    numeric_cols = []
+    for col in out.columns:
+        if col not in ['date', 'ticker', 'in_universe', 'sector_name'] and pd.api.types.is_numeric_dtype(out[col]):
+            numeric_cols.append(col)
+
+    warns.append(f"[L3 Cleaning] {len(numeric_cols)}개 수치 피처 대상 클리닝 진행")
+
+    # 1. 결측치 처리
+    missing_stats = {}
+    for col in numeric_cols:
+        missing_count = out[col].isnull().sum()
+        if missing_count > 0:
+            missing_pct = missing_count / len(out) * 100
+            missing_stats[col] = missing_pct
+
+            # 결측치 보간 (ticker 그룹 내 forward fill + backward fill)
+            out[col] = out.groupby('ticker')[col].transform(
+                lambda x: x.fillna(method='ffill').fillna(method='bfill')
+            )
+
+            # 그래도 결측치가 남았다면 median으로 채움
+            remaining_missing = out[col].isnull().sum()
+            if remaining_missing > 0:
+                median_val = out[col].median()
+                out[col] = out[col].fillna(median_val)
+                warns.append(f"[L3 Cleaning] {col}: {missing_pct:.1f}% 결측치 → median({median_val:.3f}) 보간")
+
+    # 2. 이상치 처리 (99% 분위수 기반 클리핑)
+    outlier_stats = {}
+    for col in numeric_cols:
+        if out[col].notna().sum() > 100:  # 충분한 데이터가 있는 경우만
+            q99 = out[col].quantile(0.99)
+            outlier_count = (out[col] > q99).sum()
+            if outlier_count > 0:
+                outlier_pct = outlier_count / len(out) * 100
+                if outlier_pct > 0.1:  # 0.1% 초과하는 경우만 클리핑
+                    # 클리핑 적용
+                    out[col] = out[col].clip(upper=q99)
+                    outlier_stats[col] = outlier_pct
+                    warns.append(f"[L3 Cleaning] {col}: {outlier_pct:.1f}% 이상치 → 99% 분위수({q99:.3f}) 클리핑")
+
+    # 3. 데이터 검증 요약
+    total_missing_handled = len(missing_stats)
+    total_outliers_handled = len(outlier_stats)
+
+    if total_missing_handled > 0:
+        warns.append(f"[L3 Cleaning] 결측치 처리 완료: {total_missing_handled}개 피처")
+    else:
+        warns.append("[L3 Cleaning] 결측치 없음 ✓")
+
+    if total_outliers_handled > 0:
+        warns.append(f"[L3 Cleaning] 이상치 처리 완료: {total_outliers_handled}개 피처")
+    else:
+        warns.append("[L3 Cleaning] 이상치 적음 ✓")
+
+    # 4. 최종 검증
+    final_shape = out.shape
+    warns.append(f"[L3 Cleaning] 최종 데이터: {final_shape[0]:,}행 × {final_shape[1]}열")
+
     return out, warns
 

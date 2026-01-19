@@ -1,0 +1,5 @@
+﻿일자,ticker,pred_label,ESG_Label
+20210727,007700,0,Governance
+20210818,007700,0,Governance
+20210819,007700,0,Governance
+20210820,007700,1,Governance

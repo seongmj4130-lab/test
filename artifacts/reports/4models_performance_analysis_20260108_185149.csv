@@ -1,0 +1,17 @@
+model,horizon,period,net_sharpe_ratio,net_total_return,net_cagr,net_mdd
+Grid Search,short,dev,-0.1432,-0.1097,-0.3514,-0.2985
+Grid Search,short,holdout,0.1914,-0.0024,-0.0755,-0.1332
+Grid Search,long,dev,0.5212,0.0273,0.1057,-0.4074
+Grid Search,long,holdout,4.2208,0.1028,24.8000,-0.0465
+Ridge,short,dev,-0.1432,-0.1097,-0.3514,-0.2985
+Ridge,short,holdout,0.1914,-0.0024,-0.0755,-0.1332
+Ridge,long,dev,0.5212,0.0273,0.1057,-0.4074
+Ridge,long,holdout,4.2208,0.1028,24.8000,-0.0465
+XGBoost,short,dev,-0.1432,-0.1097,-0.3514,-0.2985
+XGBoost,short,holdout,0.1914,-0.0024,-0.0755,-0.1332
+XGBoost,long,dev,0.5212,0.0273,0.1057,-0.4074
+XGBoost,long,holdout,4.2208,0.1028,24.8000,-0.0465
+Random Forest,short,dev,-0.1432,-0.1097,-0.3514,-0.2985
+Random Forest,short,holdout,0.1914,-0.0024,-0.0755,-0.1332
+Random Forest,long,dev,0.5212,0.0273,0.1057,-0.4074
+Random Forest,long,holdout,4.2208,0.1028,24.8000,-0.0465

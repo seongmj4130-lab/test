@@ -19,13 +19,15 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 
-# Virtual Environment
-venv/
-env/
-ENV/
+# Virtual environments
+.env
 .venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
 # IDE
 .vscode/
@@ -33,62 +35,52 @@ ENV/
 *.swp
 *.swo
 *~
+
+# OS
 .DS_Store
-
-# Jupyter Notebook
-.ipynb_checkpoints
-*.ipynb_checkpoints
-
-# Data files (중요: 대용량 데이터 제외)
-data/raw/
-data/external/
-data/interim/*.parquet
-data/interim/*.csv
-data/processed/
-!data/interim/*__meta.json
-
-# Artifacts
-artifacts/models/
-artifacts/reports/
-artifacts/rankings/
-artifacts/backtests/
-!artifacts/reports/*.md
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 # Logs
 *.log
 logs/
 
-# Environment variables
-.env
-.env.local
-
-# OS
-Thumbs.db
-.DS_Store
-
 # Temporary files
 *.tmp
 *.temp
+temp_*
+tmp_*
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Data files (선택적 - 큰 파일들은 gitignore 권장)
+# data/raw/*.csv
+# data/interim/*.parquet
+# artifacts/models/*.pkl
+
+# Results and experiments
+experiments/*.csv
+experiments/*.png
+results/
+!results/README.md
+
+# Baseline backups (baseline 폴더들은 git에 포함하지 않음)
+baseline_*/
+
+# Test outputs
+test_*.txt
+*_output.txt
+*_results.txt
+
+# Backup files
+*.backup
 *.bak
-*.swp
 
-# Cursor specific
-.cursor/
-
-# Base dir placeholder
-{base_dir}/
-
-# Large files
-*.zip
-*.tar.gz
-*.pkl
-*.pickle
-
-# Keep directory structure but ignore contents
-!data/interim/.gitkeep
-!data/raw/.gitkeep
-!data/external/.gitkeep
-!data/processed/.gitkeep
-!artifacts/models/.gitkeep
-!artifacts/reports/.gitkeep
-
+# Local configuration
+config.local.yaml
+secrets.yaml

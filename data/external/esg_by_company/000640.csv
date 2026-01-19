@@ -1,0 +1,9 @@
+﻿일자,ticker,pred_label,ESG_Label
+20200102,000640,0,Social
+20200225,000640,0,Governance
+20200225,000640,1,Governance
+20200226,000640,1,Governance
+20200325,000640,0,Environmental
+20200619,000640,0,Governance
+20201221,000640,0,Social
+20201221,000640,0,Social

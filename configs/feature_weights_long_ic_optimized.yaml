@@ -1,0 +1,35 @@
+description: '[L8-L5 통일] IC 기반 최적화 - L5 장기 피처 19개만 사용 (OHLCV 제거)'
+feature_weights:
+  # Core 공통 (12개)
+  volatility_60d: 0.02
+  volatility_20d: 0.02
+  volatility: 0.02
+  momentum_rank: 0.02
+  downside_volatility_60d: 0.02
+  price_momentum_60d: 0.02
+  price_momentum: 0.02
+  momentum_6m: 0.02
+  max_drawdown_60d: 0.02
+  turnover: 0.02
+  net_income: 0.05
+  roe: 0.1
+  # Long 전용 (7개)
+  total_liabilities: 0.052
+  debt_ratio: 0.052
+  esg_score: 0.052
+  environmental_score: 0.052
+  social_score: 0.052
+  governance_score: 0.052
+  news_sentiment_ewm20: 0.03  # [Hit Ratio 개선] 장기 News 가중치 감소 (0.05→0.03)
+group_weights:
+  value: 0.26
+  profitability: 0.21
+  technical: 0.41
+  other: 0.1
+  news: 0.02  # [Hit Ratio 개선] 장기 News 그룹 가중치 감소 (0.05→0.02)
+metadata:
+  total_weight: 1.0
+  n_groups: 5
+  n_features: 19
+  optimization_target: ic_optimized_l5_unified
+  note: '[L8-L5 통일] L5 장기 피처 19개와 동일, OHLCV 제거됨, ESG 포함, News 가중치 감소 (0.05→0.03)'

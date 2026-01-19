@@ -15,7 +15,7 @@ def format_number(value, decimals=4):
 
 def show_backtest_metrics():
     """백테스트 지표 표시"""
-    strategies = ['bt20_short', 'bt20_ens', 'bt120_long', 'bt120_ens']
+    strategies = ['bt20_short', 'bt20_pro', 'bt20_ens', 'bt120_long', 'bt120_ens']
     interim_dir = Path('data/interim')
     
     all_metrics = []

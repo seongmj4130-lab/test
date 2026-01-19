@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-# C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/utils/config.py
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any, Dict, Union
 
@@ -36,9 +36,10 @@ def load_config(path: Union[str, Path]) -> Dict[str, Any]:
     # [경로 고정] base_dir 깨진 문자열 검증 및 제거
     base_dir_str = str(base_dir).strip()
     if "???" in base_dir_str or "??" in base_dir_str or not base_dir_str:
+        expected_base_dir = os.getenv('BASE_DIR', 'C:/Users/seong/OneDrive/Desktop/bootcamp/000_code')
         raise ValueError(
             f"[FATAL] base_dir contains corrupted characters: {base_dir_str}\n"
-            f"Fix configs/config.yaml paths.base_dir to: C:/Users/seong/OneDrive/Desktop/bootcamp/03_code"
+            f"Fix configs/config.yaml paths.base_dir to: {expected_base_dir}"
         )
 
     base_dir_posix = _to_posix(base_dir)
@@ -52,15 +53,16 @@ def load_config(path: Union[str, Path]) -> Dict[str, Any]:
     cfg["paths"] = paths
 
     # [경로 고정] 런타임 강제 검증: base_dir이 정확한 경로인지 확인
-    EXPECTED = Path(r"C:\Users\seong\OneDrive\Desktop\bootcamp\03_code").resolve()
+    expected_base_dir = os.getenv('BASE_DIR', 'C:/Users/seong/OneDrive/Desktop/bootcamp/000_code')
+    EXPECTED = Path(expected_base_dir).resolve()
     ACTUAL = Path(paths["base_dir"]).resolve()
-    
+
     if ACTUAL != EXPECTED:
         raise RuntimeError(
             f"[FATAL] base_dir mismatch.\n"
             f"  expected: {EXPECTED}\n"
             f"  actual  : {ACTUAL}\n"
-            f"Fix configs/config.yaml paths.base_dir to: C:/Users/seong/OneDrive/Desktop/bootcamp/03_code"
+            f"Fix configs/config.yaml paths.base_dir to: {expected_base_dir}"
         )
     
     # [경로 고정] 런타임 로그 출력

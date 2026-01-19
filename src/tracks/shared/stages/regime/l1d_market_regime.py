@@ -112,17 +112,17 @@ def build_market_regime(
             })
             continue
         
+        # [수정] 전체 period_data에서 종목별로 날짜 순서대로 정렬 후 전일 종가 계산
+        period_data_sorted = period_data.sort_values(["ticker", "date"]).copy()
+        period_data_sorted["prev_close"] = period_data_sorted.groupby("ticker")["close"].shift(1)
+        period_data_sorted["daily_return"] = (period_data_sorted["close"] - period_data_sorted["prev_close"]) / period_data_sorted["prev_close"]
+        
         # 일별 시장 가중 평균 수익률 계산 (시가총액 가중 또는 동일 가중)
         daily_returns = []
         daily_volumes = []
         
-        for date in period_data["date"].unique():
-            day_data = period_data[period_data["date"] == date]
-            
-            # 종목별 수익률 계산 (전일 대비)
-            day_data = day_data.sort_values("ticker")
-            day_data["prev_close"] = day_data.groupby("ticker")["close"].shift(1)
-            day_data["daily_return"] = (day_data["close"] - day_data["prev_close"]) / day_data["prev_close"]
+        for date in sorted(period_data_sorted["date"].unique()):
+            day_data = period_data_sorted[period_data_sorted["date"] == date]
             
             # 유효한 수익률만 사용
             valid_returns = day_data["daily_return"].dropna()

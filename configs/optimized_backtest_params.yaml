@@ -1,0 +1,32 @@
+# 최적화된 백테스트 파라미터 (실무 적용용)
+# 전략별 특성에 맞게 조정된 파라미터들
+
+params:
+  start_date: '2016-01-01'
+  end_date: '2024-12-31'
+
+# 전략별 최적화된 파라미터
+
+bt20_short:
+  holding_days: [20, 40, 60]
+  top_k: 8
+  cost_bps: 8
+  buffer_k: 10
+  rebalance_interval: 15
+  # 단기 모멘텀 강화, 불필요한 장기 제외
+
+bt120_long:
+  holding_days: [120]
+  top_k: 12
+  cost_bps: 12
+  buffer_k: 18
+  rebalance_interval: 25
+  # 장기 트렌드 집중, 120일 최적화
+
+bt20_ens:
+  holding_days: [40, 60]
+  top_k: 6
+  cost_bps: 6
+  buffer_k: 12
+  rebalance_interval: 20
+  # 통합 전략 대폭 간소화, top_k 최소화

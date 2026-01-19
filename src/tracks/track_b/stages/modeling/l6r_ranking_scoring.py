@@ -49,6 +49,35 @@ def _segment_to_phase(seg: str) -> str:
         return "holdout"
     return "dev"
 
+def _map_date_to_phase(date: pd.Timestamp, cv_folds: pd.DataFrame) -> str:
+    """
+    [rebalance_interval 개선] 날짜를 가장 가까운 cv_folds.test_end의 phase로 매핑
+    
+    Args:
+        date: 매핑할 날짜
+        cv_folds: cv_folds_short DataFrame (test_end, segment 컬럼 포함)
+    
+    Returns:
+        phase: "dev" 또는 "holdout"
+    """
+    if cv_folds.empty or "test_end" not in cv_folds.columns:
+        return "dev"  # 기본값
+    
+    cv_folds = cv_folds.copy()
+    cv_folds["test_end"] = pd.to_datetime(cv_folds["test_end"], errors="coerce")
+    cv_folds = cv_folds.dropna(subset=["test_end"])
+    
+    if len(cv_folds) == 0:
+        return "dev"
+    
+    # 가장 가까운 test_end 찾기
+    date_ts = pd.to_datetime(date)
+    cv_folds["date_diff"] = (cv_folds["test_end"] - date_ts).abs()
+    closest = cv_folds.loc[cv_folds["date_diff"].idxmin()]
+    
+    # segment를 phase로 변환
+    return _segment_to_phase(str(closest.get("segment", "dev")))
+
 def build_rebalance_scores_from_ranking(
     *,
     dataset_daily: pd.DataFrame,
@@ -59,6 +88,7 @@ def build_rebalance_scores_from_ranking(
     ranking_short_daily: Optional[pd.DataFrame] = None,  # [Dual Horizon] 단기 랭킹
     ranking_long_daily: Optional[pd.DataFrame] = None,    # [Dual Horizon] 장기 랭킹
     ohlcv_daily: Optional[pd.DataFrame] = None,  # 시장 국면 분류용 OHLCV 데이터
+    rebalance_interval: int = 1,  # [rebalance_interval 개선] 리밸런싱 주기 (1=월별, >1=일별 필터링)
 ) -> Tuple[pd.DataFrame, pd.DataFrame, dict, List[str]]:
     """
     [개선안 13번] 랭킹 기반 전략용 rebalance_scores 생성
@@ -138,7 +168,7 @@ def build_rebalance_scores_from_ranking(
     if use_dual_horizon:
         warns.append(f"[L6R Dual Horizon] 단기/장기 랭킹 결합 모드: α_short={cfg_rank.alpha_short:.2f}")
         # ranking_short_daily와 ranking_long_daily를 사용 (별도 계산 불필요)
-        ranking_daily = None  # 단일 랭킹 모드가 아님
+        ranking_daily = None  # 단일 랭킹 모드가 아님 (rebalance_interval > 1일 때 ranking_short_daily 사용)
     else:
         # 기존 단일 랭킹 모드
         warns.append("[L6R] 단일 랭킹 모드 (기존 동작)")
@@ -228,24 +258,58 @@ def build_rebalance_scores_from_ranking(
             regime_weights_config=regime_weights_config,  # [국면별 전략]
         )
 
-    # 3) 리밸런싱 날짜/phase 결정: cv_folds_short.test_end 사용
-    req_cols = {"test_end", "segment"}
-    if not req_cols.issubset(set(cv_folds_short.columns)):
-        raise KeyError(f"cv_folds_short missing required columns: {sorted(list(req_cols - set(cv_folds_short.columns)))}")
+    # 3) 리밸런싱 날짜/phase 결정
+    # [bt20 프로페셔널] 적응형 리밸런싱 적용을 위해 bt20_pro는 L6R에서 필터링하지 않음
+    # cfg에서 전략 확인
+    strategy_name = cfg.get("l7", {}).get("score_col", "")
+    if "bt20_pro" in str(strategy_name) or "bt20_pro" in str(cfg.get("l7", {})):
+        logger.info("[bt20 프로페셔널] L6R에서 rebalance_interval=1로 설정하여 L7에서 적응형 리밸런싱 적용")
+        rebalance_interval = 1
+    else:
+        rebalance_interval = int(rebalance_interval) if rebalance_interval is not None else 1
+    
+    if rebalance_interval == 1:
+        # 기존 로직: cv_folds_short.test_end 사용 (월별)
+        req_cols = {"test_end", "segment"}
+        if not req_cols.issubset(set(cv_folds_short.columns)):
+            raise KeyError(f"cv_folds_short missing required columns: {sorted(list(req_cols - set(cv_folds_short.columns)))}")
 
-    folds = cv_folds_short.copy()
-    folds["test_end"] = pd.to_datetime(folds["test_end"], errors="raise")
-    folds["phase"] = folds["segment"].astype(str).map(_segment_to_phase)
+        folds = cv_folds_short.copy()
+        folds["test_end"] = pd.to_datetime(folds["test_end"], errors="raise")
+        folds["phase"] = folds["segment"].astype(str).map(_segment_to_phase)
 
-    # 날짜가 중복되는 경우(이상 케이스) 보수적으로 holdout 우선
-    dup_dates = folds.duplicated(["test_end"]).any()
-    if dup_dates:
-        warns.append("[L6R] Duplicate rebalance dates in cv_folds_short.test_end -> resolving by phase priority(holdout>dev)")
-        pr = folds["phase"].map({"dev": 0, "holdout": 1}).fillna(0).astype(int)
-        folds = folds.assign(_prio=pr).sort_values(["test_end", "_prio"]).drop_duplicates(["test_end"], keep="last")
-        folds = folds.drop(columns=["_prio"])
+        # 날짜가 중복되는 경우(이상 케이스) 보수적으로 holdout 우선
+        dup_dates = folds.duplicated(["test_end"]).any()
+        if dup_dates:
+            warns.append("[L6R] Duplicate rebalance dates in cv_folds_short.test_end -> resolving by phase priority(holdout>dev)")
+            pr = folds["phase"].map({"dev": 0, "holdout": 1}).fillna(0).astype(int)
+            folds = folds.assign(_prio=pr).sort_values(["test_end", "_prio"]).drop_duplicates(["test_end"], keep="last")
+            folds = folds.drop(columns=["_prio"])
 
-    rebal_map = folds[["test_end", "phase"]].rename(columns={"test_end": "date"}).copy()
+        rebal_map = folds[["test_end", "phase"]].rename(columns={"test_end": "date"}).copy()
+        warns.append(f"[L6R rebalance_interval] 월별 리밸런싱 사용 (cv_folds_short.test_end): {len(rebal_map)}개 날짜")
+    else:
+        # [rebalance_interval 개선] 일별 랭킹 데이터에서 rebalance_interval에 맞게 필터링
+        if use_dual_horizon:
+            # Dual Horizon 모드: ranking_short_daily 사용
+            if ranking_short_daily is None or ranking_short_daily.empty:
+                raise ValueError("[L6R rebalance_interval] rebalance_interval > 1 requires ranking_short_daily")
+            all_dates = sorted(pd.to_datetime(ranking_short_daily["date"].unique()))
+        else:
+            # 단일 랭킹 모드: ranking_daily 사용
+            if ranking_daily is None or ranking_daily.empty:
+                raise ValueError("[L6R rebalance_interval] rebalance_interval > 1 requires ranking_daily")
+            all_dates = sorted(pd.to_datetime(ranking_daily["date"].unique()))
+        
+        # rebalance_interval에 맞게 필터링
+        rebalance_dates = [all_dates[i] for i in range(0, len(all_dates), rebalance_interval)]
+        
+        # Phase는 cv_folds_short에서 매핑
+        rebal_map = pd.DataFrame({"date": rebalance_dates})
+        rebal_map["phase"] = rebal_map["date"].apply(
+            lambda d: _map_date_to_phase(d, cv_folds_short)
+        )
+        warns.append(f"[L6R rebalance_interval] 일별 리밸런싱 사용 (interval={rebalance_interval}): {len(rebal_map)}개 날짜 (전체 {len(all_dates)}개 중)")
 
     # 4) [Dual Horizon] 단기/장기 랭킹 결합 또는 단일 랭킹 필터링
     if use_dual_horizon:
@@ -297,13 +361,18 @@ def build_rebalance_scores_from_ranking(
             )
             
             # 국면별 α 매핑
-            def get_alpha_for_regime(regime: str) -> float:
+            def get_alpha_for_regime(regime) -> float:
                 """
                 [개선안 22번] 3단계/5단계 국면 모두 지원
                 - config의 regime_alpha가 bull/neutral/bear 3키만 있어도 동작
                 - 기존 bull_strong/bull_weak/... 도 그대로 지원
                 """
-                regime_lower = (regime or "").strip().lower()
+                # [수정] NaN 처리: pd.isna()로 NaN 체크 후 문자열 변환
+                if pd.isna(regime) or regime is None:
+                    regime_lower = ""
+                else:
+                    regime_lower = str(regime).strip().lower()
+                
                 if regime_lower in regime_alpha_config:
                     return float(regime_alpha_config.get(regime_lower, base_alpha_short))
                 # 5단계 -> 3단계 매핑
@@ -386,7 +455,8 @@ def build_rebalance_scores_from_ranking(
     # [North Star] BT20 지원: true_short 컬럼 생성 (cfg_rank.return_col이 이미 true_short인 경우 중복 방지)
     if cfg_rank.return_col != "true_short":
         r[cfg_rank.return_col] = r[ret_fwd_col_short].astype(float)
-    r["true_short"] = r[ret_fwd_col_short].astype(float)  # [North Star] BT20 지원
+    # [동적 Return] true_short는 holding_days에 따라 동적으로 선택하므로 여기서는 생성하지 않음
+    # r["true_short"] = r[ret_fwd_col_short].astype(float)  # [North Star] BT20 지원 - 주석처리
     
     # true_long 부착 (North Star: BT120 지원)
     ret_fwd_col_long = f"ret_fwd_{horizon_long}d"
@@ -394,7 +464,17 @@ def build_rebalance_scores_from_ranking(
         ret_info_long = ds[["date", "ticker", ret_fwd_col_long]].copy()
         ret_info_long = ret_info_long.drop_duplicates(["date", "ticker"])
         r = r.merge(ret_info_long, on=["date", "ticker"], how="left", validate="one_to_one")
-        r["true_long"] = r[ret_fwd_col_long].astype(float)  # [North Star] BT120 지원
+        r["true_long"] = r[ret_fwd_col_long].astype(float)
+
+    # [동적 Return 계산] 다양한 holding_days에 대한 forward return 추가
+    dynamic_holding_days = [20, 40, 60, 80, 100, 120]
+    for hd in dynamic_holding_days:
+        ret_fwd_col = f"ret_fwd_{hd}d"
+        if ret_fwd_col in ds.columns:
+            ret_info = ds[["date", "ticker", ret_fwd_col]].copy()
+            ret_info = ret_info.drop_duplicates(["date", "ticker"])
+            r = r.merge(ret_info, on=["date", "ticker"], how="left", validate="one_to_one")
+            r[f"true_{hd}d"] = r[ret_fwd_col].astype(float)  # [North Star] BT120 지원
         warns.append(f"[L6R North Star] true_long 부착 완료 (BT120 지원): {ret_fwd_col_long}")
     else:
         warns.append(f"[L6R North Star] true_long 부착 스킵: {ret_fwd_col_long} 컬럼 없음 (BT120 비활성화)")
@@ -415,7 +495,14 @@ def build_rebalance_scores_from_ranking(
 
     # 8) L7이 기대하는 최소 스키마로 정리 (North Star: true_short/true_long 모두 포함)
     # [단기/장기 랭킹 분리 분석] score_total_short와 score_total_long 포함
-    out_cols = ["date", "ticker", "phase", "score_ens", cfg_rank.return_col, "true_short", "true_long", "score_total", "rank_total", "in_universe"]
+    out_cols = ["date", "ticker", "phase", "score_ens", cfg_rank.return_col, "true_long", "score_total", "rank_total", "in_universe"]
+
+    # [동적 Return 계산] 다양한 holding_days에 대한 return 컬럼 추가
+    dynamic_holding_days = [20, 40, 60, 80, 100, 120]
+    for hd in dynamic_holding_days:
+        dynamic_col = f"true_{hd}d"
+        if dynamic_col in r.columns:
+            out_cols.append(dynamic_col)
     # score_total_short와 score_total_long이 있으면 추가
     if "score_total_short" in r.columns:
         out_cols.append("score_total_short")
@@ -500,15 +587,29 @@ def run_L6R_ranking_scoring(
     outputs:
       - rebalance_scores
       - rebalance_scores_summary
-    
+
     [Dual Horizon] ranking_short_daily와 ranking_long_daily가 있으면 α로 결합
     """
+    warns: list[str] = []  # 경고 메시지 리스트 초기화
+
     l7 = (cfg.get("l7", {}) if isinstance(cfg, dict) else {}) or {}
     l6r = (cfg.get("l6r", {}) if isinstance(cfg, dict) else {}) or {}
     
     score_source = str(l7.get("ranking_score_source", "score_total"))
     
-    # [Dual Horizon] α 설정
+    # [앙상블 가중치 적용] Track A 앙상블 가중치 로드
+    ensemble_weights = cfg.get("l6r", {}).get("ensemble_weights", {})
+
+    # 앙상블 가중치 로드 확인 로그
+    if ensemble_weights:
+        warns.append(f"[L6R] 앙상블 가중치 로드 완료: 단기 {len(ensemble_weights.get('short', {}))}개, 장기 {len(ensemble_weights.get('long', {}))}개 모델")
+        for horizon, weights in ensemble_weights.items():
+            if isinstance(weights, dict):
+                warns.append(f"[L6R] {horizon} 앙상블: {weights}")
+    else:
+        warns.append("[L6R] 앙상블 가중치 설정을 찾을 수 없음")
+
+    # [Dual Horizon] α 설정 (기존 로직 유지)
     alpha_short = l6r.get("alpha_short", None)
     alpha_long = l6r.get("alpha_long", None)
     
@@ -525,6 +626,14 @@ def run_L6R_ranking_scoring(
     
     # 시장 국면 분류용 ohlcv_daily 확인
     ohlcv_daily = artifacts.get("ohlcv_daily")
+    
+    # [rebalance_interval 개선] rebalance_interval 설정 읽기
+    # 우선순위: l7 설정 > l6r 설정 > 기본값(1)
+    l7_rebalance_interval = l7.get("rebalance_interval", None)
+    l6r_rebalance_interval = l6r.get("rebalance_interval", None)
+    rebalance_interval = l7_rebalance_interval if l7_rebalance_interval is not None else (l6r_rebalance_interval if l6r_rebalance_interval is not None else 1)
+    if rebalance_interval is None:
+        rebalance_interval = 1
 
     out, summary, quality, warns = build_rebalance_scores_from_ranking(
         dataset_daily=artifacts["dataset_daily"],
@@ -535,6 +644,7 @@ def run_L6R_ranking_scoring(
         ranking_short_daily=ranking_short_daily,
         ranking_long_daily=ranking_long_daily,
         ohlcv_daily=ohlcv_daily,
+        rebalance_interval=rebalance_interval,  # [rebalance_interval 개선]
     )
 
     # run_all.py가 meta에 넣을 quality hook

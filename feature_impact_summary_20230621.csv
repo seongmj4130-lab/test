@@ -1,0 +1,7 @@
+﻿피처 그룹,순위,종목,주요 피처,영향
+Technical,1위,현대자동차,"volatility_20d, volatility_60d",매우 긍정
+ESG,2위,현대자동차,"esg_score, environmental_score",긍정
+Value,3위,현대자동차,"net_income, roe, turnover",긍정
+Technical,1위,현대자동차증권,"volatility_20d, volatility_60d",매우 긍정
+News,2위,현대자동차증권,"news_sentiment, news_volume",긍정
+Value,3위,현대자동차증권,"debt_ratio, equity",혼합

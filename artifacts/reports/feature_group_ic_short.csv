@@ -1,0 +1,6 @@
+﻿group,n_features,mean_rank_ic,abs_mean_rank_ic,weighted_mean_rank_ic,features
+value,5,0.02522130979783624,0.02522130979783624,0.03620737908388389,"equity, total_liabilities, net_income, debt_ratio, debt_ratio_sector_z"
+profitability,2,-0.00093693102904025,0.00093693102904025,-0.001130844672004371,"roe, roe_sector_z"
+technical,20,-0.022053484133975506,0.024825062474969805,-0.03098130375390512,"volatility_60d, volatility_20d, volatility, downside_volatility_60d, price_momentum_60d..."
+other,1,1.1536516694383528e-16,1.1536516694383528e-16,1.1536516694383528e-16,in_universe
+news,0,0.0,0.0,0.0,

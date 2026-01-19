@@ -1,0 +1,2 @@
+params,hit_ratio,ic_mean,icir,objective_score,non_zero_features
+"{'n_estimators': 100, 'max_depth': 6, 'min_samples_split': 2, 'min_samples_leaf': 1, 'max_features': 'sqrt'}",0.44540229885057464,0.00030902489319709916,0.03651402548645103,0.49025313675800775,30

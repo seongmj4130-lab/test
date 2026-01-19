@@ -1,0 +1,50 @@
+description: '[Phase 1.5 RF 학습] Feature Importance 기반 가중치 (참고용, 실제 사용 시 모델 객체 사용)
+  (Params={''n_estimators'': 100, ''max_depth'': 6, ''min_samples_split'': 2, ''min_samples_leaf'':
+  1, ''max_features'': ''sqrt''}, Objective Score=0.4840)'
+horizon: short
+model_file: artifacts\models\rf_model_short_20260108_204232.pkl
+hyperparameters:
+  n_estimators: 100
+  max_depth: 6
+  min_samples_split: 2
+  min_samples_leaf: 1
+  max_features: sqrt
+metadata:
+  objective_score: 0.48403817283626194
+  hit_ratio: 0.47142857142857136
+  ic_mean: -0.0020640031473846097
+  icir: -0.14078850876862756
+  optimization_date: '20260108_204232'
+  feature_count: 30
+  non_zero_feature_count: 30
+feature_weights:
+  debt_ratio: 0.03489521191634045
+  downside_volatility_60d: 0.029929203228715215
+  environmental_score: 0.0022447915527453164
+  equity: 0.019657143342723782
+  esg_score: 0.00867866278817189
+  governance_score: 0.0031529223925485174
+  max_drawdown_60d: 0.06753826253752243
+  momentum_3m: 0.05249195630362391
+  momentum_6m: 0.055896312975421025
+  momentum_rank: 0.05107657860655127
+  momentum_reversal: 0.0304779855640725
+  net_income: 0.01592705554201755
+  news_conviction: 0.01583267246167897
+  news_sentiment: 0.004638761493608087
+  news_sentiment_ewm20: 0.005593429603541469
+  news_sentiment_ewm5: 0.0015698000956208336
+  news_sentiment_surprise: 0.008732908839424515
+  news_volume: 0.007248041833595564
+  price_momentum: 0.05000985281715029
+  price_momentum_20d: 0.041462384221386046
+  price_momentum_60d: 0.07143641450426469
+  ret_daily: 0.09340106208925868
+  roe: 0.011789346859306389
+  social_score: 0.0022694609932483183
+  total_liabilities: 0.020018532454628334
+  turnover: 0.10900618849672834
+  volatility: 0.02993576458491447
+  volatility_20d: 0.05865524248265559
+  volatility_60d: 0.03518296528479639
+  volume_ratio: 0.061251084133739156

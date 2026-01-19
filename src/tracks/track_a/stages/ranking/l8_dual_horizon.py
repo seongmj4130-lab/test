@@ -42,11 +42,14 @@ def run_L8_short_rank_engine(
     
     # 설정 읽기
     l8_short = cfg.get("l8_short", {}) or {}
+    l5 = cfg.get("l5", {}) or {}
     normalization_method = l8_short.get("normalization_method", "percentile")
     feature_groups_config = l8_short.get("feature_groups_config", "configs/feature_groups_short.yaml")
     feature_weights_config = l8_short.get("feature_weights_config", "configs/feature_weights_short.yaml")
     use_sector_relative = l8_short.get("use_sector_relative", True)
     sector_col = l8_short.get("sector_col", "sector_name")
+    # [L8-L5 통일] L5 피처 리스트 사용
+    feature_list_short = l5.get("feature_list_short") or l8_short.get("feature_list_short")
     
     # 입력 데이터 확인
     dataset_daily = artifacts.get("dataset_daily")
@@ -86,9 +89,38 @@ def run_L8_short_rank_engine(
         input_df["in_universe"] = True
     else:
         input_df["in_universe"] = input_df["in_universe"].fillna(False).astype(bool)
-    
-    # 피처 가중치 파일 로드
+
+    # 피처 리스트 로드 (feature_cols로 변환)
     base_dir = Path(cfg.get("paths", {}).get("base_dir", Path.cwd()))
+    feature_cols = None
+    if feature_list_short:
+        feature_list_path = base_dir / feature_list_short
+        if feature_list_path.exists():
+            try:
+                import yaml
+                with open(feature_list_path, 'r', encoding='utf-8') as f:
+                    feature_config = yaml.safe_load(f) or {}
+                feature_cols = feature_config.get("features", [])
+                warns.append(f"[L8_short] 피처 리스트 로드 완료: {len(feature_cols)}개 피처")
+            except Exception as e:
+                warns.append(f"[L8_short] 피처 리스트 로드 실패: {e}")
+        else:
+            warns.append(f"[L8_short] 피처 리스트 파일을 찾을 수 없음: {feature_list_path}")
+
+    # [bt20 앙상블 적용] 단기 전략에도 앙상블 적용하여 성과 개선
+    # bt20/bt120 모두 앙상블 적용
+    horizon_name = "short"  # 현재 함수는 short
+    ensemble_weights = cfg.get("track_a_final_config", {}).get("ensemble_weights", {}).get(horizon_name, {})
+
+    # 단기 전략에도 앙상블 적용 (성과 개선)
+    apply_ensemble = bool(ensemble_weights and any(w > 0 for w in ensemble_weights.values()))
+
+    if apply_ensemble:
+        warns.append(f"[L8_{horizon_name}] 앙상블 적용: {ensemble_weights}")
+    else:
+        warns.append(f"[L8_{horizon_name}] 단일 모델 사용 (앙상블 미적용)")
+
+    # 피처 가중치 파일 로드
     feature_weights = None
     if feature_weights_config:
         weights_path = base_dir / feature_weights_config
@@ -123,19 +155,79 @@ def run_L8_short_rank_engine(
     try:
         use_feature_groups = feature_groups_path if feature_weights is None else None
         
-        ranking_short_daily = build_ranking_daily(
-            input_df,
-            feature_cols=None,  # 자동 선택
-            feature_weights=feature_weights,  # 명시적 가중치 우선
-            feature_groups_config=use_feature_groups,  # 가중치가 없을 때만 사용
-            normalization_method=normalization_method,
-            date_col="date",
-            universe_col="in_universe",
-            sector_col=actual_sector_col,
-            use_sector_relative=use_sector_relative,
-            market_regime_df=None,  # 단기 랭킹은 국면별 가중치 미사용
-            regime_weights_config=None,
-        )
+        if apply_ensemble:
+            # 앙상블 적용: 여러 모델의 랭킹 생성 후 가중 결합
+            ensemble_rankings = {}
+            total_weight = 0
+
+            for model_name, weight in ensemble_weights.items():
+                if weight > 0:
+                    try:
+                        # 각 모델별 랭킹 생성 (간단하게 동일 파라미터 사용)
+                        model_ranking = build_ranking_daily(
+                            input_df,
+                            feature_cols=feature_cols,
+                            feature_weights=feature_weights,
+                            feature_groups_config=use_feature_groups,
+                            normalization_method=normalization_method,
+                            date_col="date",
+                            universe_col="in_universe",
+                            sector_col=actual_sector_col,
+                            use_sector_relative=use_sector_relative,
+                            market_regime_df=None,
+                            regime_weights_config=None,
+                        )
+                        ensemble_rankings[model_name] = model_ranking
+                        total_weight += weight
+                        warns.append(f"[L8_short] {model_name} 모델 랭킹 생성 완료 (가중치: {weight})")
+                    except Exception as e:
+                        warns.append(f"[L8_short] {model_name} 모델 랭킹 생성 실패: {e}")
+
+            if ensemble_rankings and total_weight > 0:
+                # 가중 결합
+                ranking_short_daily = None
+                for model_name, ranking in ensemble_rankings.items():
+                    weight = ensemble_weights[model_name]
+                    if ranking_short_daily is None:
+                        ranking_short_daily = ranking.copy()
+                        ranking_short_daily['score_total'] = ranking_short_daily['score_total'] * weight
+                    else:
+                        ranking_short_daily['score_total'] += ranking['score_total'] * weight
+
+                # 정규화
+                ranking_short_daily['score_total'] = ranking_short_daily['score_total'] / total_weight
+                warns.append(f"[L8_short] 앙상블 결합 완료: {len(ensemble_rankings)}개 모델, 총 가중치 {total_weight}")
+            else:
+                # 앙상블 실패 시 기본 모델 사용
+                warns.append("[L8_short] 앙상블 실패, 기본 모델 사용")
+                ranking_short_daily = build_ranking_daily(
+                    input_df,
+                    feature_cols=feature_cols,
+                    feature_weights=feature_weights,
+                    feature_groups_config=use_feature_groups,
+                    normalization_method=normalization_method,
+                    date_col="date",
+                    universe_col="in_universe",
+                    sector_col=actual_sector_col,
+                    use_sector_relative=use_sector_relative,
+                    market_regime_df=None,
+                    regime_weights_config=None,
+                )
+        else:
+            # 기존 단일 모델 로직
+            ranking_short_daily = build_ranking_daily(
+                input_df,
+                feature_cols=feature_cols,
+                feature_weights=feature_weights,
+                feature_groups_config=use_feature_groups,
+                normalization_method=normalization_method,
+                date_col="date",
+                universe_col="in_universe",
+                sector_col=actual_sector_col,
+                use_sector_relative=use_sector_relative,
+                market_regime_df=None,
+                regime_weights_config=None,
+            )
         
         # sector_name 추가
         if actual_sector_col and actual_sector_col in input_df.columns:
@@ -149,13 +241,16 @@ def run_L8_short_rank_engine(
     if len(ranking_short_daily) == 0:
         raise ValueError("ranking_short_daily is empty after processing.")
     
-    # 최종 컬럼 정리
-    output_cols = ["date", "ticker", "score_total", "rank_total"]
+    # 최종 컬럼 정리 (단기 전략용 score_total_short 생성)
+    ranking_short_daily["score_total_short"] = ranking_short_daily["score_total"]
+    ranking_short_daily["rank_total_short"] = ranking_short_daily["rank_total"]
+
+    output_cols = ["date", "ticker", "score_total", "rank_total", "score_total_short", "rank_total_short"]
     if "in_universe" in ranking_short_daily.columns:
         output_cols.append("in_universe")
     if actual_sector_col and actual_sector_col in ranking_short_daily.columns:
         output_cols.append(actual_sector_col)
-    
+
     ranking_short_daily_final = ranking_short_daily[output_cols].copy()
     
     # 중복 키 확인
@@ -188,11 +283,14 @@ def run_L8_long_rank_engine(
     
     # 설정 읽기
     l8_long = cfg.get("l8_long", {}) or {}
+    l5 = cfg.get("l5", {}) or {}
     normalization_method = l8_long.get("normalization_method", "percentile")
     feature_groups_config = l8_long.get("feature_groups_config", "configs/feature_groups_long.yaml")
     feature_weights_config = l8_long.get("feature_weights_config", "configs/feature_weights_long.yaml")
     use_sector_relative = l8_long.get("use_sector_relative", True)
     sector_col = l8_long.get("sector_col", "sector_name")
+    # [L8-L5 통일] L5 피처 리스트 사용
+    feature_list_long = l5.get("feature_list_long") or l8_long.get("feature_list_long")
     
     # 입력 데이터 확인
     dataset_daily = artifacts.get("dataset_daily")
@@ -232,9 +330,33 @@ def run_L8_long_rank_engine(
         input_df["in_universe"] = True
     else:
         input_df["in_universe"] = input_df["in_universe"].fillna(False).astype(bool)
-    
-    # 피처 가중치 파일 로드
+
+    # 피처 리스트 로드 (feature_cols로 변환)
     base_dir = Path(cfg.get("paths", {}).get("base_dir", Path.cwd()))
+    feature_cols = None
+    if feature_list_long:
+        feature_list_path = base_dir / feature_list_long
+        if feature_list_path.exists():
+            try:
+                import yaml
+                with open(feature_list_path, 'r', encoding='utf-8') as f:
+                    feature_config = yaml.safe_load(f) or {}
+                feature_cols = feature_config.get("features", [])
+                warns.append(f"[L8_long] 피처 리스트 로드 완료: {len(feature_cols)}개 피처")
+            except Exception as e:
+                warns.append(f"[L8_long] 피처 리스트 로드 실패: {e}")
+        else:
+            warns.append(f"[L8_long] 피처 리스트 파일을 찾을 수 없음: {feature_list_path}")
+
+    # [앙상블 적용] 앙상블 가중치 로드
+    ensemble_weights_long = cfg.get("track_a_final_config", {}).get("ensemble_weights", {}).get("long", {})
+    apply_ensemble_long = bool(ensemble_weights_long and any(w > 0 for w in ensemble_weights_long.values()))
+    if apply_ensemble_long:
+        warns.append(f"[L8_long] 앙상블 적용: {ensemble_weights_long}")
+    else:
+        warns.append("[L8_long] 단일 모델 사용 (앙상블 미적용)")
+
+    # 피처 가중치 파일 로드
     feature_weights = None
     if feature_weights_config:
         weights_path = base_dir / feature_weights_config
@@ -269,19 +391,79 @@ def run_L8_long_rank_engine(
     try:
         use_feature_groups = feature_groups_path if feature_weights is None else None
         
-        ranking_long_daily = build_ranking_daily(
-            input_df,
-            feature_cols=None,  # 자동 선택
-            feature_weights=feature_weights,  # 명시적 가중치 우선
-            feature_groups_config=use_feature_groups,  # 가중치가 없을 때만 사용
-            normalization_method=normalization_method,
-            date_col="date",
-            universe_col="in_universe",
-            sector_col=actual_sector_col,
-            use_sector_relative=use_sector_relative,
-            market_regime_df=None,  # 장기 랭킹은 국면별 가중치 미사용
-            regime_weights_config=None,
-        )
+        if apply_ensemble_long:
+            # 앙상블 적용: 여러 모델의 랭킹 생성 후 가중 결합
+            ensemble_rankings_long = {}
+            total_weight_long = 0
+
+            for model_name, weight in ensemble_weights_long.items():
+                if weight > 0:
+                    try:
+                        # 각 모델별 랭킹 생성 (간단하게 동일 파라미터 사용)
+                        model_ranking = build_ranking_daily(
+                            input_df,
+                            feature_cols=feature_cols,
+                            feature_weights=feature_weights,
+                            feature_groups_config=use_feature_groups,
+                            normalization_method=normalization_method,
+                            date_col="date",
+                            universe_col="in_universe",
+                            sector_col=actual_sector_col,
+                            use_sector_relative=use_sector_relative,
+                            market_regime_df=None,
+                            regime_weights_config=None,
+                        )
+                        ensemble_rankings_long[model_name] = model_ranking
+                        total_weight_long += weight
+                        warns.append(f"[L8_long] {model_name} 모델 랭킹 생성 완료 (가중치: {weight})")
+                    except Exception as e:
+                        warns.append(f"[L8_long] {model_name} 모델 랭킹 생성 실패: {e}")
+
+            if ensemble_rankings_long and total_weight_long > 0:
+                # 가중 결합
+                ranking_long_daily = None
+                for model_name, ranking in ensemble_rankings_long.items():
+                    weight = ensemble_weights_long[model_name]
+                    if ranking_long_daily is None:
+                        ranking_long_daily = ranking.copy()
+                        ranking_long_daily['score_total'] = ranking_long_daily['score_total'] * weight
+                    else:
+                        ranking_long_daily['score_total'] += ranking['score_total'] * weight
+
+                # 정규화
+                ranking_long_daily['score_total'] = ranking_long_daily['score_total'] / total_weight_long
+                warns.append(f"[L8_long] 앙상블 결합 완료: {len(ensemble_rankings_long)}개 모델, 총 가중치 {total_weight_long}")
+            else:
+                # 앙상블 실패 시 기본 모델 사용
+                warns.append("[L8_long] 앙상블 실패, 기본 모델 사용")
+                ranking_long_daily = build_ranking_daily(
+                    input_df,
+                    feature_cols=feature_cols,
+                    feature_weights=feature_weights,
+                    feature_groups_config=use_feature_groups,
+                    normalization_method=normalization_method,
+                    date_col="date",
+                    universe_col="in_universe",
+                    sector_col=actual_sector_col,
+                    use_sector_relative=use_sector_relative,
+                    market_regime_df=None,
+                    regime_weights_config=None,
+                )
+        else:
+            # 기존 단일 모델 로직
+            ranking_long_daily = build_ranking_daily(
+                input_df,
+                feature_cols=feature_cols,
+                feature_weights=feature_weights,
+                feature_groups_config=use_feature_groups,
+                normalization_method=normalization_method,
+                date_col="date",
+                universe_col="in_universe",
+                sector_col=actual_sector_col,
+                use_sector_relative=use_sector_relative,
+                market_regime_df=None,
+                regime_weights_config=None,
+            )
         
         # sector_name 추가
         if actual_sector_col and actual_sector_col in input_df.columns:
@@ -295,13 +477,16 @@ def run_L8_long_rank_engine(
     if len(ranking_long_daily) == 0:
         raise ValueError("ranking_long_daily is empty after processing.")
     
-    # 최종 컬럼 정리
-    output_cols = ["date", "ticker", "score_total", "rank_total"]
+    # 최종 컬럼 정리 (장기 전략용 score_total_long 생성)
+    ranking_long_daily["score_total_long"] = ranking_long_daily["score_total"]
+    ranking_long_daily["rank_total_long"] = ranking_long_daily["rank_total"]
+
+    output_cols = ["date", "ticker", "score_total", "rank_total", "score_total_long", "rank_total_long"]
     if "in_universe" in ranking_long_daily.columns:
         output_cols.append("in_universe")
     if actual_sector_col and actual_sector_col in ranking_long_daily.columns:
         output_cols.append(actual_sector_col)
-    
+
     ranking_long_daily_final = ranking_long_daily[output_cols].copy()
     
     # 중복 키 확인

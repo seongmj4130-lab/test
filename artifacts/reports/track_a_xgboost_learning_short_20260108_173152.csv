@@ -1,0 +1,2 @@
+colsample_bytree,learning_rate,max_depth,n_estimators,reg_alpha,reg_lambda,subsample,hit_ratio,ic_mean,icir,objective_score,non_zero_features
+0.8,0.1,6,100,0.0,1.0,0.8,0.7557142857142857,0.5049550203114304,3.486287148024674,0.782617581773169,30

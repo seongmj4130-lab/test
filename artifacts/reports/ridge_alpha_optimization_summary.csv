@@ -1,0 +1,5 @@
+﻿strategy,optimization_target,best_ridge_alpha,best_score
+bt20_short,total_return,0.3,0.048995603765866313
+bt20_ens,total_return,0.5,0.018535055607474815
+bt120_long,sharpe,0.1,0.17689569824193235
+bt120_ens,sharpe,0.5,0.21663439738187582

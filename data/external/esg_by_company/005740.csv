@@ -1,0 +1,13 @@
+﻿일자,ticker,pred_label,ESG_Label
+20161021,005740,0,Governance
+20170411,005740,-1,Governance
+20170412,005740,0,Environmental
+20170525,005740,1,Environmental
+20171016,005740,0,Governance
+20171019,005740,0,Governance
+20171019,005740,0,Governance
+20171019,005740,0,Governance
+20171020,005740,0,Governance
+20171024,005740,1,Governance
+20171025,005740,1,Governance
+20171025,005740,1,Governance

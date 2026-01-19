@@ -1,0 +1,2 @@
+colsample_bytree,learning_rate,max_depth,n_estimators,reg_alpha,reg_lambda,subsample,dev_objective_score,dev_hit_ratio,dev_ic_mean,dev_icir,holdout_objective_score,holdout_hit_ratio,holdout_ic_mean,holdout_icir,non_zero_features
+0.8,0.1,5,75,0.5,5.0,0.8,0.6610525274569647,0.6402439024390245,0.3369741252444916,1.8136282564893746,0.49343166058539184,0.48913043478260887,-0.0041502236817787955,-0.05326599251283025,30

@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 ################################################################################
 # START OF FILE: __init__.py
 ################################################################################
@@ -173,8 +175,6 @@ if __name__ == "__main__":
 ################################################################################
 
 # src/stages/combine_snapshot_outputs_to_one.py
-from __future__ import annotations
-
 import argparse
 import json
 from pathlib import Path
@@ -346,8 +346,6 @@ if __name__ == "__main__":
 # START OF FILE: l0_universe.py
 ################################################################################
 
-from __future__ import annotations
-
 import pandas as pd
 
 def _require_pykrx():
@@ -419,8 +417,6 @@ def build_k200_membership_month_end(
 ################################################################################
 # START OF FILE: l1_ohlcv.py
 ################################################################################
-
-from __future__ import annotations
 
 import pandas as pd
 

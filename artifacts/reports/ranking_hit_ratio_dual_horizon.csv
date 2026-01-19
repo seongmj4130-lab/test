@@ -1,0 +1,2 @@
+﻿timestamp,hit_ratio_overall,hit_ratio_dev,hit_ratio_holdout,n_samples,overfitting_gap,overfitting_severity,ridge_alpha,min_feature_ic,alpha_short
+2026-01-06 23:35:42,0.41580230390516704,0.4115883504650025,0.4308499016823247,20921,-0.019261551217322204,low,1.5,0.005,0.5

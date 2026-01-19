@@ -1,0 +1,42 @@
+description: '[Phase 3 Ridge 학습] 개별 피처 가중치 (Alpha=1.0, Objective Score=0.5050)'
+horizon: short
+alpha: 1.0
+metadata:
+  objective_score: 0.504987824800305
+  hit_ratio: 0.47500000000000003
+  ic_mean: 4.229732861257775e-17
+  icir: 0.49959416001016466
+  optimization_date: '20260108_143713'
+  feature_count: 30
+  non_zero_feature_count: 30
+feature_weights:
+  debt_ratio: 0.07669658392211218
+  downside_volatility_60d: -0.09513804601188094
+  environmental_score: -0.024345974117327605
+  equity: 0.06597079175855462
+  esg_score: 0.02165929804987337
+  governance_score: -0.004141526626116032
+  max_drawdown_60d: 0.01727424119651446
+  momentum_3m: -0.0006159169811800569
+  momentum_6m: 0.04102555316397443
+  momentum_rank: 0.013101005953624295
+  momentum_reversal: -0.015298826894609584
+  net_income: 0.02396441682946934
+  news_conviction: -0.013298988636987218
+  news_sentiment: -0.025120195623114308
+  news_sentiment_ewm20: -0.0003951736341707638
+  news_sentiment_ewm5: 0.035336916347046506
+  news_sentiment_surprise: 0.01316434891875906
+  news_volume: 0.010621701298725151
+  price_momentum: 0.013101005953601561
+  price_momentum_20d: 0.013101005953584896
+  price_momentum_60d: -0.10942290815104011
+  ret_daily: -0.02627162077959045
+  roe: 0.022783882326176882
+  social_score: -0.0075807608779319136
+  total_liabilities: -0.08563347858707057
+  turnover: 0.01351249222935408
+  volatility: 0.037449070630002974
+  volatility_20d: 0.03744907062999961
+  volatility_60d: 0.057031168631927046
+  volume_ratio: -0.07949402928568002

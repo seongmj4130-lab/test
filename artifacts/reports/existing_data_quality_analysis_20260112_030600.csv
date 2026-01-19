@@ -1,0 +1,4 @@
+﻿파일명,행수,열수,결측률(%),결측셀수,결측컬럼수,수치형컬럼수
+pred_long_oos.parquet,349908,9,0.0,0,0,4
+pred_short_oos.parquet,414465,9,0.0,0,0,4
+rebalance_scores.parquet,20721,20,4.672071811206023,19362,6,13

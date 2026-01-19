@@ -1,0 +1,122 @@
+# [개선안 36번] 기본 피처 그룹 설정 (공통/레거시 경로용)
+# - 일부 스테이지/리포트/유틸에서 configs/feature_groups.yaml을 기대할 수 있어 파일을 제공
+# - 실제 운영(L8)은 feature_weights_config 우선이므로, 이 파일은 "그룹 정의/설명가능성/밸런싱" 용도로 사용됨
+
+feature_groups:
+  value:
+    target_weight: 0.25
+    features:
+      - debt_ratio
+      - total_liabilities
+      - equity
+  profitability:
+    target_weight: 0.25
+    features:
+      - roe
+      - net_income
+  technical:
+    target_weight: 0.40
+    features:
+      - price_momentum
+      - price_momentum_20d
+      - price_momentum_60d
+      - momentum_3m
+      - momentum_6m
+      - momentum_rank
+      - momentum_reversal
+      - volatility
+      - volatility_20d
+      - volatility_60d
+      - downside_volatility_60d
+      - max_drawdown_60d
+      - ret_daily
+      - turnover
+      - volume_ratio
+  news:
+    target_weight: 0.05
+    features:
+      - news_sentiment
+      - news_sentiment_ewm5
+      - news_sentiment_ewm20
+      - news_sentiment_surprise
+      - news_volume
+      - news_conviction
+  esg:
+    target_weight: 0.05
+    features:
+      - esg_score
+      - environmental_score
+      - social_score
+      - governance_score
+
+balancing:
+  method: "equal_weight"
+  min_features_per_group: 1
+  apply_during_training: true
+
+# configs/feature_groups.yaml
+# [Stage6] 피처 그룹 밸런싱 설정
+# 각 그룹의 피처 목록과 목표 가중치를 정의
+
+feature_groups:
+  # 가치(Value) 그룹
+  value:
+    features:
+      - debt_ratio
+      - debt_ratio_sector_z
+    target_weight: 0.25  # 전체 피처 중 25% 가중치 목표
+  
+  # 수익성(Profitability) 그룹
+  profitability:
+    features:
+      - roe
+      - roe_sector_z
+    target_weight: 0.25  # 전체 피처 중 25% 가중치 목표
+  
+  # 기술적(Technical) 그룹
+  technical:
+    features:
+      - volume_ratio
+      - price_momentum
+      - price_momentum_20d
+      - price_momentum_60d
+      - momentum_3m  # [Phase 5 전략1] 3개월 모멘텀 추가
+      - momentum_6m  # [Phase 5 전략1] 6개월 모멘텀 추가
+      - volatility
+      - volatility_20d
+      - volatility_60d
+      - turnover
+      # [팩터 정교화] 모멘텀 반전 + 리스크 팩터
+      - momentum_reversal
+      - max_drawdown_60d
+      - downside_volatility_60d
+    target_weight: 0.50  # [Phase 5 전략1] 전체 피처 중 50% 가중치 목표 (기술적 팩터 강화)
+  
+  # 기타(Other) 그룹
+  other:
+    features:
+      - market_cap
+      - turnover
+    target_weight: 0.25  # 전체 피처 중 25% 가중치 목표
+
+  # [개선안 15번] 뉴스 감성(News Sentiment) 그룹 (데이터 투입 전 뼈대)
+  # - 실제 컬럼이 dataset_daily에 존재할 때만 자동으로 반영됨(없으면 무시됨).
+  news:
+    features:
+      - news_sentiment
+      - news_conviction
+      - news_volume
+      - news_sentiment_ewm5
+      - news_sentiment_ewm20
+      - news_sentiment_surprise
+    target_weight: 0.10  # 초기값: 전체의 10% (필요시 조정)
+
+# 밸런싱 방법 설정
+balancing:
+  method: "equal_weight"  # "equal_weight" | "proportional" | "none"
+  min_features_per_group: 1  # 그룹당 최소 피처 수 (이보다 적으면 그룹 제외)
+  apply_during_training: true  # 학습 중 밸런싱 적용 여부
+
+
+
+

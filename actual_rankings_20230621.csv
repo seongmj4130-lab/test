@@ -1,0 +1,4 @@
+﻿전략,랭킹,종목명(ticker),날짜,score,top3 피쳐그룹
+short,1,한국전력(015760),2023-06-21,0.0442940562587581,"news,profitability,technical"
+long,1,삼성전자(005930),2023-06-21,0.0628005099690161,"profitability,technical,esg"
+integrated,1,현대차(005380),2023-06-21,0.0639080392279201,"news,value,other"
