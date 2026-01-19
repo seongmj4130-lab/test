@@ -1,5 +1,6 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 
 def analyze_ranking_difference():
     """단기/장기 랭킹 통합이 왜 BT20/BT120 성과를 같게 만드는지 분석"""

@@ -2,15 +2,15 @@
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/data/l2_fundamentals_dart.py
 from __future__ import annotations
 
-import os
-import time
 import io
 import logging
+import os
+import time
 from contextlib import redirect_stdout
 from typing import Any
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -165,24 +165,24 @@ def download_annual_fundamentals(
                 api_keys = [k.strip() for k in env_keys.split(",") if k.strip()]
             else:
                 api_keys = []
-    
+
     if not api_keys or len(api_keys) == 0:
         raise RuntimeError(
             "DART_API_KEY가 없습니다. api_key, api_keys 파라미터 또는 환경변수 DART_API_KEY/DART_API_KEYS를 설정해야 L2를 진행할 수 있습니다."
         )
-    
+
     # API 키 정리
     api_keys = [k.strip() for k in api_keys if k.strip()]
     if len(api_keys) == 0:
         raise RuntimeError("유효한 DART_API_KEY가 없습니다.")
-    
+
     logger.info(f"[L2] API 키 {len(api_keys)}개 사용: {api_keys[0][:10]}..." + (f", {api_keys[1][:10]}..." if len(api_keys) > 1 else ""))
 
     OpenDartReader = _require_opendart()
     # 첫 번째 키로 corp_map 로드 (corp_map은 키와 무관)
     dart = OpenDartReader(api_keys[0])
     corp_map = _load_corp_map(dart)
-    
+
     # API 키 순환을 위한 인덱스
     api_key_idx = 0
 
@@ -226,7 +226,7 @@ def download_annual_fundamentals(
             current_api_key = api_keys[api_key_idx % len(api_keys)]
             dart = OpenDartReader(current_api_key)
             api_key_idx += 1
-            
+
             # CFS -> OFS 순서로 시도
             for fs_div in fs_div_order:
                 fs, status, msg = _call_finstate_safely(
@@ -260,7 +260,7 @@ def download_annual_fundamentals(
             # [Stage 1] report_rcept_date 추출 (접수일)
             report_rcept_date = None
             lag_source = "year_end_fallback"
-            
+
             # 방법 1: finstate DataFrame에서 접수일 컬럼 찾기
             rcept_cols = [c for c in fs.columns if "rcept" in str(c).lower() or "접수" in str(c)]
             if rcept_cols:
@@ -280,7 +280,7 @@ def download_annual_fundamentals(
                                         break
                 except Exception:
                     pass
-            
+
             # 방법 2: OpenDartReader의 list() 메서드로 공시 목록에서 접수일 가져오기 (fallback)
             # 주의: 추가 API 호출이므로 성능 고려 필요
             if lag_source != "rcept_date":
@@ -295,7 +295,7 @@ def download_annual_fundamentals(
                                 matching = list_res[list_res["reprt_code"] == reprt_code]
                             else:
                                 matching = list_res
-                            
+
                             if not matching.empty and "rcept_dt" in matching.columns:
                                 rcept_val = matching["rcept_dt"].iloc[0]
                                 if pd.notna(rcept_val) and str(rcept_val).strip() != "":
@@ -306,10 +306,10 @@ def download_annual_fundamentals(
                                             lag_source = "rcept_date"
                 except Exception:
                     pass  # list() 실패해도 계속 진행 (fallback 사용)
-            
+
             # year_end 날짜 (기본값)
             year_end = pd.to_datetime(f"{y}-12-31")
-            
+
             # effective_date 계산
             if lag_source == "rcept_date" and report_rcept_date is not None:
                 effective_date = report_rcept_date + pd.Timedelta(days=disclosure_lag_days)
@@ -398,7 +398,7 @@ def download_annual_fundamentals(
     df["date"] = pd.to_datetime(df["date"])
     df["ticker"] = df["ticker"].astype(str).str.zfill(6)
     df["corp_code"] = df["corp_code"].astype(str).str.zfill(8)
-    
+
     # [Stage 1] effective_date, report_rcept_date 타입 정리
     if "effective_date" in df.columns:
         df["effective_date"] = pd.to_datetime(df["effective_date"], errors="coerce")

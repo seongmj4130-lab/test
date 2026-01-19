@@ -3,12 +3,14 @@
 
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import logging
+
+from src.stages.modeling.l5_train_models import train_oos_predictions
 from src.utils.config import load_config
 from src.utils.io import load_artifact
-from src.stages.modeling.l5_train_models import train_oos_predictions
-import logging
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 
@@ -48,4 +50,3 @@ if len(weight_warns) == 0:
     print("  - config.yaml 설정을 확인하세요.")
 else:
     print("\n✅ 가중치가 적용되었습니다!")
-

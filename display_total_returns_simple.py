@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 def display_total_returns_simple():
     """통일 파라미터 총수익률 결과를 간단하게 표시"""
 

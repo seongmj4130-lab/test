@@ -8,5 +8,3 @@ from src.tracks.shared.stages.data.news_sentiment_features import (
 )
 
 __all__ = ["NewsSentimentConfig", "attach_news_sentiment_features"]
-
-

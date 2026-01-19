@@ -3,10 +3,12 @@
 트렌치별(holding_days) 단기/장기/통합 전략의 KOSPI200 대비 초과수익률 계산
 """
 
-import pandas as pd
-import numpy as np
 import os
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
 
 def load_data():
     """필요한 데이터 파일 로드"""

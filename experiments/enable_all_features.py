@@ -3,8 +3,10 @@
 모든 boolean 설정을 true로 변경하여 재현 가능하게 만듦
 """
 
-import yaml
 import re
+
+import yaml
+
 
 def enable_all_features():
     """모든 boolean 설정을 true로 변경"""

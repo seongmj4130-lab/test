@@ -1,6 +1,6 @@
 # 피쳐 엔지니어링 테스트
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 # 샘플 데이터 생성
 sample_data = pd.DataFrame({

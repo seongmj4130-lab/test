@@ -2,11 +2,12 @@
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/backtest/l7b_sensitivity.py
 from __future__ import annotations
 
-from typing import List, Tuple, Dict, Any, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
 from src.stages.backtest.l7_backtest import BacktestConfig, run_backtest
+
 
 def _resolve_section(cfg: dict, name: str) -> dict:
     """config.yaml이 params 아래에 섹션을 두는 구조를 지원한다."""

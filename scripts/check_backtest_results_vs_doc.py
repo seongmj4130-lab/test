@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """백테스트 결과와 문서 기대값 비교"""
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 import yaml
 
 base_dir = Path('C:/Users/seong/OneDrive/Desktop/bootcamp/03_code')
@@ -27,10 +28,10 @@ for strategy in strategies:
     if not metrics_path.exists():
         print(f"⚠️  {strategy}: 결과 파일 없음")
         continue
-    
+
     df = pd.read_parquet(metrics_path)
     holdout = df[df['phase'] == 'holdout'].iloc[0]
-    
+
     exp = expected[strategy]
     actual = {
         'net_sharpe': holdout['net_sharpe'],
@@ -38,7 +39,7 @@ for strategy in strategies:
         'net_mdd': holdout['net_mdd'],
         'net_calmar_ratio': holdout['net_calmar_ratio'],
     }
-    
+
     results.append({
         'strategy': strategy,
         'metric': 'Net Sharpe',
@@ -97,4 +98,3 @@ for strategy in strategies:
     df_strat = df_results[df_results['strategy'] == strategy]
     matched = sum(1 for _, r in df_strat.iterrows() if abs(r['diff']) < 0.001)
     print(f"  {strategy}: {matched}/4 지표 일치")
-

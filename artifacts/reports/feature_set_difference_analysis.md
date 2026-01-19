@@ -45,14 +45,14 @@ def _pick_feature_cols(df: pd.DataFrame) -> List[str]:
         "in_universe", "ym", "corp_code",
         "open", "high", "low", "close", "volume",  # OHLCV는 피처로 사용하지 않음
     }
-    
+
     cols: List[str] = []
     for c in df.columns:
         if c in exclude:
             continue
         if df[c].dtype in [np.float64, np.float32, np.int64, np.int32]:
             cols.append(c)  # 숫자형 컬럼만 선택
-    
+
     return sorted(cols)
 ```
 

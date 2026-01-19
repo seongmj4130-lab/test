@@ -147,20 +147,20 @@ RANKING_TRACK_STAGES = ["stage7", "stage8", "stage9", "stage10", "stage11"]
 def get_latest_pipeline_baseline(base_interim_dir: Path, current_stage_num: int) -> Optional[str]:
     """
     Pipeline track의 경우 최신 pipeline Stage를 baseline으로 사용
-    
+
     Args:
         base_interim_dir: interim 디렉토리
         current_stage_num: 현재 Stage 번호 (이전 Stage만 고려)
-    
+
     Returns:
         최신 pipeline baseline 태그 또는 None
     """
     # 현재 Stage 이전의 pipeline track Stage들만 고려
     pipeline_stages = [s for s in PIPELINE_TRACK_STAGES if int(s.replace("stage", "")) < current_stage_num]
-    
+
     if not pipeline_stages:
         return None
-    
+
     # 각 pipeline Stage의 run_tag 패턴으로 검색
     candidates = []
     for stage_name in pipeline_stages:
@@ -172,10 +172,10 @@ def get_latest_pipeline_baseline(base_interim_dir: Path, current_stage_num: int)
                 # rebalance_scores 또는 bt_returns가 있으면 pipeline track
                 if (folder / "rebalance_scores.parquet").exists() or (folder / "bt_returns.parquet").exists():
                     candidates.append((folder.name, folder.stat().st_mtime))
-    
+
     if not candidates:
         return None
-    
+
     # 최신 순으로 정렬
     candidates.sort(key=lambda x: x[1], reverse=True)
     return candidates[0][0]
@@ -183,20 +183,20 @@ def get_latest_pipeline_baseline(base_interim_dir: Path, current_stage_num: int)
 def get_latest_ranking_baseline(base_interim_dir: Path, current_stage_num: int) -> Optional[str]:
     """
     Ranking/UI track의 경우 최신 Ranking/UI Stage를 baseline으로 사용
-    
+
     Args:
         base_interim_dir: interim 디렉토리
         current_stage_num: 현재 Stage 번호 (이전 Stage만 고려)
-    
+
     Returns:
         최신 ranking baseline 태그 또는 None
     """
     # 현재 Stage 이전의 ranking track Stage들만 고려
     ranking_stages = [s for s in RANKING_TRACK_STAGES if int(s.replace("stage", "")) < current_stage_num]
-    
+
     if not ranking_stages:
         return None
-    
+
     # 각 ranking Stage의 run_tag 패턴으로 검색
     candidates = []
     for stage_name in ranking_stages:
@@ -208,10 +208,10 @@ def get_latest_ranking_baseline(base_interim_dir: Path, current_stage_num: int) 
                 # ranking_daily가 있으면 ranking track
                 if (folder / "ranking_daily.parquet").exists():
                     candidates.append((folder.name, folder.stat().st_mtime))
-    
+
     if not candidates:
         return None
-    
+
     # 최신 순으로 정렬
     candidates.sort(key=lambda x: x[1], reverse=True)
     return candidates[0][0]
@@ -224,22 +224,22 @@ def resolve_baseline_tag(
 ) -> str:
     """
     Stage 성격에 맞게 baseline_tag 결정
-    
+
     Args:
         stage_name: Stage 이름 (예: "stage0", "stage7")
         base_interim_dir: interim 디렉토리
         default_baseline: 기본 baseline 태그 (STAGE_DEFINITIONS에서 가져온 값)
         skip_scan: True면 스캔 건너뛰고 default_baseline 사용 (OneDrive 최적화)
-    
+
     Returns:
         결정된 baseline 태그
     """
     if skip_scan:
         logger.info(f"[Baseline] 스캔 건너뛰기: {default_baseline} 사용")
         return default_baseline
-    
+
     stage_num = int(stage_name.replace("stage", ""))
-    
+
     # Pipeline track: 최신 pipeline Stage 사용
     if stage_name in PIPELINE_TRACK_STAGES:
         baseline = get_latest_pipeline_baseline(base_interim_dir, stage_num)
@@ -249,7 +249,7 @@ def resolve_baseline_tag(
         else:
             logger.warning(f"[Baseline] Pipeline baseline을 찾을 수 없어 기본값 사용: {default_baseline}")
             return default_baseline
-    
+
     # Ranking/UI track: 최신 ranking Stage 사용
     elif stage_name in RANKING_TRACK_STAGES:
         baseline = get_latest_ranking_baseline(base_interim_dir, stage_num)
@@ -259,7 +259,7 @@ def resolve_baseline_tag(
         else:
             logger.warning(f"[Baseline] Ranking baseline을 찾을 수 없어 기본값 사용: {default_baseline}")
             return default_baseline
-    
+
     # 기본값 사용
     logger.info(f"[Baseline] 기본값 사용: {default_baseline}")
     return default_baseline
@@ -282,7 +282,7 @@ def run_stage(
 ) -> Tuple[bool, str, Optional[str]]:
     """
     단일 Stage 실행
-    
+
     Returns:
         (성공 여부, run_tag, baseline_tag)
     """
@@ -293,14 +293,14 @@ def run_stage(
         stage_def["baseline_tag"],
         skip_scan=skip_scan,
     )
-    
+
     logger.info(f"\n{'='*80}")
     logger.info(f"Stage 실행 시작: {stage_def['name']}")
     logger.info(f"Run Tag: {run_tag}")
     logger.info(f"Baseline Tag: {baseline_tag}")
     logger.info(f"From: {stage_def['from_stage']}, To: {stage_def['to_stage']}")
     logger.info(f"{'='*80}\n")
-    
+
     # run_all.py 실행 명령 구성
     cmd = [
         sys.executable,
@@ -311,20 +311,20 @@ def run_stage(
         "--baseline-tag", baseline_tag,
         "--config", str(config_path),
     ]
-    
+
     if skip_l2:
         cmd.append("--skip-l2")
-    
+
     if force_rebuild:
         cmd.append("--force-rebuild")
-    
+
     if max_rebalances:
         cmd.extend(["--max-rebalances", str(max_rebalances)])
-    
+
     # 실행
     logger.info(f"[실행] 명령: {' '.join(cmd)}")
     start_time = time.time()
-    
+
     try:
         result = subprocess.run(
             cmd,
@@ -352,7 +352,7 @@ def generate_stage_summary_report(
 ) -> None:
     """
     Stage별 변화 요약 리포트 생성
-    
+
     Args:
         stage_results: Stage 실행 결과 리스트
         output_path: 출력 파일 경로
@@ -362,23 +362,23 @@ def generate_stage_summary_report(
     lines.append("# Stage0~13 리플레이 실행 요약 리포트\n")
     lines.append(f"생성 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
     lines.append("\n---\n")
-    
+
     # 전체 실행 통계
     total_stages = len(stage_results)
     success_stages = sum(1 for r in stage_results if r["success"])
     failed_stages = total_stages - success_stages
-    
+
     lines.append("## 전체 실행 통계\n")
     lines.append(f"- 총 Stage 수: {total_stages}")
     lines.append(f"- 성공: {success_stages}")
     lines.append(f"- 실패: {failed_stages}")
     lines.append("\n")
-    
+
     # Stage별 상세 결과
     lines.append("## Stage별 실행 결과\n")
     lines.append("| Stage | 이름 | Run Tag | Baseline Tag | 성공 여부 | 실행 시간 (초) |")
     lines.append("|-------|------|---------|--------------|-----------|----------------|")
-    
+
     for result in stage_results:
         stage_name = result["stage_name"]
         stage_def = STAGE_DEFINITIONS[stage_name]
@@ -388,37 +388,37 @@ def generate_stage_summary_report(
             f"| {stage_name} | {stage_def['name']} | {result['run_tag']} | "
             f"{result['baseline_tag']} | {success} | {elapsed:.1f} |"
         )
-    
+
     lines.append("\n")
-    
+
     # Stage별 개선점 및 수치 변화 (KPI 리포트에서 추출)
     lines.append("## Stage별 개선점 및 수치 변화\n")
     lines.append("> 주의: 수치 변화는 KPI 리포트와 Delta 리포트를 참조하세요.\n")
     lines.append("> 자동 추출 기능은 향후 구현 예정입니다.\n")
     lines.append("\n")
-    
+
     for result in stage_results:
         if not result["success"]:
             continue
-        
+
         stage_name = result["stage_name"]
         stage_def = STAGE_DEFINITIONS[stage_name]
         run_tag = result["run_tag"]
         baseline_tag = result["baseline_tag"]
-        
+
         lines.append(f"### {stage_name}: {stage_def['name']}\n")
         lines.append(f"**Run Tag**: `{run_tag}`\n")
         lines.append(f"**Baseline Tag**: `{baseline_tag}`\n")
         lines.append(f"**설명**: {stage_def['description']}\n")
         lines.append("\n")
-        
+
         # KPI 리포트 링크
         kpi_csv = base_dir / "reports" / "kpi" / f"kpi_table__{run_tag}.csv"
         kpi_md = base_dir / "reports" / "kpi" / f"kpi_table__{run_tag}.md"
         delta_csv = base_dir / "reports" / "delta" / f"delta_kpi__{baseline_tag}__vs__{run_tag}.csv"
         delta_md = base_dir / "reports" / "delta" / f"delta_report__{baseline_tag}__vs__{run_tag}.md"
         check_md = base_dir / "reports" / "stages" / f"check__{stage_name}__{run_tag}.md"
-        
+
         lines.append("**리포트 파일**:\n")
         if kpi_csv.exists():
             lines.append(f"- KPI CSV: `{kpi_csv.relative_to(base_dir)}`\n")
@@ -430,9 +430,9 @@ def generate_stage_summary_report(
             lines.append(f"- Delta MD: `{delta_md.relative_to(base_dir)}`\n")
         if check_md.exists():
             lines.append(f"- Check MD: `{check_md.relative_to(base_dir)}`\n")
-        
+
         lines.append("\n")
-    
+
     # 리포트 저장
     output_path.write_text("\n".join(lines), encoding="utf-8")
     logger.info(f"[리포트] Stage 요약 리포트 저장: {output_path}")
@@ -490,43 +490,43 @@ def main():
         help="요약 리포트 출력 경로 (기본: reports/analysis/stage_replay_summary__{timestamp}.md)",
     )
     args = parser.parse_args()
-    
+
     # 경로 확인
     base_dir = PROJECT_ROOT
     config_path = base_dir / args.config
-    
+
     if not config_path.exists():
         logger.error(f"Config 파일을 찾을 수 없습니다: {config_path}")
         sys.exit(1)
-    
+
     # Stage 범위 확인
     stage_names = sorted(STAGE_DEFINITIONS.keys(), key=lambda x: int(x.replace("stage", "")))
     from_idx = stage_names.index(args.from_stage) if args.from_stage in stage_names else 0
     to_idx = stage_names.index(args.to_stage) if args.to_stage in stage_names else len(stage_names) - 1
-    
+
     if from_idx > to_idx:
         logger.error(f"잘못된 Stage 범위: {args.from_stage} > {args.to_stage}")
         sys.exit(1)
-    
+
     target_stages = stage_names[from_idx : to_idx + 1]
-    
+
     logger.info(f"리플레이 대상 Stage: {target_stages}")
     logger.info(f"Config: {config_path}")
     logger.info(f"Skip L2: {args.skip_l2}")
     logger.info(f"Force Rebuild: {args.force_rebuild}")
     logger.info(f"Skip Scan: {args.skip_scan}")
-    
+
     # Stage별 실행
     stage_results = []
     total_start_time = time.time()
-    
+
     for stage_name in target_stages:
         stage_def = STAGE_DEFINITIONS[stage_name]
         stage_start_time = time.time()
-        
+
         # Stage13만 max_rebalances 적용
         max_rebalances = args.max_rebalances if stage_name == "stage13" else None
-        
+
         success, run_tag, baseline_tag = run_stage(
             stage_name=stage_name,
             stage_def=stage_def,
@@ -537,9 +537,9 @@ def main():
             skip_scan=args.skip_scan,
             max_rebalances=max_rebalances,
         )
-        
+
         stage_elapsed = time.time() - stage_start_time
-        
+
         stage_results.append({
             "stage_name": stage_name,
             "run_tag": run_tag,
@@ -547,23 +547,23 @@ def main():
             "success": success,
             "elapsed_time": stage_elapsed,
         })
-        
+
         if not success:
             logger.error(f"[중단] {stage_name} 실행 실패로 인해 리플레이를 중단합니다.")
             break
-    
+
     total_elapsed = time.time() - total_start_time
-    
+
     # 요약 리포트 생성
     if args.output:
         output_path = Path(args.output)
     else:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_path = base_dir / "reports" / "analysis" / f"stage_replay_summary__{timestamp}.md"
-    
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
     generate_stage_summary_report(stage_results, output_path, base_dir)
-    
+
     logger.info(f"\n{'='*80}")
     logger.info(f"리플레이 완료: 총 {total_elapsed:.1f}초")
     logger.info(f"요약 리포트: {output_path}")

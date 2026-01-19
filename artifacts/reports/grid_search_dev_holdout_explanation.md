@@ -30,10 +30,10 @@
 
 1. **Dev 구간 (Grid Search 실행)**
    - **목적**: 최적 가중치 조합 **선택** (튜닝)
-   - **과정**: 
+   - **과정**:
      - 여러 가중치 조합을 Dev 구간에서 평가
      - Objective Score가 가장 높은 조합 선택
-   - **예시**: 
+   - **예시**:
      - 조합 1: technical=-0.5, value=0.5 → Score: 0.40
      - 조합 2: technical=-1.0, value=0.0 → Score: 0.35
      - 조합 3: technical=-0.5, value=0.5 → Score: 0.41 ✅ **최적 선택**
@@ -108,11 +108,11 @@ def evaluate_group_weights(...):
     # cv_folds에서 Dev 구간만 필터링
     dev_folds = cv_folds[cv_folds["fold_id"] != "holdout"]
     dev_dates = dev_folds["test_end"].unique()
-    
+
     # Dev 구간 데이터만 사용
     ranking_daily = ranking_daily[ranking_daily["date"].isin(dev_dates)]
     forward_returns = forward_returns[forward_returns["date"].isin(dev_dates)]
-    
+
     # 평가 및 점수 계산
     metrics = calculate_metrics(...)
     return objective_score
@@ -121,14 +121,14 @@ def evaluate_group_weights(...):
 def evaluate_holdout_performance(...):
     # 최적 가중치로 랭킹 생성
     ranking_daily = build_ranking_daily(..., feature_groups_config=optimal_weights)
-    
+
     # Holdout 구간만 필터링
     holdout_folds = cv_folds[cv_folds["fold_id"].str.startswith("holdout")]
     holdout_dates = holdout_folds["test_end"].unique()
-    
+
     # Holdout 구간 평가
     holdout_metrics = evaluate_on_fold(ranking_daily, forward_returns, "holdout")
-    
+
     # Dev/Holdout 비교
     comparison = compare_dev_holdout(dev_metrics, holdout_metrics)
 ```
@@ -217,7 +217,7 @@ def evaluate_holdout_performance(...):
 
 ---
 
-**작성일**: 2026-01-08  
-**참고 문서**: 
+**작성일**: 2026-01-08
+**참고 문서**:
 - `track_a_optimization_direction_validation.md`
 - `dev_holdout_final_comparison_20260108_160851.md`

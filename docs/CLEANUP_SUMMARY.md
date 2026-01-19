@@ -43,7 +43,7 @@ README.md 기준으로 필요한 파일만 유지하고 나머지는 `05_backup`
 ### 2. 산출물 재생성 ⚠️
 **상태**: 네트워크 오류로 보류됨
 
-**원인**: 
+**원인**:
 - Track A 파이프라인 실행 시 UI Payload Builder에서 pykrx 라이브러리의 외부 API 호출 실패
 - Track B 파이프라인 실행 시 시장 국면 데이터 생성 중 외부 API 호출 실패
 
@@ -54,7 +54,7 @@ README.md 기준으로 필요한 파일만 유지하고 나머지는 `05_backup`
 
 **재생성 필요 산출물**:
 - Track A: `ranking_short_daily`, `ranking_long_daily` (이미 존재하지만 재생성 권장)
-- Track B: 
+- Track B:
   - `rebalance_scores_from_ranking` (이미 존재하지만 재생성 권장)
   - `bt_metrics_bt20_short`, `bt_metrics_bt20_ens`, `bt_metrics_bt120_long`, `bt_metrics_bt120_ens`
   - `bt_returns_*`, `bt_equity_curve_*`, `bt_positions_*` 등
@@ -102,7 +102,7 @@ README.md 기준으로 필요한 파일만 유지하고 나머지는 `05_backup`
    ```bash
    # Track A 실행
    python -m src.pipeline.track_a_pipeline
-   
+
    # Track B 실행 (4가지 전략)
    python -m src.pipeline.track_b_pipeline bt20_short
    python -m src.pipeline.track_b_pipeline bt20_ens

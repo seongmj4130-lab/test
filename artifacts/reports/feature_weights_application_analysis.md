@@ -131,7 +131,7 @@ l5:
    ```yaml
    l8_short:
      feature_weights_config: configs/feature_weights_short_hitratio_optimized.yaml
-   
+
    l8_long:
      feature_weights_config: configs/feature_weights_long_ic_optimized.yaml
    ```
@@ -180,4 +180,3 @@ l5:
 ---
 
 **생성 스크립트**: `scripts/check_feature_weights.py`
-

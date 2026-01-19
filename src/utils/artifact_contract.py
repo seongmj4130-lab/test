@@ -230,10 +230,3 @@ def is_pipeline_track(stage_name: str) -> bool:
 def is_ranking_track(stage_name: str) -> bool:
     """Ranking Track 여부 확인"""
     return get_stage_track(stage_name) == "ranking"
-
-
-
-
-
-
-

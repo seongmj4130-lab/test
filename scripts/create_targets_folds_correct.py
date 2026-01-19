@@ -3,10 +3,11 @@
 targets_and_folds.parquet 생성 (올바른 버전)
 """
 
-from pathlib import Path
-import pandas as pd
-from datetime import datetime, timedelta
 import sys
+from datetime import datetime, timedelta
+from pathlib import Path
+
+import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))

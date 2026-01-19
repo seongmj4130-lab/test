@@ -10,16 +10,20 @@
 """
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Dict, List, Literal, Optional
+
 import numpy as np
 import pandas as pd
-from typing import List, Dict, Optional, Literal
-from pathlib import Path
 
 from src.utils.feature_groups import (
-    load_feature_groups,
     get_feature_groups,  # [개선안 14번] feature_groups.yaml 파싱 버그 수정: 그룹->피처 리스트 추출
-    calculate_feature_group_balance,
 )
+from src.utils.feature_groups import (
+    calculate_feature_group_balance,
+    load_feature_groups,
+)
+
 
 def _pick_feature_cols(df: pd.DataFrame) -> List[str]:
     """피처 컬럼 선택 (식별자/타겟 제외)"""
@@ -30,17 +34,17 @@ def _pick_feature_cols(df: pd.DataFrame) -> List[str]:
         "in_universe", "ym", "corp_code",
         "open", "high", "low", "close", "volume",  # OHLCV는 피처로 사용하지 않음
     }
-    
+
     cols: List[str] = []
     for c in df.columns:
         if c in exclude:
             continue
         if df[c].dtype in [np.float64, np.float32, np.int64, np.int32]:
             cols.append(c)
-    
+
     if len(cols) == 0:
         raise ValueError("No numeric feature columns found after excluding identifiers/targets.")
-    
+
     return sorted(cols)
 
 def normalize_feature_cross_sectional(
@@ -52,14 +56,14 @@ def normalize_feature_cross_sectional(
 ) -> pd.Series:
     """
     날짜별 cross-sectional 정규화 (sector-relative 지원)
-    
+
     Args:
         df: 입력 DataFrame (date, feature_col 포함, 선택적으로 sector_col)
         feature_col: 정규화할 피처 컬럼명
         date_col: 날짜 컬럼명
         method: "percentile" 또는 "zscore"
         sector_col: 섹터 컬럼명 (None이면 전체 시장 기준, 있으면 섹터별 정규화)
-    
+
     Returns:
         정규화된 값 Series (인덱스는 df와 동일)
     """
@@ -67,21 +71,21 @@ def normalize_feature_cross_sectional(
         raise KeyError(f"Feature column not found: {feature_col}")
     if date_col not in df.columns:
         raise KeyError(f"Date column not found: {date_col}")
-    
+
     # [Stage8] sector-relative 정규화가 가능한지 확인
     use_sector_relative = (
         sector_col is not None
         and sector_col in df.columns
         and df[sector_col].notna().sum() > 0
     )
-    
+
     result = pd.Series(index=df.index, dtype=float)
-    
+
     if use_sector_relative:
         # [Stage8] 섹터별 정규화: 같은 date, 같은 sector 내에서 정규화
         for (date, sector), group in df.groupby([date_col, sector_col], sort=False):
             values = group[feature_col].values
-            
+
             if method == "percentile":
                 # Percentile rank (0~1)
                 ranks = pd.Series(values).rank(pct=True, method="first")
@@ -96,13 +100,13 @@ def normalize_feature_cross_sectional(
                     normalized = np.zeros_like(values)
             else:
                 raise ValueError(f"Unknown normalization method: {method}")
-            
+
             result.loc[group.index] = normalized
     else:
         # 전체 시장 기준 정규화 (기존 로직)
         for date, group in df.groupby(date_col, sort=False):
             values = group[feature_col].values
-            
+
             if method == "percentile":
                 # Percentile rank (0~1)
                 ranks = pd.Series(values).rank(pct=True, method="first")
@@ -117,9 +121,9 @@ def normalize_feature_cross_sectional(
                     normalized = np.zeros_like(values)
             else:
                 raise ValueError(f"Unknown normalization method: {method}")
-            
+
             result.loc[group.index] = normalized
-    
+
     return result
 
 def build_score_total(
@@ -136,7 +140,7 @@ def build_score_total(
 ) -> pd.DataFrame:
     """
     score_total 생성
-    
+
     Args:
         df: 입력 DataFrame (date, ticker, 피처들 포함)
         feature_cols: 사용할 피처 컬럼 리스트 (None이면 자동 선택)
@@ -144,25 +148,25 @@ def build_score_total(
         feature_groups_config: 피처 그룹 설정 파일 경로 (None이면 그룹별 균등 가중치)
         normalization_method: 정규화 방법 ("percentile" 또는 "zscore")
         date_col: 날짜 컬럼명
-    
+
     Returns:
         df에 score_total 컬럼이 추가된 DataFrame
     """
     out = df.copy()
-    
+
     # 피처 컬럼 선택
     if feature_cols is None:
         feature_cols = _pick_feature_cols(df)
-    
+
     if len(feature_cols) == 0:
         raise ValueError("No feature columns available for scoring.")
-    
+
     # [Stage8] sector-relative 정규화 사용 여부 결정
     actual_sector_col = None
     if use_sector_relative and sector_col and sector_col in out.columns:
         if out[sector_col].notna().sum() > 0:
             actual_sector_col = sector_col
-    
+
     # 피처별 정규화
     normalized_features = {}
     for feat in feature_cols:
@@ -171,10 +175,10 @@ def build_score_total(
         normalized_features[feat] = normalize_feature_cross_sectional(
             out, feat, date_col, method=normalization_method, sector_col=actual_sector_col
         )
-    
+
     if len(normalized_features) == 0:
         raise ValueError("No valid features found after normalization.")
-    
+
     # 가중치 결정
     if feature_groups_config is not None and Path(feature_groups_config).exists():
         # [개선안 14번] feature_groups.yaml 스키마는 최상위에 feature_groups/balancing 키가 있음.
@@ -182,7 +186,7 @@ def build_score_total(
         cfg_groups = load_feature_groups(feature_groups_config)
         feature_groups = get_feature_groups(cfg_groups)
         group_weights = {}
-        
+
         # 그룹별 균등 가중치 (그룹 합 = 1)
         group_names = set()
         for feat in feature_cols:
@@ -190,12 +194,12 @@ def build_score_total(
                 if feat in set(map(str, group_features)):
                     group_names.add(group_name)
                     break
-        
+
         if len(group_names) > 0:
             weight_per_group = 1.0 / len(group_names)
             for group_name in group_names:
                 group_weights[group_name] = weight_per_group
-        
+
         # 피처별 가중치 계산 (그룹 내 균등)
         feature_weights = {}
         for feat in feature_cols:
@@ -209,14 +213,14 @@ def build_score_total(
             if feat not in feature_weights:
                 # 그룹에 속하지 않은 피처는 균등 가중치
                 feature_weights[feat] = 1.0 / len(feature_cols)
-    
+
     elif feature_weights is not None:
         # 사용자 지정 가중치 사용
         pass
     else:
         # 균등 가중치
         feature_weights = {feat: 1.0 / len(normalized_features) for feat in normalized_features.keys()}
-    
+
     # [국면별 전략] 국면별 가중치 적용
     use_regime_weights = (
         market_regime_df is not None
@@ -224,18 +228,18 @@ def build_score_total(
         and len(regime_weights_config) > 0
         and "regime" in market_regime_df.columns
     )
-    
+
     if use_regime_weights:
         # 날짜별로 국면에 맞는 가중치 사용
         score_total = pd.Series(0.0, index=out.index)
-        
+
         for date, group in out.groupby(date_col, sort=False):
             # 해당 날짜의 국면 조회
             regime_row = market_regime_df[market_regime_df[date_col] == date]
-            
+
             if len(regime_row) > 0:
                 regime = regime_row.iloc[0]["regime"]
-                
+
                 # [국면 세분화] 5단계 국면별 가중치 선택
                 if regime in regime_weights_config:
                     date_weights = regime_weights_config[regime]
@@ -264,14 +268,14 @@ def build_score_total(
                     date_weights = feature_weights  # 기본 가중치 사용
             else:
                 date_weights = feature_weights  # 국면 정보 없으면 기본 가중치
-            
+
             # 가중치 정규화 (합 = 1)
             total_weight = sum(date_weights.get(feat, 0.0) for feat in normalized_features.keys())
             if total_weight > 1e-8:
                 date_weights = {feat: w / total_weight for feat, w in date_weights.items() if feat in normalized_features}
             else:
                 date_weights = {feat: 1.0 / len(normalized_features) for feat in normalized_features.keys()}
-            
+
             # 해당 날짜의 score_total 계산
             for feat, normalized_values in normalized_features.items():
                 weight = date_weights.get(feat, 0.0)
@@ -282,19 +286,19 @@ def build_score_total(
         total_weight = sum(feature_weights.get(feat, 0.0) for feat in normalized_features.keys())
         if total_weight > 1e-8:
             feature_weights = {feat: w / total_weight for feat, w in feature_weights.items() if feat in normalized_features}
-        
+
         # score_total 계산
         score_total = pd.Series(0.0, index=out.index)
         for feat, normalized_values in normalized_features.items():
             weight = feature_weights.get(feat, 0.0)
             score_total += weight * normalized_values.fillna(0.0)
-    
+
     out["score_total"] = score_total
-    
+
     # [Stage8] sector_col이 있으면 유지 (build_ranking_daily에서 사용)
     # build_score_total은 입력 DataFrame의 모든 컬럼을 유지하므로
     # sector_col이 이미 out에 있으면 그대로 유지됨
-    
+
     return out
 
 def build_rank_total(
@@ -305,45 +309,45 @@ def build_rank_total(
 ) -> pd.DataFrame:
     """
     rank_total 생성 (in_universe=True 대상으로만)
-    
+
     Args:
         df: 입력 DataFrame (score_total, in_universe 포함)
         score_col: 점수 컬럼명
         date_col: 날짜 컬럼명
         universe_col: 유니버스 필터 컬럼명
-    
+
     Returns:
         df에 rank_total 컬럼이 추가된 DataFrame
     """
     out = df.copy()
-    
+
     if score_col not in out.columns:
         raise KeyError(f"Score column not found: {score_col}")
     if date_col not in out.columns:
         raise KeyError(f"Date column not found: {date_col}")
-    
+
     # in_universe 필터링
     if universe_col in out.columns:
         universe_mask = out[universe_col].fillna(False).astype(bool)
     else:
         universe_mask = pd.Series(True, index=out.index)
-    
+
     # 날짜별 랭킹 (높은 점수 = 낮은 랭크 = 상위)
     rank_total = pd.Series(np.nan, index=out.index, dtype=float)
-    
+
     for date, group in out.groupby(date_col, sort=False):
         group_mask = universe_mask.loc[group.index]
         universe_group = group.loc[group_mask]
-        
+
         if len(universe_group) == 0:
             continue
-        
+
         # 랭킹 계산 (높은 점수 = 낮은 랭크)
         ranks = universe_group[score_col].rank(ascending=False, method="first")
         rank_total.loc[universe_group.index] = ranks.values
-    
+
     out["rank_total"] = rank_total
-    
+
     return out
 
 def build_ranking_daily(
@@ -361,7 +365,7 @@ def build_ranking_daily(
 ) -> pd.DataFrame:
     """
     ranking_daily 생성 (score_total + rank_total)
-    
+
     Args:
         df: 입력 DataFrame (date, ticker, 피처들, in_universe 포함)
         feature_cols: 사용할 피처 컬럼 리스트
@@ -370,7 +374,7 @@ def build_ranking_daily(
         normalization_method: 정규화 방법
         date_col: 날짜 컬럼명
         universe_col: 유니버스 필터 컬럼명
-    
+
     Returns:
         ranking_daily DataFrame (date, ticker, score_total, rank_total 포함)
     """
@@ -387,7 +391,7 @@ def build_ranking_daily(
         market_regime_df=market_regime_df,  # [국면별 전략]
         regime_weights_config=regime_weights_config,  # [국면별 전략]
     )
-    
+
     # rank_total 생성
     df_ranked = build_rank_total(
         df_scored,
@@ -395,16 +399,16 @@ def build_ranking_daily(
         date_col=date_col,
         universe_col=universe_col,
     )
-    
+
     # 최종 컬럼 선택
     output_cols = [date_col, "ticker", "score_total", "rank_total"]
     if universe_col in df_ranked.columns:
         output_cols.append(universe_col)
-    
+
     # [Stage8] sector_col 포함 (있는 경우)
     if sector_col and sector_col in df_ranked.columns:
         output_cols.append(sector_col)
-    
+
     result = df_ranked[output_cols].copy()
-    
+
     return result

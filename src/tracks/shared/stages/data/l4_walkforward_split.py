@@ -2,8 +2,9 @@
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/data/l4_walkforward_split.py
 from __future__ import annotations
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 
 def _sanitize_panel(panel: pd.DataFrame, price_col: str | None = None):
     df = panel.copy()
@@ -51,10 +52,10 @@ def build_inner_cv_folds(
 ) -> pd.DataFrame:
     """
     [Stage 3] 내부 time-series CV folds 생성
-    
+
     train_start와 train_end 사이를 k개 fold로 나누되, embargo와 horizon을 고려하여
     각 fold의 validation 구간이 겹치지 않도록 구성.
-    
+
     Args:
         train_start: 학습 구간 시작일
         train_end: 학습 구간 종료일
@@ -62,58 +63,58 @@ def build_inner_cv_folds(
         embargo_days: embargo 일수
         horizon_days: horizon 일수
         dates: 전체 거래일 인덱스
-    
+
     Returns:
-        DataFrame with columns: inner_fold_id, inner_train_start, inner_train_end, 
+        DataFrame with columns: inner_fold_id, inner_train_start, inner_train_end,
                                inner_val_start, inner_val_end
     """
     # train 구간의 날짜 인덱스 찾기
     train_start_pos = int(dates.searchsorted(train_start, side="left"))
     train_end_pos = int(dates.searchsorted(train_end, side="right")) - 1
-    
+
     if train_end_pos <= train_start_pos:
-        return pd.DataFrame(columns=["inner_fold_id", "inner_train_start", "inner_train_end", 
+        return pd.DataFrame(columns=["inner_fold_id", "inner_train_start", "inner_train_end",
                                      "inner_val_start", "inner_val_end"])
-    
+
     # 사용 가능한 날짜 범위 계산 (embargo + horizon 고려)
     # validation 구간이 train_end 이후에 있어야 하므로, 마지막 validation 시작일은
     # train_end - embargo_days - horizon_days 이전이어야 함
     available_end_pos = train_end_pos - embargo_days - horizon_days
-    
+
     if available_end_pos <= train_start_pos:
         # 사용 가능한 구간이 없으면 빈 DataFrame 반환
-        return pd.DataFrame(columns=["inner_fold_id", "inner_train_start", "inner_train_end", 
+        return pd.DataFrame(columns=["inner_fold_id", "inner_train_start", "inner_train_end",
                                      "inner_val_start", "inner_val_end"])
-    
+
     # k개 fold로 나누기 (time-series이므로 순차적으로)
     # 각 fold의 validation 구간이 겹치지 않도록 구성
     total_available_days = available_end_pos - train_start_pos + 1
-    
+
     # 각 fold의 validation 구간 크기 (최소 1일)
     val_window_days = max(1, total_available_days // (k + 1))
-    
+
     inner_folds = []
-    
+
     for i in range(k):
         # validation 구간: 뒤에서부터 할당 (최신 데이터를 validation으로)
         val_start_pos = available_end_pos - (k - i) * val_window_days + 1
         val_end_pos = min(val_start_pos + val_window_days - 1, available_end_pos)
-        
+
         if val_start_pos < train_start_pos or val_end_pos < val_start_pos:
             continue
-        
+
         # train 구간: train_start부터 validation 시작 전까지 (embargo 고려)
         inner_train_end_pos = val_start_pos - embargo_days - horizon_days - 1
-        
+
         if inner_train_end_pos < train_start_pos:
             # train 구간이 너무 작으면 스킵
             continue
-        
+
         inner_train_start = dates[train_start_pos]
         inner_train_end = dates[inner_train_end_pos]
         inner_val_start = dates[val_start_pos]
         inner_val_end = dates[val_end_pos]
-        
+
         inner_folds.append({
             "inner_fold_id": f"inner_{i+1:02d}",
             "inner_train_start": inner_train_start,
@@ -121,7 +122,7 @@ def build_inner_cv_folds(
             "inner_val_start": inner_val_start,
             "inner_val_end": inner_val_end,
         })
-    
+
     return pd.DataFrame(inner_folds)
 
 def build_targets_and_folds(
@@ -169,15 +170,15 @@ def build_targets_and_folds(
         market_ret_short = df.groupby("date")[f"ret_fwd_{horizon_short}d"].mean()
         market_ret_long = df.groupby("date")[f"ret_fwd_{horizon_long}d"].mean()
         warnings.append("[Phase 5] Market-Neutral: 시장 수익률 계산 시 전체 종목 사용 (in_universe 없음)")
-    
+
     # 초과 수익률 계산 (타겟 변수로 사용)
     df[f"ret_fwd_{horizon_short}d_excess"] = df[f"ret_fwd_{horizon_short}d"] - df["date"].map(market_ret_short)
     df[f"ret_fwd_{horizon_long}d_excess"] = df[f"ret_fwd_{horizon_long}d"] - df["date"].map(market_ret_long)
-    
+
     # 시장 수익률 컬럼도 저장 (참고용)
     df["market_ret_20d"] = df["date"].map(market_ret_short)
     df["market_ret_120d"] = df["date"].map(market_ret_long)
-    
+
     # 초과 수익률 결측률 확인
     miss_s_excess = df[f"ret_fwd_{horizon_short}d_excess"].isna().mean()
     miss_l_excess = df[f"ret_fwd_{horizon_long}d_excess"].isna().mean()

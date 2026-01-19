@@ -1,6 +1,8 @@
-import pandas as pd
-import numpy as np
 from datetime import datetime, timedelta
+
+import numpy as np
+import pandas as pd
+
 
 def create_baseline2_ui_data():
     """Baseline2 기준 KOSPI200 TR vs 4전략 비교 데이터 생성"""

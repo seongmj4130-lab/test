@@ -14,14 +14,14 @@ src/extract_report_table.py
 """
 from __future__ import annotations
 
-import sys
+import inspect
 import re
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
-import inspect
 
 try:
     import yaml

@@ -1,8 +1,8 @@
 # KOSPI200 랭킹 엔진 (Track A) 기술 보고서
 
-**작성일**: 2026-01-07 (최종 업데이트)  
-**버전**: Phase 9 + 랭킹산정모델 최종 픽스 (2026-01-07)  
-**대상**: 사내 퀀트/ML 개발자, 리서처  
+**작성일**: 2026-01-07 (최종 업데이트)
+**버전**: Phase 9 + 랭킹산정모델 최종 픽스 (2026-01-07)
+**대상**: 사내 퀀트/ML 개발자, 리서처
 **관점**: 코드 기반, 실제 데이터 플로우 기반 설명
 
 ---
@@ -126,11 +126,11 @@ date        ym        ticker
 
 ### 2.2 L1: OHLCV 전처리 및 기술적 지표 계산
 
-**파일**: 
+**파일**:
 - `src/tracks/shared/stages/data/l1_ohlcv.py`
 - `src/tracks/shared/stages/data/l1_technical_features.py`
 
-**함수**: 
+**함수**:
 - `download_ohlcv_panel()` (OHLCV 다운로드)
 - `calculate_technical_features()` (기술적 지표 계산)
 
@@ -363,13 +363,13 @@ pos = start_pos
 while pos <= max_test_start:
     test_start_pos = pos
     test_end_pos = pos + (test_window_days - 1)
-    
+
     train_end_pos = test_start_pos - embargo_days - horizon_days - 1
     train_end = dates[train_end_pos]
     train_start_threshold = train_end - pd.DateOffset(years=train_years)
     train_start_pos = int(dates.searchsorted(train_start_threshold, side="left"))
     train_start = dates[train_start_pos]
-    
+
     folds.append({
         "fold_id": f"{segment}_{fold_i:04d}",
         "segment": segment,  # "dev" | "holdout"
@@ -507,25 +507,25 @@ for fold_spec in fold_specs:
     # 1. Train/Test 분할
     train_mask = (df["date"] >= fold_spec.train_start) & (df["date"] <= fold_spec.train_end)
     test_mask = (df["date"] >= fold_spec.test_start) & (df["date"] <= fold_spec.test_end)
-    
+
     train_data = df[train_mask].copy()
     test_data = df[test_mask].copy()
-    
+
     # 2. 타깃 변환 (cs_rank)
     y_train = _cs_rank_by_date(train_data, target_col, center=True)
     y_test = _cs_rank_by_date(test_data, target_col, center=True)
-    
+
     # 3. 피처 선택
     feature_cols = _pick_feature_cols(train_data, target_col=target_col, cfg=cfg, horizon=horizon)
     X_train = train_data[feature_cols]
     X_test = test_data[feature_cols]
-    
+
     # 4. 모델 학습
     pipe.fit(X_train, y_train)
-    
+
     # 5. OOS 예측
     y_pred = pipe.predict(X_test)
-    
+
     # 6. 결과 저장
     pred_df.append({
         "date": test_data["date"],
@@ -577,7 +577,7 @@ def _rank_ic(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 
 ## 5. 랭킹 산정 (L8, Score Engine)
 
-**파일**: 
+**파일**:
 - `src/tracks/track_a/stages/ranking/l8_dual_horizon.py` (단기/장기 랭킹 생성)
 - `src/components/ranking/score_engine.py` (스코어 계산 엔진)
 
@@ -881,8 +881,8 @@ l6r:
 
 ---
 
-**문서 버전**: Phase 9 + 랭킹산정모델 최종 픽스 (2026-01-07)  
-**최종 업데이트**: 
+**문서 버전**: Phase 9 + 랭킹산정모델 최종 픽스 (2026-01-07)
+**최종 업데이트**:
 - 뉴스 감성 피처 4개 추가 (단기 모델 18개→22개)
 - 투트랙 구조 반영 (Track A: 랭킹 엔진)
 - 코드 경로 업데이트 (`src/tracks/track_a/`)
@@ -900,4 +900,3 @@ l6r:
   - `min_feature_ic`: -0.1 (픽스)
   - 단기 News 피처 가중치: 0.10 (픽스)
   - 장기 News 피처 가중치: 0.03 (픽스)
-

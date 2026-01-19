@@ -1,5 +1,6 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 
 def clarify_returns_type():
     """수익률 타입(CAGR vs Total Return) 명확히 구분하여 설명"""

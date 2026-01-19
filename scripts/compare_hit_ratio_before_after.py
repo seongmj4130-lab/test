@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Hit Ratio 최적화 전후 비교"""
 
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 
 base_dir = Path(__file__).parent.parent
 backup_dir = base_dir / 'artifacts' / 'reports' / 'backup_before_weight_change'
@@ -27,7 +28,7 @@ print("="*80)
 for phase in ['dev', 'holdout']:
     b = before[before['phase'] == phase].iloc[0]
     a = after[after['phase'] == phase].iloc[0]
-    
+
     print(f"\n[{phase.upper()}]")
     print(f"  Hit Ratio: {b['net_hit_ratio']:.4f} → {a['net_hit_ratio']:.4f} ({a['net_hit_ratio'] - b['net_hit_ratio']:+.4f})")
     print(f"  Sharpe:    {b['net_sharpe']:.4f} → {a['net_sharpe']:.4f} ({a['net_sharpe'] - b['net_sharpe']:+.4f})")
@@ -69,4 +70,3 @@ elif overfitting_ok_after:
     print("\n⚠️ 과적합은 개선되었으나 Hit Ratio가 50% 미만입니다.")
 else:
     print("\n❌ 추가 최적화가 필요합니다.")
-

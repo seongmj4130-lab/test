@@ -212,11 +212,11 @@ def build_rebalance_scores(
     # 모델 예측값 집계
     ps1 = _agg_across_models(ps, score_col="y_pred")
     pl1 = _agg_across_models(pl, score_col="y_pred")
-    
+
     # 리밸런싱 날짜 선택 (fold의 test_end)
     ps2 = _pick_rebalance_rows_by_fold_end(ps1)
     pl2 = _pick_rebalance_rows_by_fold_end(pl1)
-    
+
     # 단기/장기 결합
     score_ens = weight_short * score_short + weight_long * score_long
 ```
@@ -234,11 +234,11 @@ def build_rebalance_scores_from_ranking(
         rebal_map = folds[["test_end", "phase"]]
     else:
         rebalance_dates = [all_dates[i] for i in range(0, len(all_dates), rebalance_interval)]
-    
+
     # 랭킹 점수 추출
     score_short = ranking_short_daily["score_total"]
     score_long = ranking_long_daily["score_total"]
-    
+
     # 단기/장기 결합 (α 가중치)
     score_ens = alpha_short * score_short + (1 - alpha_short) * score_long
 ```
@@ -343,4 +343,3 @@ L6R 산출물:
 **투트랙 구조**는 **랭킹 기반** 접근 방식으로, 피처 가중치로 계산한 랭킹 점수를 사용하여 투자 신호를 생성합니다.
 
 현재 프로젝트는 **투트랙 구조를 권장**하며, 레거시 파이프라인은 하위 호환성을 위해 유지됩니다.
-

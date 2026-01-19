@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/utils/quality.py
 from __future__ import annotations
+
 import pandas as pd
+
 
 def fundamental_coverage_report(df: pd.DataFrame) -> dict:
     """L3: 재무 머지 커버리지(행 기준)"""

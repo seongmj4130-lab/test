@@ -2,9 +2,10 @@
 """
 랭킹 데이터와 rebalance_scores의 날짜 분포 비교
 """
-import pandas as pd
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
 
 data_dir = Path("data/interim")
 
@@ -19,11 +20,11 @@ if ranking_short_path.exists():
     print(f"\nranking_short_daily:")
     print(f"  총 행 수: {len(df_short):,}")
     print(f"  날짜 수: {df_short['date'].nunique():,}")
-    
+
     # 날짜 간격 분석
     dates = sorted(df_short['date'].unique())
     if len(dates) > 1:
-        date_diffs = [(pd.to_datetime(dates[i+1]) - pd.to_datetime(dates[i])).days 
+        date_diffs = [(pd.to_datetime(dates[i+1]) - pd.to_datetime(dates[i])).days
                       for i in range(len(dates)-1)]
         print(f"  날짜 간격 통계:")
         print(f"    평균: {np.mean(date_diffs):.1f}일")
@@ -43,11 +44,11 @@ if ranking_long_path.exists():
     print(f"\nranking_long_daily:")
     print(f"  총 행 수: {len(df_long):,}")
     print(f"  날짜 수: {df_long['date'].nunique():,}")
-    
+
     # 날짜 간격 분석
     dates = sorted(df_long['date'].unique())
     if len(dates) > 1:
-        date_diffs = [(pd.to_datetime(dates[i+1]) - pd.to_datetime(dates[i])).days 
+        date_diffs = [(pd.to_datetime(dates[i+1]) - pd.to_datetime(dates[i])).days
                       for i in range(len(dates)-1)]
         print(f"  날짜 간격 통계:")
         print(f"    평균: {np.mean(date_diffs):.1f}일")
@@ -64,11 +65,11 @@ if rebalance_scores_path.exists():
     print(f"\nrebalance_scores_from_ranking:")
     print(f"  총 행 수: {len(df_scores):,}")
     print(f"  날짜 수: {df_scores['date'].nunique():,}")
-    
+
     # 날짜 간격 분석
     dates = sorted(df_scores['date'].unique())
     if len(dates) > 1:
-        date_diffs = [(pd.to_datetime(dates[i+1]) - pd.to_datetime(dates[i])).days 
+        date_diffs = [(pd.to_datetime(dates[i+1]) - pd.to_datetime(dates[i])).days
                       for i in range(len(dates)-1)]
         print(f"  날짜 간격 통계:")
         print(f"    평균: {np.mean(date_diffs):.1f}일")
@@ -78,7 +79,7 @@ if rebalance_scores_path.exists():
         print(f"  샘플 날짜 (처음 20개):")
         for d in dates[:20]:
             print(f"    {d}")
-    
+
     # ranking과 rebalance_scores의 날짜 비교
     if ranking_short_path.exists():
         ranking_dates = set(df_short['date'].unique())
@@ -102,7 +103,7 @@ if cv_folds_path.exists():
         test_ends = sorted(df_cv['test_end'].unique())
         print(f"  test_end 날짜 수: {len(test_ends):,}")
         if len(test_ends) > 1:
-            date_diffs = [(pd.to_datetime(test_ends[i+1]) - pd.to_datetime(test_ends[i])).days 
+            date_diffs = [(pd.to_datetime(test_ends[i+1]) - pd.to_datetime(test_ends[i])).days
                           for i in range(len(test_ends)-1)]
             print(f"  test_end 날짜 간격 통계:")
             print(f"    평균: {np.mean(date_diffs):.1f}일")
@@ -114,4 +115,3 @@ if cv_folds_path.exists():
                 print(f"    {d}")
 else:
     print("\ncv_folds_short 파일이 없습니다.")
-

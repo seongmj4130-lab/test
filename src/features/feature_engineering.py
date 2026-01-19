@@ -6,10 +6,12 @@
 모든 피쳐는 벡터화 구현으로 성능 최적화.
 """
 
+import warnings
+from typing import Dict, List, Optional
+
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional
-import warnings
+
 warnings.filterwarnings('ignore')
 
 

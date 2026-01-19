@@ -5,9 +5,12 @@ Track A 다중 실행 테스트 스크립트
 Track A 랭킹 생성을 3번 실행해서 결과를 비교
 """
 
-from src.tracks.track_a.ranking_service import generate_rankings
-import pandas as pd
 import time
+
+import pandas as pd
+
+from src.tracks.track_a.ranking_service import generate_rankings
+
 
 def run_track_a_multiple_times(times=3):
     """Track A를 여러 번 실행하고 결과를 수집"""

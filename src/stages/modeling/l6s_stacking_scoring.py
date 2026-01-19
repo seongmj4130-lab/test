@@ -22,9 +22,8 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
-
-from sklearn.linear_model import Ridge
 from sklearn.impute import SimpleImputer
+from sklearn.linear_model import Ridge
 from sklearn.pipeline import Pipeline
 
 
@@ -121,5 +120,3 @@ def build_stacked_rebalance_scores(
     }
 
     return out.sort_values(key).reset_index(drop=True), report, warns
-
-

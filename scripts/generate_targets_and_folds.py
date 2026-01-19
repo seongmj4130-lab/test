@@ -5,11 +5,12 @@ targets_and_folds.parquet 생성 스크립트
 L4 CV 분할 단계에서 필요한 targets_and_folds.parquet 파일을 생성합니다.
 """
 
-from pathlib import Path
-import pandas as pd
-import numpy as np
-from datetime import datetime
 import sys
+from datetime import datetime
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))

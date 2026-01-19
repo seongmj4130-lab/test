@@ -1,8 +1,8 @@
 # KOSPI200 투자 모델 (Track B) 기술 보고서
 
-**작성일**: 2026-01-07 (최종 업데이트)  
-**버전**: Phase 9 + 랭킹산정모델 최종 픽스 (2026-01-07)  
-**대상**: 퀀트 PM, 리스크/리서치, 백테스트 구현 엔지니어  
+**작성일**: 2026-01-07 (최종 업데이트)
+**버전**: Phase 9 + 랭킹산정모델 최종 픽스 (2026-01-07)
+**대상**: 퀀트 PM, 리스크/리서치, 백테스트 구현 엔지니어
 **관점**: 코드 기반, 실제 산출물 기준 설명
 
 ---
@@ -66,7 +66,7 @@ python scripts/inspect_tracka_holdout_day.py --date 2024-12-30 --topk 10 --horiz
 - `bt_metrics_{strategy}.parquet`: 성과 지표 (Dev/Holdout)
 - `bt_regime_metrics_{strategy}.parquet`: 국면별 성과 지표 (선택적)
 
-**코드 위치**: 
+**코드 위치**:
 - `src/tracks/track_b/stages/backtest/l7_backtest.py` (백테스트 실행)
 - `src/tracks/track_b/stages/modeling/l6r_ranking_scoring.py` (랭킹 스코어 변환)
 
@@ -175,7 +175,7 @@ pred_short, pred_long, metrics = train_oos_predictions(cfg, dataset_daily, cv_fo
 
 **파일**: `configs/config.yaml`
 
-**BT20 설정 섹션**: `l7_bt20_short`, `l7_bt20_ens`  
+**BT20 설정 섹션**: `l7_bt20_short`, `l7_bt20_ens`
 **BT120 설정 섹션**: `l7_bt120_long`, `l7_bt120_ens`
 
 ### 2.2 Phase 9 기준 파라미터 비교
@@ -215,7 +215,7 @@ pred_short, pred_long, metrics = train_oos_predictions(cfg, dataset_daily, cv_fo
 # Phase별로 그룹화
 for phase, dphase in df_sorted.groupby(phase_col, sort=False):
     rebalance_dates_all = sorted(dphase[date_col].unique())
-    
+
     # [rebalance_interval 개선] L6R에서 이미 필터링되었으므로 L7에서는 추가 필터링 건너뛰기
     rebalance_interval = int(cfg.rebalance_interval)
     if rebalance_interval > 1:
@@ -248,7 +248,7 @@ else:
 ```python
 # 매 N번째 리밸런싱만 선택 (0-indexed)
         rebalance_dates_filtered = [
-            rebalance_dates_all[i] 
+            rebalance_dates_all[i]
             for i in range(0, len(rebalance_dates_all), rebalance_interval)
         ]
         dphase = dphase[dphase[date_col].isin(rebalance_dates_filtered)].copy()
@@ -441,7 +441,7 @@ if method == "softmax":
 **BT20 설정**:
 - `softmax_temperature: 0.5` → 낮은 온도 = 상위 종목에 더 집중
 
-**효과**: 
+**효과**:
 - Temperature가 낮을수록 상위 종목에 가중치 집중
 - Temperature=0.5일 때 상위 1-2개 종목에 30-50% 가중치 집중 가능
 
@@ -765,7 +765,7 @@ gross_sharpe = float((np.mean(r_gross) / (np.std(r_gross, ddof=1) + 1e-12)) * np
 net_sharpe = float((np.mean(r_net) / (np.std(r_net, ddof=1) + 1e-12)) * np.sqrt(periods_per_year))
 ```
 
-**수식**: 
+**수식**:
 - `volatility_annual = std(returns) * sqrt(periods_per_year)`
 - `Sharpe = mean(returns) / std(returns) * sqrt(periods_per_year)`
 
@@ -859,7 +859,7 @@ net_profit_factor = _calculate_profit_factor(r_net)
 if len(bt_positions) > 0:
     phase_positions = bt_positions[bt_positions["phase"] == phase].copy()
     phase_positions = phase_positions.sort_values(["ticker", "date"])
-    
+
     durations = []
     for ticker, ticker_positions in phase_positions.groupby("ticker", sort=False):
         ticker_positions = ticker_positions.sort_values("date")
@@ -869,7 +869,7 @@ if len(bt_positions) > 0:
                 days_diff = pd.Timedelta(dates[i+1] - dates[i]).days
                 if days_diff <= cfg.holding_days * 2:  # 연속 보유
                     durations.append(days_diff)
-    
+
     if len(durations) > 0:
         avg_trade_duration = float(np.mean(durations))
 ```
@@ -939,11 +939,11 @@ if len(bt_positions) > 0:
   w = np.exp(x) / sum(np.exp(x))  # Softmax
   ```
 
-**Turnover 수준**: 
+**Turnover 수준**:
 - Phase 9 Step 2 기준: **55.55%** (목표 ≤ 500% 달성)
 - `rebalance_interval=1`이지만 스마트 버퍼링으로 완화
 
-**종목 수**: 
+**종목 수**:
 - `top_k=15` (국면별 조정 가능: Bull Strong=10, Bear=30)
 - `k_eff` (실제 선택 수) ≤ 15
 
@@ -1003,7 +1003,7 @@ if len(bt_positions) > 0:
 - 월별 평가 기준 평균 one-way turnover는 약 7% 수준(전략/구간별 상이)
 - 오버래핑 트랜치 구조는 “전체 자본이 한 번에 갈아타는” 형태를 피하므로 타이밍 리스크를 줄입니다
 
-**종목 수**: 
+**종목 수**:
 - `top_k=20` (국면별 조정 가능: Bull Strong=12, Bear=30)
 - `k_eff` (실제 선택 수) ≤ 20
 
@@ -1116,7 +1116,7 @@ if len(bt_positions) > 0:
 
 ---
 
-**문서 버전**: Phase 9 + 투트랙 구조 리팩토링 + Track B 최신 스냅샷 반영 (2026-01-07)  
+**문서 버전**: Phase 9 + 투트랙 구조 리팩토링 + Track B 최신 스냅샷 반영 (2026-01-07)
 **최종 업데이트**:
 - 거래비용 모델 정상화(턴오버 기반) 및 Alpha Quality 지표 산출 반영
 - BT120 오버래핑 트랜치(월별 4트랜치) 도입으로 Holdout 리밸런싱 표본 확보
@@ -1138,4 +1138,3 @@ if len(bt_positions) > 0:
   - 상세 리포트: `artifacts/reports/weighting_comparison_optimization_report.md`
 - 투트랙 구조 반영 (Track B: 투자 모델)
 - 코드 경로 업데이트 (`src/tracks/track_b/`)
-

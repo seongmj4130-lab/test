@@ -21,7 +21,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import Dict, Tuple, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 
@@ -29,11 +29,13 @@ ROOT = Path(__file__).resolve().parents[2]
 # scripts/* 패턴과 동일하게 프로젝트 루트를 sys.path에 추가
 sys.path.insert(0, str(ROOT))
 
-from src.utils.config import load_config  # noqa: E402
-from src.stages.modeling.l6r_ranking_scoring import run_L6R_ranking_scoring  # noqa: E402
-from src.stages.backtest.l7_backtest import BacktestConfig, run_backtest  # noqa: E402
 from src.stages.backtest.l1d_market_regime import build_market_regime  # noqa: E402
+from src.stages.backtest.l7_backtest import BacktestConfig, run_backtest  # noqa: E402
 from src.stages.backtest.l7c_benchmark import run_l7c_benchmark  # noqa: E402
+from src.stages.modeling.l6r_ranking_scoring import (  # noqa: E402
+    run_L6R_ranking_scoring,
+)
+from src.utils.config import load_config  # noqa: E402
 
 
 def _project_root() -> Path:
@@ -265,5 +267,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

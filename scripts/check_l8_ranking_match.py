@@ -33,11 +33,11 @@ if 'score_total_short' in merged_short.columns and 'score_total_l8' in merged_sh
         print(f'\nL6 score_total_short vs L8 Short score_total:')
         print(f'  상관계수: {corr:.4f}')
         print(f'  일치하는 종목 수: {len(valid)}/{len(merged_short)}')
-        
+
         # 완전 일치 여부
         exact_match = (valid['score_total_short'] == valid['score_total_l8']).sum()
         print(f'  완전 일치 종목 수: {exact_match}/{len(valid)}')
-        
+
         if exact_match == len(valid):
             print(f'  ✅ 완전 일치')
         else:
@@ -71,11 +71,11 @@ if 'score_total_long' in merged_long.columns and 'score_total_l8' in merged_long
         print(f'\nL6 score_total_long vs L8 Long score_total:')
         print(f'  상관계수: {corr:.4f}')
         print(f'  일치하는 종목 수: {len(valid)}/{len(merged_long)}')
-        
+
         # 완전 일치 여부
         exact_match = (valid['score_total_long'] == valid['score_total_l8']).sum()
         print(f'  완전 일치 종목 수: {exact_match}/{len(valid)}')
-        
+
         if exact_match == len(valid):
             print(f'  ✅ 완전 일치')
         else:
@@ -83,4 +83,3 @@ if 'score_total_long' in merged_long.columns and 'score_total_l8' in merged_long
             diff = (valid['score_total_long'] - valid['score_total_l8']).abs()
             print(f'  최대 차이: {diff.max():.6f}')
             print(f'  평균 차이: {diff.mean():.6f}')
-

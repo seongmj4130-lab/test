@@ -3,31 +3,32 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Set, Optional
 from pathlib import Path
+from typing import Dict, List, Optional, Set, Tuple
 
 import numpy as np
 import pandas as pd
-
-from sklearn.pipeline import Pipeline
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import Ridge
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import Ridge
 from sklearn.model_selection import GridSearchCV
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
 try:
     from xgboost import XGBRegressor
     XGBOOST_AVAILABLE = True
 except ImportError:
     XGBOOST_AVAILABLE = False
-from sklearn.metrics import r2_score
 import yaml
+from sklearn.metrics import r2_score
 
 # [Stage6] 피처 그룹 밸런싱 유틸리티
 from src.utils.feature_groups import (
-    load_feature_groups,
     calculate_feature_group_balance,
+    load_feature_groups,
 )
+
 
 @dataclass(frozen=True)
 class FoldSpec:
@@ -104,42 +105,43 @@ def _pick_feature_cols(df: pd.DataFrame, *, target_col: str, cfg: dict = None, h
         l5 = (cfg.get("l5", {}) if isinstance(cfg, dict) else {}) or {}
         feature_list_short = l5.get("feature_list_short")
         feature_list_long = l5.get("feature_list_long")
-        
+
         # horizon이 없으면 target_col에서 추론 시도
         if horizon is None:
             if "20d" in target_col.lower() or "short" in target_col.lower():
                 horizon = 20
             elif "120d" in target_col.lower() or "long" in target_col.lower():
                 horizon = 120
-        
+
         # 피처 고정 모드: YAML 파일에서 피처 리스트 읽기
         feature_list_path = None
         if horizon == 20 and feature_list_short:
             feature_list_path = feature_list_short
         elif horizon == 120 and feature_list_long:
             feature_list_path = feature_list_long
-        
+
         if feature_list_path:
-            import yaml
             import logging
+
+            import yaml
             logger = logging.getLogger(__name__)
-            
+
             try:
                 base_dir = Path(cfg.get("paths", {}).get("base_dir", "."))
                 feature_path = base_dir / feature_list_path
-                
+
                 if feature_path.exists():
                     with open(feature_path, 'r', encoding='utf-8') as f:
                         feature_config = yaml.safe_load(f) or {}
                         fixed_features = feature_config.get("features", [])
-                        
+
                         if not isinstance(fixed_features, list):
                             logger.warning(f"[Phase 6] feature_list format error: expected list, got {type(fixed_features)}")
                         else:
                             # df에 존재하는 피처만 필터링
                             available = [f for f in fixed_features if f in df.columns]
                             missing = [f for f in fixed_features if f not in df.columns]
-                            
+
                             if len(available) > 0:
                                 logger.info(f"[Phase 6] 피처 고정 모드: {len(available)}/{len(fixed_features)}개 피처 사용 (horizon={horizon})")
                                 if missing:
@@ -151,7 +153,7 @@ def _pick_feature_cols(df: pd.DataFrame, *, target_col: str, cfg: dict = None, h
                 import logging
                 logger = logging.getLogger(__name__)
                 logger.warning(f"[Phase 6] 피처 고정 모드 로드 실패: {e}. 기존 로직으로 fallback")
-    
+
     # [Phase 5 개선안] Market-Neutral: 초과 수익률 컬럼도 피처에서 제외
     exclude = {
         "date", "ticker",
@@ -170,7 +172,7 @@ def _pick_feature_cols(df: pd.DataFrame, *, target_col: str, cfg: dict = None, h
 
     if not cols:
         raise ValueError("No numeric feature columns found after excluding identifiers/targets.")
-    
+
     # [Phase 5 개선안] 피처 IC 필터링: IC 또는 Rank IC < min_feature_ic인 피처 제외
     # [Phase 6] IC 필터링은 피처 고정 모드가 없을 때만 적용
     if cfg is not None:
@@ -179,21 +181,21 @@ def _pick_feature_cols(df: pd.DataFrame, *, target_col: str, cfg: dict = None, h
         use_rank_ic = l5.get("use_rank_ic", False)  # [Phase 5 개선안] Rank IC 기준 필터링
         min_feature_ic = float(l5.get("min_feature_ic", 0.01))
         feature_ic_file = l5.get("feature_ic_file", "artifacts/reports/feature_ic_dev.csv")
-        
+
         if filter_by_ic:
             import logging
             logger = logging.getLogger(__name__)
-            
+
             # IC 파일 경로 계산
             base_dir = Path(cfg.get("paths", {}).get("base_dir", "."))
             ic_path = base_dir / feature_ic_file
-            
+
             if ic_path.exists():
                 try:
                     ic_df = pd.read_csv(ic_path)
                     logger.info(f"[Phase 5] Loading feature IC from {ic_path}")
                     logger.info(f"[Phase 5] Total features in IC file: {len(ic_df)}")
-                    
+
                     # [Phase 5 개선안] Rank IC 기준 필터링
                     if use_rank_ic:
                         ic_col = "rank_ic"
@@ -201,26 +203,26 @@ def _pick_feature_cols(df: pd.DataFrame, *, target_col: str, cfg: dict = None, h
                     else:
                         ic_col = "ic"
                         logger.info(f"[Phase 5] Using IC for filtering (IC < {min_feature_ic})")
-                    
+
                     # IC 또는 Rank IC < min_feature_ic인 피처 제외
                     if ic_col not in ic_df.columns:
                         logger.warning(f"[Phase 5] Column '{ic_col}' not found in IC file. Using 'ic' instead.")
                         ic_col = "ic"
-                    
+
                     bad_features = set(ic_df[ic_df[ic_col] < min_feature_ic]["feature"].tolist())
                     original_count = len(cols)
                     cols = [c for c in cols if c not in bad_features]
                     filtered_count = len(cols)
-                    
+
                     logger.info(f"[Phase 5] Feature filtering ({ic_col}): {original_count} -> {filtered_count} (removed {original_count - filtered_count} features with {ic_col} < {min_feature_ic})")
-                    
+
                     if filtered_count == 0:
                         raise ValueError(f"All features were filtered out! Check min_feature_ic={min_feature_ic} and feature_ic_file={feature_ic_file}")
                 except Exception as e:
                     logger.warning(f"[Phase 5] Failed to load/apply feature IC filter: {e}. Using all features.")
             else:
                 logger.warning(f"[Phase 5] Feature IC file not found: {ic_path}. IC filtering disabled. Run scripts/calculate_feature_ic.py first.")
-    
+
     return cols
 
 def _rank_ic(y_true: np.ndarray, y_pred: np.ndarray) -> float:
@@ -444,7 +446,7 @@ def _select_ridge_alpha_by_time_split(
     # [Alpha 튜닝 전략 개선] 복합 메트릭 사용: IC + Hit Ratio + Regularization 페널티
     tune_metric = str(l5.get("tune_metric", "ic_rank")).lower()
     use_composite_metric = tune_metric in ("composite", "ic_hit", "ic_penalty")
-    
+
     best_alpha: Optional[float] = None
     best_score: Optional[float] = None
     alpha_scores = []  # 디버깅용
@@ -462,16 +464,16 @@ def _select_ridge_alpha_by_time_split(
             model.fit(X_sub, y_sub)
             pred = model.predict(X_val).astype(np.float32)
             ic = _rank_ic(y_val_metric, pred)
-            
+
             # Hit Ratio 계산
             hit_ratio = float(np.mean(np.sign(y_val_metric) == np.sign(pred)))
-            
+
             # 복합 메트릭 계산
             if use_composite_metric:
                 # Regularization 페널티: Phase 2 기본값(1.0)에서 멀수록 페널티
                 penalty_weight = float(l5.get("alpha_penalty_weight", 0.1))
                 penalty = abs(np.log(alpha / 1.0)) * penalty_weight
-                
+
                 if tune_metric == "ic_hit":
                     # IC * Hit Ratio 조합
                     composite_score = ic * hit_ratio
@@ -481,14 +483,14 @@ def _select_ridge_alpha_by_time_split(
                 else:  # composite (기본)
                     # IC * Hit Ratio - Regularization 페널티
                     composite_score = ic * hit_ratio - penalty
-                
+
                 score = composite_score
             else:
                 # 기존 방식: IC만 사용
                 score = ic
-            
+
             alpha_scores.append({"alpha": alpha, "ic": ic, "hit_ratio": hit_ratio, "score": score})
-            
+
         except Exception as e:
             warns.append(f"[L5 alpha_tune] alpha={a} failed: {type(e).__name__}: {e}")
             continue
@@ -505,13 +507,13 @@ def _select_ridge_alpha_by_time_split(
     best_ic = next((s["ic"] for s in alpha_scores if s["alpha"] == best_alpha), None)
     metric_name = tune_metric if use_composite_metric else "ic_rank"
     warns.append(f"[L5 alpha_tune] selected alpha={best_alpha} (val_{metric_name}={best_score:.4f}, val_ic_rank={best_ic:.4f}, horizon={horizon})")
-    
+
     # 상위 3개 alpha 로깅 (디버깅용)
     if len(alpha_scores) > 0:
         top3 = sorted(alpha_scores, key=lambda x: x["score"], reverse=True)[:3]
         top3_str = ", ".join([f"α={s['alpha']:.1f}(score={s['score']:.4f})" for s in top3])
         warns.append(f"[L5 alpha_tune] top 3 alphas: {top3_str}")
-    
+
     return best_alpha, best_ic, warns
 
 def _slice_by_date_sorted(df: pd.DataFrame, date_arr: np.ndarray, start: pd.Timestamp, end: pd.Timestamp) -> pd.DataFrame:
@@ -552,11 +554,11 @@ def train_oos_predictions(
     # [Phase 6] horizon 정보를 _pick_feature_cols에 전달
     feature_cols = _pick_feature_cols(df, target_col=target_col, cfg=cfg, horizon=horizon)
     fold_specs_all = _standardize_folds(cv_folds)
-    
+
     # [피쳐 가중치 적용] 피쳐별 가중치 로드 (horizon별)
     feature_weights = None
     l5_cfg = _get_l5_cfg(cfg)
-    
+
     # horizon에 따라 다른 가중치 파일 사용
     if horizon == 20:
         feature_weights_config = l5_cfg.get("feature_weights_config_short")
@@ -564,12 +566,12 @@ def train_oos_predictions(
         feature_weights_config = l5_cfg.get("feature_weights_config_long")
     else:
         feature_weights_config = l5_cfg.get("feature_weights_config")
-    
+
     if feature_weights_config:
         try:
             base_dir = Path(cfg.get("paths", {}).get("base_dir", "."))
             weights_path = base_dir / feature_weights_config
-            
+
             if weights_path.exists():
                 with open(weights_path, 'r', encoding='utf-8') as f:
                     weights_data = yaml.safe_load(f) or {}
@@ -582,7 +584,7 @@ def train_oos_predictions(
 
     l5_cfg = _get_l5_cfg(cfg)
     export_feature_importance = bool(l5_cfg.get("export_feature_importance", False))
-    
+
     # [원래 상태로 복원] dev/holdout 구분 없이 모든 fold에서 동일하게 학습
     fold_specs = fold_specs_all  # dev/holdout 구분 없이 원래 순서대로 처리
 
@@ -853,7 +855,7 @@ def train_oos_predictions(
     if export_feature_importance and interim_dir is not None and coef_rows:
         coef_df = pd.DataFrame(coef_rows)
         coef_path = interim_dir / "model_coefs.parquet"
-        
+
         # 기존 파일이 있으면 병합 (누적 저장)
         if coef_path.exists():
             existing_coef = pd.read_parquet(coef_path)
@@ -862,10 +864,10 @@ def train_oos_predictions(
             coef_df = pd.concat([existing_coef, coef_df]).drop_duplicates(
                 subset=merge_keys, keep="last"
             ).reset_index(drop=True)
-        
+
         coef_df.to_parquet(coef_path, index=False)
         warns.append(f"[L5 Stage2] Model coefficients saved: {coef_path}")
-        
+
         # 집계 리포트 생성
         summary_rows = []
         for (h, ph), group in coef_df.groupby(["horizon", "phase"]):
@@ -873,13 +875,13 @@ def train_oos_predictions(
                 feat_group = group[group["feature"] == feature]
                 coef_values = feat_group["coef"].values
                 abs_coef_values = feat_group["abs_coef"].values
-                
+
                 # 부호 일치율 계산 (양수/음수 비율)
                 positive_count = (coef_values > 0).sum()
                 negative_count = (coef_values < 0).sum()
                 total_count = len(coef_values)
                 sign_stability = max(positive_count, negative_count) / total_count if total_count > 0 else np.nan
-                
+
                 summary_rows.append({
                     "horizon": int(h),
                     "phase": ph,
@@ -892,19 +894,19 @@ def train_oos_predictions(
                     "coef_sign_stability": float(sign_stability),
                     "n_folds": int(total_count),
                 })
-        
+
         if summary_rows:
             summary_df = pd.DataFrame(summary_rows)
             summary_path = interim_dir / "feature_importance_summary.parquet"
             summary_df.to_parquet(summary_path, index=False)
             warns.append(f"[L5 Stage2] Feature importance summary saved: {summary_path}")
-    
+
     # [원래 상태로 복원] Alpha 튜닝 비활성화로 인해 검증 로직 제거
-    
+
     # [Stage6] 피처 그룹 밸런싱 계산 및 저장
     try:
         feature_groups_config = load_feature_groups()
-        
+
         # 피처 중요도 추출 (coef_rows에서)
         feature_importance = {}
         if coef_rows:
@@ -913,20 +915,20 @@ def train_oos_predictions(
             for feature in coef_df_temp["feature"].unique():
                 feat_coefs = coef_df_temp[coef_df_temp["feature"] == feature]["abs_coef"].values
                 feature_importance[feature] = float(np.mean(feat_coefs)) if len(feat_coefs) > 0 else 0.0
-        
+
         # 그룹 밸런싱 계산
         balance_df = calculate_feature_group_balance(
             feature_cols=feature_cols,
             feature_importance=feature_importance if feature_importance else None,
             config=feature_groups_config,
         )
-        
+
         # feature_group_balance.parquet 저장
         if interim_dir is not None:
             balance_path = interim_dir / "feature_group_balance.parquet"
             balance_df.to_parquet(balance_path, index=False)
             warns.append(f"[Stage6] 피처 그룹 밸런싱 저장: {balance_path} ({len(balance_df)} groups)")
-            
+
             # 리포트에 그룹 밸런싱 정보 추가
             report["feature_groups_total"] = len(balance_df)
             report["feature_groups_balanced"] = int((balance_df["balance_ratio"] > 0.5).sum())
@@ -937,5 +939,5 @@ def train_oos_predictions(
         warns.append(f"[Stage6] 피처 그룹 밸런싱 계산/저장 실패: {e}")
         import traceback
         warns.append(f"[Stage6] 트레이스백: {traceback.format_exc()}")
-    
+
     return pred_oos, metrics_df, report, warns

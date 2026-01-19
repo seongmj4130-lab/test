@@ -1,7 +1,9 @@
-import pandas as pd
-import numpy as np
 import os
 from datetime import datetime
+
+import numpy as np
+import pandas as pd
+
 
 def analyze_topk_change_impact():
     """top_k=20 변경이 성과에 미치는 영향 분석"""

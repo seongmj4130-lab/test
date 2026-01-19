@@ -126,14 +126,14 @@ except FileNotFoundError:
 def get_volatility_scale(prices, window=60):
     """
     [개선안 2번] 변동성 기반 포지션 스케일 계산
-    
+
     Args:
         prices: 시장 가격 시계열
         window: 변동성 계산 기간 (기본 60일)
-    
+
     Returns:
         scale: 포지션 곱하기 팩터 (0.5~1.5)
-    
+
     Example:
         scale = get_volatility_scale(market_prices)
         positions *= scale
@@ -160,13 +160,13 @@ def get_volatility_scale(prices, window=60):
 def test_volatility_targeting():
     # Given
     prices = generate_mock_prices(vol=0.15) # 15% 변동성
-    
+
     # When
     scale = get_volatility_scale(prices)
-    
+
     # Then
     assert 0.9 <= scale <= 1.1  # 안정적
-    
+
     # 고변동성 테스트
     prices_high = generate_mock_prices(vol=0.30)
     scale_high = get_volatility_scale(prices_high)
@@ -279,11 +279,11 @@ l7: # 백테스트
 단계:
 1. config.yaml에서:
    - l7.cost_bps: 0.0 → 10.0 변경
-   
+
 2. src/stages/l7_backtest.py에서:
    - cost_bps를 포트폴리오 비용 계산에 반영
    - 예: daily_cost = position_value * cost_bps / 10000
-   
+
 3. 변경 후:
    - 전체 시뮬레이션 재실행 (python src/run_backtest.py)
    - 성과 개선도 비교 테이블 생성
@@ -312,15 +312,15 @@ l7: # 백테스트
    - 입력: 시장 가격 시계열 (window=60일)
    - 출력: 포지션 스케일 팩터 (0.5~1.5)
    - 공식: target_vol (15%) / current_vol
-   
+
 2. l7_backtest.py에서:
    - 매일 변동성 계산
    - positions *= vol_scale
-   
+
 3. 테스트:
    - 고변동성 기간 (VIX>30): scale < 1.0 (축소)
    - 저변동성 기간 (VIX<15): scale ≥ 1.0 (정상/확대)
-   
+
 기대 효과:
 - Sharpe: 0.55 → 0.65 (+18%)
 - MDD: -10.17% → -9.17%
@@ -336,10 +336,10 @@ l7: # 백테스트
 구현:
 1. config.yaml에 추가:
    slippage_bps: 5.0  # 추가 5bp의 시장임팩트
-   
+
 2. l7_backtest.py에서:
    total_cost_bps = cost_bps + slippage_bps
-   
+
 3. 거래량 기반 동적 조정 (선택):
    - if daily_turnover > 5%: slippage 1.5배
    - if daily_turnover < 1%: slippage 0.5배
@@ -364,14 +364,14 @@ Long/Short 전략 구현:
    l6:
      weight_short: 1.0   # 유지
      weight_long: 0.5    # 0.0 → 0.5로 변경 (50/50 가중치)
-   
+
    l7:
      top_k: 20 → 10로 변경 (상위 10개 롱, 하위 10개 숏)
    ```
 
 2. src/stages/l6_scoring.py에서:
    score_ens = weight_long * score_long + weight_short * score_short
-   
+
 3. src/stages/l7_backtest.py에서:
    - rank 상위 10: positions = +1.0/10 (롱)
    - rank 하위 10: positions = -1.0/10 (숏)
@@ -401,16 +401,16 @@ Long/Short 전략 구현:
 추가 피처 목록:
 1. momentum_3m: 3개월 모멘텀 (추세강도)
    = (현재가 - 90일전) / 90일전 * 100
-   
+
 2. momentum_6m: 6개월 모멘텀
    = (현재가 - 180일전) / 180일전 * 100
-   
+
 3. per: PER (가치 여부)
    = 시가총액 / 순이익
-   
+
 4. pbr: PBR
    = 시가총액 / 순자산
-   
+
 5. volatility_60d: 60일 변동성
    = std(수익률) * sqrt(252)
 
@@ -418,11 +418,11 @@ Long/Short 전략 구현:
 1. src/stages/l0_universe.py 또는 l1_ohlcv.py:
    - 5개 피처 계산 로직 추가 (50줄)
    - NaN 처리: median impute
-   
+
 2. src/stages/l5_train_models.py:
    - _pick_feature_cols() 자동으로 16개 감지
    - 변경 불필요 (이미 동적)
-   
+
 3. 전체 CV 재실행:
    - python src/run_all.py (시간 오래)
    - 또는 L0~L5만 재실행

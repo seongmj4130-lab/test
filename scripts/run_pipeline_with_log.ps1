@@ -4,10 +4,10 @@
 param(
     [Parameter(Mandatory=$false)]
     [string]$FromStage = "L5",
-    
+
     [Parameter(Mandatory=$false)]
     [string]$ToStage = "L7",
-    
+
     [Parameter(Mandatory=$false)]
     [string]$Config = "configs/config.yaml"
 )
@@ -48,8 +48,3 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "파이프라인 실행 완료" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "로그 파일: $logFile" -ForegroundColor Yellow
-
-
-
-
-

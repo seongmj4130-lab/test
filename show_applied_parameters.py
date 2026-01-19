@@ -1,5 +1,7 @@
-import yaml
 import os
+
+import yaml
+
 
 def show_applied_parameters():
     """실제 적용된 Track A와 Track B 파라미터들을 보여줌"""

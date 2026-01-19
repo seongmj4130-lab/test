@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """결과값의 시점과 설정 확인"""
-import pandas as pd
 import os
 from datetime import datetime
+
+import pandas as pd
 
 strategies = ['bt20_ens', 'bt20_short', 'bt120_ens', 'bt120_long']
 print('=' * 100)
@@ -22,27 +23,27 @@ for s in strategies:
     if os.path.exists(file_path):
         df = pd.read_parquet(file_path)
         holdout = df[df['phase'] == 'holdout']
-        
+
         if len(holdout) > 0:
             h = holdout.iloc[0]
             mtime = os.path.getmtime(file_path)
             mtime_str = datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M:%S')
-            
+
             print(f'\n[{s}]')
             print(f'  파일 수정 시간: {mtime_str}')
             print(f'  저장된 값: Sharpe={h["net_sharpe"]:.4f}, CAGR={h["net_cagr"]:.4%}, MDD={h["net_mdd"]:.4%}')
             print(f'  문서 기대값: Sharpe={expected[s]["sharpe"]:.4f}, CAGR={expected[s]["cagr"]:.4%}, MDD={expected[s]["mdd"]:.4%}')
-            
+
             # 값 비교
             sharpe_match = abs(h["net_sharpe"] - expected[s]["sharpe"]) < 0.0001
             cagr_match = abs(h["net_cagr"] - expected[s]["cagr"]) < 0.0001
-            
+
             if sharpe_match and cagr_match:
                 print(f'  ✅ 저장된 값과 문서 기대값 일치')
             else:
                 print(f'  ⚠️ 저장된 값과 문서 기대값 불일치')
                 print(f'    차이: Sharpe {abs(h["net_sharpe"] - expected[s]["sharpe"]):.4f}, CAGR {abs(h["net_cagr"] - expected[s]["cagr"]):.4%}')
-            
+
             # 설정값 확인
             print(f'\n  실제 사용된 설정:')
             print(f'    top_k: {h["top_k"]}')

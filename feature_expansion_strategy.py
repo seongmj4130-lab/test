@@ -3,9 +3,11 @@
 피처 엔지니어링 강화 전략: 현재 11개 → 20~30개 확장
 """
 
-import pandas as pd
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
 
 def analyze_current_features():
     """현재 피처 분석"""

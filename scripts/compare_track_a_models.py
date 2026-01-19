@@ -6,9 +6,10 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Dict, Optional
+
 import pandas as pd
 import yaml
-from typing import Dict, Optional
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -19,7 +20,7 @@ results = {}
 # 각 모델별 최신 파일 찾기
 models = {
     'grid_short': 'feature_groups_short_optimized_grid_*.yaml',
-    'grid_long': 'feature_groups_long_optimized_grid_*.yaml', 
+    'grid_long': 'feature_groups_long_optimized_grid_*.yaml',
     'ridge_short': 'feature_weights_short_ridge_*.yaml',
     'ridge_long': 'feature_weights_long_rf_*.yaml',
     'xgboost_short': 'feature_weights_short_xgboost_*.yaml',
@@ -36,7 +37,7 @@ for model_key, pattern in models.items():
             with open(latest_file, 'r', encoding='utf-8') as f:
                 config = yaml.safe_load(f)
                 metadata = config.get('metadata', {})
-                
+
                 # Dev 구간 지표 (여러 키 이름 지원)
                 results[model_key] = {
                     'dev_hit_ratio': metadata.get('dev_hit_ratio') or metadata.get('hit_ratio'),
@@ -48,7 +49,7 @@ for model_key, pattern in models.items():
                     'holdout_icir': metadata.get('holdout_icir'),
                     'holdout_objective': metadata.get('holdout_objective_score')
                 }
-                
+
                 # 보고서에서 확인된 추가 Holdout 데이터 (YAML에 없는 경우)
                 # Grid Search Holdout 데이터 (dev_holdout_final_comparison 보고서 기준)
                 if model_key == 'grid_short':
@@ -61,7 +62,7 @@ for model_key, pattern in models.items():
                         results[model_key]['holdout_hit_ratio'] = 0.4890
                         results[model_key]['holdout_ic_mean'] = 0.0257
                         results[model_key]['holdout_icir'] = 0.1831
-                
+
                 # Ridge Holdout 데이터 (보고서 기준 - IC Rank를 IC Mean으로 근사)
                 # 실제로는 IC Rank이지만 비교를 위해 포함
                 if model_key == 'ridge_short':

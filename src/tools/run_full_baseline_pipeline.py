@@ -14,7 +14,7 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 import yaml
@@ -23,7 +23,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
-from src.utils.config import load_config, get_path
+from src.utils.config import get_path, load_config
 from src.utils.io import artifact_exists, load_artifact
 
 logging.basicConfig(
@@ -96,19 +96,19 @@ class RunStatus:
         self.last_log_file = None
         self.validation_summary: List[Dict[str, Any]] = []
         self.file_pointers: List[str] = []
-        
+
         self.logs_dir = root / "logs" / run_tag
         self.reports_dir = root / "reports" / run_tag
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         self.reports_dir.mkdir(parents=True, exist_ok=True)
-        
-    def update_stage(self, stage: str, status: str, start_time: Optional[datetime] = None, 
+
+    def update_stage(self, stage: str, status: str, start_time: Optional[datetime] = None,
                      end_time: Optional[datetime] = None, exit_code: Optional[int] = None,
                      log_file: Optional[str] = None, cmd: Optional[str] = None):
         """단계 상태 업데이트"""
         if stage not in self.stage_status:
             self.stage_status[stage] = {}
-        
+
         self.stage_status[stage].update({
             "status": status,  # "PENDING", "RUNNING", "DONE", "FAIL"
             "start_time": start_time.isoformat() if start_time else None,
@@ -117,7 +117,7 @@ class RunStatus:
             "log_file": log_file,
             "cmd": cmd,
         })
-        
+
         self.current_stage = stage
         self.last_update = datetime.now().isoformat()
         if exit_code is not None:
@@ -126,7 +126,7 @@ class RunStatus:
             self.last_log_file = log_file
         if cmd:
             self.last_cmd = cmd
-            
+
     def add_validation(self, stage: str, output_name: str, status: str, checks: str, notes: str = ""):
         """검증 결과 추가"""
         self.validation_summary.append({
@@ -136,12 +136,12 @@ class RunStatus:
             "checks": checks,
             "notes": notes,
         })
-        
+
     def add_file_pointer(self, path: str):
         """파일 포인터 추가"""
         if path not in self.file_pointers:
             self.file_pointers.append(path)
-            
+
     def save_markdown(self, path: Path):
         """RUN_STATUS.md 저장"""
         lines = [
@@ -156,7 +156,7 @@ class RunStatus:
             "",
             "## Stage Progress",
         ]
-        
+
         for stage in STAGES:
             status_info = self.stage_status.get(stage, {})
             status = status_info.get("status", "PENDING")
@@ -170,7 +170,7 @@ class RunStatus:
                 lines.append(f"  - exit_code: {status_info['exit_code']}")
             if status_info.get("log_file"):
                 lines.append(f"  - 로그: {status_info['log_file']}")
-        
+
         lines.extend([
             "",
             "## Latest Status (auto-updated)",
@@ -184,20 +184,20 @@ class RunStatus:
             "| stage | output | status | key_checks | notes |",
             "|---|---|---|---|---|",
         ])
-        
+
         for v in self.validation_summary:
             lines.append(f"| {v['stage']} | {v['output']} | {v['status']} | {v['checks']} | {v['notes']} |")
-        
+
         lines.extend([
             "",
             "## File Pointers (found)",
         ])
-        
+
         for fp in self.file_pointers:
             lines.append(f"- {fp} (exists)")
-        
+
         path.write_text("\n".join(lines), encoding="utf-8")
-        
+
     def save_json(self, path: Path):
         """run_status.json 저장"""
         data = {
@@ -222,36 +222,36 @@ class RunStatus:
 # =========================
 # 검증 함수
 # =========================
-def validate_stage_output(stage: str, output_name: str, interim_dir: Path, 
+def validate_stage_output(stage: str, output_name: str, interim_dir: Path,
                          status: RunStatus) -> Tuple[str, str, str]:
     """
     단계별 산출물 검증
     Returns: (status, checks, notes)
     """
     output_base = interim_dir / output_name
-    
+
     # 파일 존재 여부 확인
     if not artifact_exists(output_base):
         status.add_file_pointer(str(output_base) + " (NOT FOUND)")
         return "FAIL", "파일 없음", f"{output_name} 산출물이 없습니다"
-    
+
     status.add_file_pointer(str(output_base))
-    
+
     try:
         df = load_artifact(output_base)
-        
+
         # 기본 체크
         checks = []
         notes = []
-        
+
         # 행/열 수 확인
         n_rows = len(df)
         n_cols = len(df.columns)
         checks.append(f"rows={n_rows}, cols={n_cols}")
-        
+
         if n_rows == 0:
             return "FAIL", ", ".join(checks), "행이 0개입니다"
-        
+
         # 필수 컬럼 확인
         required_cols = REQUIRED_COLS_BY_OUTPUT.get(output_name, [])
         if required_cols:
@@ -259,7 +259,7 @@ def validate_stage_output(stage: str, output_name: str, interim_dir: Path,
             if missing_cols:
                 notes.append(f"필수 컬럼 누락: {missing_cols}")
                 return "WARN", ", ".join(checks), "; ".join(notes)
-        
+
         # L7 특수 검증
         if stage == "L7" and output_name == "bt_returns":
             if "net_return" in df.columns:
@@ -267,34 +267,34 @@ def validate_stage_output(stage: str, output_name: str, interim_dir: Path,
                 if min_ret <= -1.0:
                     notes.append(f"최소 수익률이 -100% 이하: {min_ret:.2%}")
                     return "FAIL", ", ".join(checks), "; ".join(notes)
-                
+
                 # 비용 적용 여부 확인
                 if "gross_return" in df.columns and "net_return" in df.columns:
                     if (df["gross_return"] == df["net_return"]).all():
                         notes.append("gross==net (비용 미적용 가능성)")
                         return "WARN", ", ".join(checks), "; ".join(notes)
-        
+
         return "PASS", ", ".join(checks), "; ".join(notes) if notes else "OK"
-        
+
     except Exception as e:
         return "FAIL", "로드 실패", str(e)
 
 # =========================
 # 단계 실행
 # =========================
-def run_stage(stage: str, config_path: Path, root: Path, status: RunStatus, 
+def run_stage(stage: str, config_path: Path, root: Path, status: RunStatus,
               force: bool = False) -> Tuple[bool, Optional[str]]:
     """
     단계 실행
     Returns: (success, log_file_path)
     """
     logger.info(f"{'='*20} START {stage} {'='*20}")
-    
+
     start_time = datetime.now()
     status.update_stage(stage, "RUNNING", start_time=start_time)
-    
+
     log_file = status.logs_dir / f"{stage}.log"
-    
+
     # run_all.py 실행 명령 구성 (단일 스테이지 실행)
     cmd_parts = [
         sys.executable,
@@ -303,19 +303,19 @@ def run_stage(stage: str, config_path: Path, root: Path, status: RunStatus,
         "--stage", stage,
         "--run-tag", status.run_tag,
     ]
-    
+
     if force:
         cmd_parts.append("--force")
-    
+
     # strict-params는 L7에서만 적용
     if stage == "L7" and hasattr(status, 'strict_params') and status.strict_params:
         cmd_parts.append("--strict-params")
-    
+
     cmd = " ".join(cmd_parts)
     status.update_stage(stage, "RUNNING", start_time=start_time, cmd=cmd, log_file=str(log_file))
     status.save_markdown(root / "RUN_STATUS.md")
     status.save_json(status.logs_dir / "run_status.json")
-    
+
     # 실행
     try:
         with log_file.open("w", encoding="utf-8") as f:
@@ -326,12 +326,12 @@ def run_stage(stage: str, config_path: Path, root: Path, status: RunStatus,
                 stderr=subprocess.STDOUT,
                 text=True,
             )
-        
+
         end_time = datetime.now()
         exit_code = result.returncode
-        
+
         if exit_code == 0:
-            status.update_stage(stage, "DONE", start_time=start_time, end_time=end_time, 
+            status.update_stage(stage, "DONE", start_time=start_time, end_time=end_time,
                               exit_code=exit_code, log_file=str(log_file), cmd=cmd)
             logger.info(f"{'='*20} END {stage} (OK) {'='*20}")
             return True, str(log_file)
@@ -340,7 +340,7 @@ def run_stage(stage: str, config_path: Path, root: Path, status: RunStatus,
                               exit_code=exit_code, log_file=str(log_file), cmd=cmd)
             logger.error(f"{'='*20} END {stage} (FAIL, exit_code={exit_code}) {'='*20}")
             return False, str(log_file)
-            
+
     except Exception as e:
         end_time = datetime.now()
         status.update_stage(stage, "FAIL", start_time=start_time, end_time=end_time,
@@ -357,7 +357,7 @@ def main():
     parser.add_argument("--run-tag", type=str, default=None)
     parser.add_argument("--baseline-tag", type=str, default="baseline_prerefresh_20251219_143636",
                        help="Baseline tag for Delta report comparison")
-    parser.add_argument("--baseline-source", type=str, 
+    parser.add_argument("--baseline-source", type=str,
                        default="data/snapshots/baseline_after_L7BCD")
     parser.add_argument("--from", dest="from_stage", type=str, default=None)
     parser.add_argument("--to", dest="to_stage", type=str, default=None)
@@ -366,20 +366,20 @@ def main():
     parser.add_argument("--strict-params", action="store_true",
                        help="Fail pipeline if config parameters don't match actual usage")
     args = parser.parse_args()
-    
+
     root = Path(__file__).resolve().parents[2]
     config_path = root / args.config
-    
+
     if not config_path.exists():
         logger.error(f"Config not found: {config_path}")
         sys.exit(1)
-    
+
     # run_tag 생성
     if args.run_tag:
         run_tag = args.run_tag
     else:
         run_tag = f"baseline_prerefresh_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    
+
     # RunStatus 초기화
     status = RunStatus(
         run_tag=run_tag,
@@ -388,33 +388,33 @@ def main():
         baseline_source=args.baseline_source,
     )
     status.strict_params = args.strict_params  # strict-params 플래그 저장
-    
+
     # 초기 RUN_STATUS.md 생성
     status.save_markdown(root / "RUN_STATUS.md")
     status.save_json(status.logs_dir / "run_status.json")
-    
+
     logger.info("=== BASELINE FULL RUN ORCHESTRATOR ===")
     logger.info(f"RUN_TAG: {run_tag}")
     logger.info(f"ROOT: {root}")
     logger.info(f"CONFIG: {config_path}")
     logger.info(f"BASELINE_SOURCE: {args.baseline_source}")
     logger.info(f"STAGES: {STAGES}")
-    
+
     if args.dry_run:
         logger.info("[DRY-RUN] Skipping actual execution.")
         return
-    
+
     # 설정 로드
     cfg = load_config(str(config_path))
     interim_dir = get_path(cfg, "data_interim")
-    
+
     # 단계별 실행
     target_stages = STAGES
     if args.from_stage and args.to_stage:
         start_idx = STAGES.index(args.from_stage.upper())
         end_idx = STAGES.index(args.to_stage.upper())
         target_stages = STAGES[start_idx:end_idx + 1]
-    
+
     for stage in target_stages:
         # 단계 실행
         success, log_file = run_stage(
@@ -424,7 +424,7 @@ def main():
             status=status,
             force=args.force,
         )
-        
+
         # 검증 수행
         if success:
             outputs = STAGE_OUTPUTS.get(stage, [])
@@ -436,37 +436,37 @@ def main():
                     status=status,
                 )
                 status.add_validation(stage, output_name, v_status, v_checks, v_notes)
-        
+
         # 진행도 저장
         status.save_markdown(root / "RUN_STATUS.md")
         status.save_json(status.logs_dir / "run_status.json")
-        
+
         # 실패 시 중단
         if not success:
             logger.error(f"Pipeline stopped at {stage}. Check logs: {log_file}")
             sys.exit(1)
-    
+
     # 최종 리포트 생성
     logger.info("Generating final reports...")
     generate_summary_report(status, root, interim_dir)
     generate_validation_table(status, root)
-    
+
     # Manifest 생성
     logger.info("Generating manifest...")
     generate_manifest(status, root, args.config, interim_dir)
-    
+
     # KPI 테이블 생성
     logger.info("Generating KPI table...")
     generate_kpi_table(status, root, args.config)
-    
+
     # Delta 보고서 생성 (베이스라인과 비교)
     logger.info("Generating Delta report...")
     generate_delta_report(status, root, args.baseline_tag)
-    
+
     # Audit 리포트 생성
     logger.info("Generating audit report...")
     generate_audit_report(status, root)
-    
+
     # 최종 보고서 경로 출력
     logger.info("\n=== FINAL REPORTS ===")
     report_paths = {
@@ -478,20 +478,20 @@ def main():
         "audit_json": f"reports/audit/audit__{status.run_tag}.json",
         "audit_md": f"reports/audit/audit__{status.run_tag}.md",
     }
-    
+
     for name, path in report_paths.items():
         full_path = root / path
         if full_path.exists():
             logger.info(f"✅ {name}: {path}")
         else:
             logger.warning(f"⚠️ {name}: {path} (not found)")
-    
+
     logger.info("=== PIPELINE COMPLETED SUCCESSFULLY ===")
 
 def generate_summary_report(status: RunStatus, root: Path, interim_dir: Path):
     """최종 요약 리포트 생성"""
     report_path = status.reports_dir / "SUMMARY.md"
-    
+
     lines = [
         "# Baseline Full Run Summary",
         f"- Run Tag: {status.run_tag}",
@@ -503,53 +503,53 @@ def generate_summary_report(status: RunStatus, root: Path, interim_dir: Path):
         "| Stage | Status | Start Time | End Time | Exit Code |",
         "|---|---|---|---|---|",
     ]
-    
+
     for stage in STAGES:
         info = status.stage_status.get(stage, {})
         lines.append(f"| {stage} | {info.get('status', 'N/A')} | "
                     f"{info.get('start_time', 'N/A')} | "
                     f"{info.get('end_time', 'N/A')} | "
                     f"{info.get('exit_code', 'N/A')} |")
-    
+
     lines.extend([
         "",
         "## Key Artifacts",
     ])
-    
+
     for fp in status.file_pointers:
         if "NOT FOUND" not in fp:
             lines.append(f"- `{fp}`")
-    
+
     report_path.write_text("\n".join(lines), encoding="utf-8")
     logger.info(f"Summary report saved: {report_path}")
 
 def generate_validation_table(status: RunStatus, root: Path):
     """검증 테이블 리포트 생성"""
     report_path = status.reports_dir / "VALIDATION_TABLE.md"
-    
+
     lines = [
         "# Validation Table",
         "",
         "| Stage | Output | Status | Key Checks | Notes |",
         "|---|---|---|---|---|",
     ]
-    
+
     for v in status.validation_summary:
         lines.append(f"| {v['stage']} | {v['output']} | {v['status']} | "
                     f"{v['checks']} | {v['notes']} |")
-    
+
     report_path.write_text("\n".join(lines), encoding="utf-8")
     logger.info(f"Validation table saved: {report_path}")
 
 def generate_kpi_table(status: RunStatus, root: Path, config_path: str):
     """KPI 테이블 생성"""
     import subprocess
-    
+
     kpi_script = root / "src" / "tools" / "export_kpi_table.py"
     if not kpi_script.exists():
         logger.warning(f"KPI export script not found: {kpi_script}")
         return
-    
+
     cmd = [
         sys.executable,
         str(kpi_script),
@@ -557,7 +557,7 @@ def generate_kpi_table(status: RunStatus, root: Path, config_path: str):
         "--config", config_path,
         "--format", "both",
     ]
-    
+
     try:
         result = subprocess.run(cmd, cwd=str(root), capture_output=True, text=True)
         if result.returncode == 0:
@@ -574,12 +574,12 @@ def generate_kpi_table(status: RunStatus, root: Path, config_path: str):
 def generate_manifest(status: RunStatus, root: Path, config_path: str, interim_dir: Path):
     """Manifest 생성"""
     import subprocess
-    
+
     manifest_script = root / "src" / "tools" / "write_manifest.py"
     if not manifest_script.exists():
         logger.warning(f"Manifest script not found: {manifest_script}")
         return
-    
+
     cmd = [
         sys.executable,
         str(manifest_script),
@@ -587,7 +587,7 @@ def generate_manifest(status: RunStatus, root: Path, config_path: str, interim_d
         "--config", config_path,
         "--interim-dir", str(interim_dir),
     ]
-    
+
     try:
         result = subprocess.run(cmd, cwd=str(root), capture_output=True, text=True)
         if result.returncode == 0:
@@ -600,19 +600,19 @@ def generate_manifest(status: RunStatus, root: Path, config_path: str, interim_d
 def generate_delta_report(status: RunStatus, root: Path, baseline_tag: str):
     """Delta 보고서 생성 (베이스라인과 비교)"""
     import subprocess
-    
+
     delta_script = root / "src" / "tools" / "generate_delta_report.py"
     if not delta_script.exists():
         logger.warning(f"Delta report script not found: {delta_script}")
         return
-    
+
     cmd = [
         sys.executable,
         str(delta_script),
         "--baseline-tag", baseline_tag,
         "--current-tag", status.run_tag,
     ]
-    
+
     try:
         result = subprocess.run(cmd, cwd=str(root), capture_output=True, text=True)
         if result.returncode == 0:
@@ -625,18 +625,18 @@ def generate_delta_report(status: RunStatus, root: Path, baseline_tag: str):
 def generate_audit_report(status: RunStatus, root: Path):
     """Audit 리포트 생성"""
     import subprocess
-    
+
     audit_script = root / "src" / "tools" / "audit_pipeline_features.py"
     if not audit_script.exists():
         logger.warning(f"Audit script not found: {audit_script}")
         return
-    
+
     cmd = [
         sys.executable,
         str(audit_script),
         "--run-tag", status.run_tag,
     ]
-    
+
     try:
         result = subprocess.run(cmd, cwd=str(root), capture_output=True, text=True)
         if result.returncode == 0:

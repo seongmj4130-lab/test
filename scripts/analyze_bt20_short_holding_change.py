@@ -3,9 +3,10 @@
 bt20_short 보유 기간 변경 효과 분석
 """
 
-from pathlib import Path
-import pandas as pd
 import sys
+from pathlib import Path
+
+import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))

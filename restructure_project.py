@@ -2,6 +2,7 @@ import os
 import shutil
 from pathlib import Path
 
+
 def create_new_structure():
     """
     프로젝트를 모듈화하여 구조화합니다.

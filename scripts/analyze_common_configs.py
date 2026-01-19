@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """전략별 공통 설정값 분석"""
-import yaml
-from pathlib import Path
 from collections import Counter
+from pathlib import Path
+
+import yaml
 
 base_dir = Path('C:/Users/seong/OneDrive/Desktop/bootcamp/03_code')
 
@@ -143,4 +144,3 @@ for key, value in recommended.items():
         print(f"  {key:<40} = {value} (현재: {current}) ⚠️ 변경 필요")
     else:
         print(f"  {key:<40} = {value} ✅")
-

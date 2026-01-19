@@ -1,5 +1,6 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 
 def create_baseline2_simple():
     """Baseline2 기준 간단한 UI 데이터 생성"""

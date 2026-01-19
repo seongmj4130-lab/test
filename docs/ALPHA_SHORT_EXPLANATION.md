@@ -67,7 +67,7 @@ l6r:
 종목 A:
   score_short = 0.8 (단기 랭킹 상위)
   score_long = 0.3 (장기 랭킹 중위)
-  
+
   score_ens = 0.5 × 0.8 + 0.5 × 0.3
            = 0.4 + 0.15
            = 0.55
@@ -78,7 +78,7 @@ l6r:
 종목 A:
   score_short = 0.8 (단기 랭킹 상위)
   score_long = 0.3 (장기 랭킹 중위)
-  
+
   score_ens = 0.6 × 0.8 + 0.4 × 0.3
            = 0.48 + 0.12
            = 0.60  ← 단기 랭킹 영향력 증가
@@ -115,4 +115,3 @@ l6r:
 - **설정**: `configs/config.yaml` → `l6r.alpha_short`
 - **구현**: `src/tracks/track_b/stages/modeling/l6r_ranking_scoring.py:389-393`
 - **국면별 조정**: `src/tracks/track_b/stages/modeling/l6r_ranking_scoring.py:348-388`
-

@@ -4,10 +4,12 @@ Track A 성과 상세 분석 스크립트
 """
 
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
 from src.utils.config import load_config
 from src.utils.io import load_artifact
-import pandas as pd
-import numpy as np
 
 
 def analyze_track_a_performance():

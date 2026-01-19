@@ -15,4 +15,3 @@ for s in strategies:
         print(f'  MDD: {holdout["net_mdd"].iloc[0]:.4%}')
         print(f'  Calmar: {holdout["net_calmar_ratio"].iloc[0]:.4f}')
         print()
-

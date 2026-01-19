@@ -1,5 +1,6 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 
 def analyze_holding_days_issue():
     """40~100일 값이 같은 이유 분석"""

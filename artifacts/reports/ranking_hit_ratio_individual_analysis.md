@@ -1,6 +1,6 @@
 # 랭킹산정모델 개별 Hit Ratio 분석 리포트
 
-**생성일시**: 2025-01-XX  
+**생성일시**: 2025-01-XX
 **측정 스크립트**: `scripts/measure_ranking_hit_ratio.py`
 
 ---
@@ -46,7 +46,7 @@
 - **장기**: 38.72% (Dev 38.13%, Holdout 41.45%)
 - **차이**: +2.86%p (단기가 장기보다 높음)
 
-**해석**: 
+**해석**:
 - 단기(20일) 예측이 장기(120일) 예측보다 정확함
 - 단기 피처셋이 장기 피처셋보다 예측력이 높음
 
@@ -157,6 +157,5 @@ l6r:
 
 ---
 
-**생성 스크립트**: `scripts/measure_ranking_hit_ratio.py`  
+**생성 스크립트**: `scripts/measure_ranking_hit_ratio.py`
 **결과 파일**: `artifacts/reports/ranking_hit_ratio_individual.csv`
-

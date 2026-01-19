@@ -3,9 +3,11 @@
 절대 수익률 중심 평가 - 간단 버전
 """
 
-import pandas as pd
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
 
 def main():
     print("🎯 절대 수익률 중심 평가 시스템")

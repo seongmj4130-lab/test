@@ -13,6 +13,3 @@ __all__ = [
     "build_esg_sentiment_daily_features",
     "maybe_merge_esg_sentiment",
 ]
-
-
-

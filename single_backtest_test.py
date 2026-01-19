@@ -3,17 +3,19 @@
 단일 전략 백테스트 샘플 테스트
 """
 
+import logging
 import sys
 from pathlib import Path
-import logging
+
 import yaml
 
 project_root = Path(__file__).resolve().parent
 sys.path.insert(0, str(project_root))
 
-from src.utils.config import load_config, get_path
+from src.tracks.track_b.stages.backtest.l7_backtest import BacktestConfig, run_backtest
+from src.utils.config import get_path, load_config
 from src.utils.io import load_artifact
-from src.tracks.track_b.stages.backtest.l7_backtest import run_backtest, BacktestConfig
+
 
 def test_single_backtest(strategy_name: str, holding_days: int):
     """단일 전략 백테스트 테스트"""

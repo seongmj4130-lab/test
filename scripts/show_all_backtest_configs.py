@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """백테스트 결과에 영향을 주는 모든 config 설정값 표시"""
-import yaml
-from pathlib import Path
 import sys
+from pathlib import Path
+
+import yaml
 
 # BacktestConfig 기본값 가져오기
 sys.path.insert(0, str(Path('C:/Users/seong/OneDrive/Desktop/bootcamp/03_code').resolve()))
@@ -63,11 +64,11 @@ print("=" * 120)
 for strategy_name, config_key in strategies.items():
     print(f"\n[{strategy_name}]")
     print("=" * 120)
-    
+
     l7_cfg = cfg.get(config_key, {})
     l7_regime = (l7_cfg.get("regime", {}) or {}) if isinstance(l7_cfg.get("regime", {}), dict) else {}
     l7_div = (l7_cfg.get("diversify", {}) or {}) if isinstance(l7_cfg.get("diversify", {}), dict) else {}
-    
+
     # 기본 설정
     print("\n[기본 설정]")
     print("-" * 120)
@@ -83,7 +84,7 @@ for strategy_name, config_key in strategies.items():
         ('buffer_k', 'buffer_k'),
         ('rebalance_interval', 'rebalance_interval'),
     ]
-    
+
     for config_key_name, attr_name in basic_configs:
         config_val = l7_cfg.get(config_key_name) if config_key_name != 'softmax_temperature' else l7_cfg.get('softmax_temperature', l7_cfg.get('softmax_temp'))
         default_val = getattr(default_cfg, attr_name)
@@ -97,7 +98,7 @@ for strategy_name, config_key in strategies.items():
         else:
             default_val_str = f'"{default_val}"' if isinstance(default_val, str) else str(default_val)
             print(f"  {config_key_name:<35} = {default_val_str:<30} (기본값 사용) ✅")
-    
+
     # 고급 설정
     print("\n[고급 설정 - 스마트 버퍼/변동성 조정]")
     print("-" * 120)
@@ -110,7 +111,7 @@ for strategy_name, config_key in strategies.items():
         ('volatility_adjustment_max', 'volatility_adjustment_max'),
         ('volatility_adjustment_min', 'volatility_adjustment_min'),
     ]
-    
+
     for config_key_name, attr_name in advanced_configs:
         config_val = l7_cfg.get(config_key_name)
         default_val = getattr(default_cfg, attr_name)
@@ -119,7 +120,7 @@ for strategy_name, config_key in strategies.items():
             print(f"  {config_key_name:<35} = {config_val:<30} (기본값: {default_val}){mark}")
         else:
             print(f"  {config_key_name:<35} = {default_val:<30} (기본값 사용) ✅")
-    
+
     # 리스크 스케일링
     print("\n[리스크 스케일링]")
     print("-" * 120)
@@ -129,7 +130,7 @@ for strategy_name, config_key in strategies.items():
         ('risk_scaling_neutral_multiplier', 'risk_scaling_neutral_multiplier'),
         ('risk_scaling_bull_multiplier', 'risk_scaling_bull_multiplier'),
     ]
-    
+
     for config_key_name, attr_name in risk_configs:
         config_val = l7_cfg.get(config_key_name)
         default_val = getattr(default_cfg, attr_name)
@@ -138,7 +139,7 @@ for strategy_name, config_key in strategies.items():
             print(f"  {config_key_name:<35} = {config_val:<30} (기본값: {default_val}){mark}")
         else:
             print(f"  {config_key_name:<35} = {default_val:<30} (기본값 사용) ✅")
-    
+
     # 오버래핑 트랜치
     print("\n[오버래핑 트랜치]")
     print("-" * 120)
@@ -148,7 +149,7 @@ for strategy_name, config_key in strategies.items():
         ('tranche_max_active', 'tranche_max_active'),
         ('tranche_allocation_mode', 'tranche_allocation_mode'),
     ]
-    
+
     for config_key_name, attr_name in tranche_configs:
         config_val = l7_cfg.get(config_key_name)
         default_val = getattr(default_cfg, attr_name)
@@ -160,7 +161,7 @@ for strategy_name, config_key in strategies.items():
         else:
             default_val_str = f'"{default_val}"' if isinstance(default_val, str) else str(default_val)
             print(f"  {config_key_name:<35} = {default_val_str:<30} (기본값 사용) ✅")
-    
+
     # 업종 분산
     print("\n[업종 분산]")
     print("-" * 120)
@@ -169,13 +170,13 @@ for strategy_name, config_key in strategies.items():
         ('diversify.group_col', 'group_col'),
         ('diversify.max_names_per_group', 'max_names_per_group'),
     ]
-    
+
     div_map = {
         'diversify.enabled': ('enabled', 'diversify_enabled'),
         'diversify.group_col': ('group_col', 'group_col'),
         'diversify.max_names_per_group': ('max_names_per_group', 'max_names_per_group'),
     }
-    
+
     for config_key_name, attr_name in div_configs:
         key_path = div_map[config_key_name][0]
         config_val = l7_div.get(key_path) if key_path in ['enabled', 'group_col', 'max_names_per_group'] else l7_div.get(key_path)
@@ -188,11 +189,11 @@ for strategy_name, config_key in strategies.items():
         else:
             default_val_str = f'"{default_val}"' if isinstance(default_val, str) else str(default_val)
             print(f"  {config_key_name:<35} = {default_val_str:<30} (기본값 사용) ✅")
-    
+
     # 시장 국면 (Regime)
     print("\n[시장 국면 (Regime)]")
     print("-" * 120)
-    
+
     regime_configs = [
         ('regime.enabled', 'regime_enabled'),
         ('regime.lookback_days', None),  # BacktestConfig에 없음
@@ -213,11 +214,11 @@ for strategy_name, config_key in strategies.items():
         ('regime.exposure_bull', 'regime_exposure_bull'),
         ('regime.exposure_bear', 'regime_exposure_bear'),
     ]
-    
+
     for config_key_name, attr_name in regime_configs:
         key = config_key_name.replace('regime.', '')
         config_val = l7_regime.get(key)
-        
+
         if attr_name is None:
             # BacktestConfig에 없는 설정
             if config_val is not None:
@@ -246,4 +247,3 @@ print("""
 - config.yaml에 없는 설정은 BacktestConfig 기본값이 사용됩니다
 - 모든 설정값은 백테스트 결과에 영향을 줍니다
 """)
-

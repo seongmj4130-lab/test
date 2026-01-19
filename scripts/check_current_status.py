@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 """현재 상태 확인"""
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
+
 
 def check_status():
     """현재 상태 확인"""
     print("=" * 80)
     print("현재 상태 요약")
     print("=" * 80)
-    
+
     # 단기 랭킹 결과
     short_file = "artifacts/reports/track_a_group_weights_grid_search_20260108_135117.csv"
     if Path(short_file).exists():
@@ -22,7 +24,7 @@ def check_status():
         print(f"  최적 IC Mean: {short_best['ic_mean']:.4f}")
         print(f"  최적 ICIR: {short_best['icir']:.4f}")
         print(f"  가중치: technical={short_best['technical']:.2f}, value={short_best['value']:.2f}, profitability={short_best['profitability']:.2f}, news={short_best['news']:.2f}")
-    
+
     # 장기 랭킹 결과
     long_file = "artifacts/reports/track_a_group_weights_grid_search_20260108_145118.csv"
     if Path(long_file).exists():
@@ -39,7 +41,7 @@ def check_status():
             print(f"  가중치: technical={long_best['technical']:.2f}, value={long_best['value']:.2f}, profitability={long_best['profitability']:.2f}, news={long_best['news']:.2f}")
         else:
             print(f"  가중치: technical={long_best['technical']:.2f}, value={long_best['value']:.2f}, profitability={long_best['profitability']:.2f}")
-    
+
     # 비교
     if Path(short_file).exists() and Path(long_file).exists():
         print("\n" + "=" * 80)

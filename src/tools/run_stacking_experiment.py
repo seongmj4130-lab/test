@@ -26,14 +26,19 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from src.utils.config import load_config  # noqa: E402
-from src.utils.io import load_artifact, artifact_exists  # noqa: E402
+from src.stages.backtest.l1d_market_regime import build_market_regime  # noqa: E402
+from src.stages.backtest.l7_backtest import run_backtest  # noqa: E402
 from src.stages.modeling.l5_train_models import train_oos_predictions  # noqa: E402
 from src.stages.modeling.l6_scoring import build_rebalance_scores  # noqa: E402
-from src.stages.modeling.l6r_ranking_scoring import run_L6R_ranking_scoring  # noqa: E402
-from src.stages.modeling.l6s_stacking_scoring import StackingConfig, build_stacked_rebalance_scores  # noqa: E402
-from src.stages.backtest.l7_backtest import run_backtest  # noqa: E402
-from src.stages.backtest.l1d_market_regime import build_market_regime  # noqa: E402
+from src.stages.modeling.l6r_ranking_scoring import (  # noqa: E402
+    run_L6R_ranking_scoring,
+)
+from src.stages.modeling.l6s_stacking_scoring import (  # noqa: E402
+    StackingConfig,
+    build_stacked_rebalance_scores,
+)
+from src.utils.config import load_config  # noqa: E402
+from src.utils.io import artifact_exists, load_artifact  # noqa: E402
 
 
 def _safe_read_parquet(p: Path) -> pd.DataFrame:
@@ -215,5 +220,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

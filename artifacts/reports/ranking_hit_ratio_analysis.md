@@ -1,6 +1,6 @@
 # 랭킹산정모델 Hit Ratio 측정 및 과적합 분석 리포트
 
-**생성일시**: 2025-01-XX  
+**생성일시**: 2025-01-XX
 **측정 스크립트**: `scripts/measure_ranking_hit_ratio.py`
 
 ---
@@ -15,7 +15,7 @@
 | Dev | 45.64% | - | ✗ -4.36%p |
 | Holdout | 46.84% | - | ✗ -3.16%p |
 
-**목표**: Hit Ratio ≥ 50%  
+**목표**: Hit Ratio ≥ 50%
 **현재 상태**: 목표 미달 (전체 45.91%, Holdout 46.84%)
 
 ---
@@ -86,7 +86,7 @@
 
 ### 우선순위 1: ridge_alpha 추가 증가
 
-**현재**: 1.5  
+**현재**: 1.5
 **추천**: 2.0 ~ 3.0
 
 - **예상 효과**: +2~3%p (과적합 추가 감소)
@@ -94,7 +94,7 @@
 
 ### 우선순위 2: Dual Horizon 모드 활성화
 
-**현재**: 단일 랭킹 모드  
+**현재**: 단일 랭킹 모드
 **추천**: Dual Horizon 모드 (ranking_short_daily + ranking_long_daily)
 
 - **예상 효과**: +4%p (국면 적응력 향상)
@@ -102,7 +102,7 @@
 
 ### 우선순위 3: 피처 가중치 최적화
 
-**현재**: feature_groups 사용  
+**현재**: feature_groups 사용
 **추천**: IC 기반 최적 가중치 파일 생성
 
 - **예상 효과**: +1~2%p (중요 피처 강조)
@@ -153,6 +153,6 @@
 
 ---
 
-**생성 스크립트**: `scripts/measure_ranking_hit_ratio.py`  
+**생성 스크립트**: `scripts/measure_ranking_hit_ratio.py`
 **결과 파일**: `artifacts/reports/ranking_hit_ratio_measurement.csv`
 

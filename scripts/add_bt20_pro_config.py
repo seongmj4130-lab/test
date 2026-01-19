@@ -3,8 +3,9 @@
 bt20_pro 설정을 config.yaml에 추가하는 스크립트
 """
 
-import yaml
 from pathlib import Path
+
+import yaml
 
 
 def add_bt20_pro_config():

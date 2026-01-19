@@ -8,6 +8,7 @@ from typing import List, Optional, Tuple
 
 import pandas as pd
 
+
 @dataclass(frozen=True)
 class NewsSentimentConfig:
     """

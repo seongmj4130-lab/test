@@ -6,6 +6,7 @@ Track A 성과 결과 정리
 
 import pandas as pd
 
+
 def summarize_track_a_results():
     """Track A 성과 결과를 PPT 형식으로 정리"""
 

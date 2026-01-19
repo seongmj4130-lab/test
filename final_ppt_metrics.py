@@ -1,5 +1,6 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 
 def create_final_ppt_metrics():
     """PPT 발표용 최종 성과 지표 정리"""

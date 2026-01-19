@@ -4,8 +4,9 @@
 누적 수익률 계산 방법 상세 설명
 """
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 
 def demonstrate_cumulative_calculation():
     """누적 수익률 계산 방법 단계별 설명"""

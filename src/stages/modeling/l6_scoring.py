@@ -5,6 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+
 def _ensure_datetime(df: pd.DataFrame, col: str) -> None:
     if col not in df.columns:
         raise KeyError(f"missing column: {col}")
@@ -167,7 +168,7 @@ def build_rebalance_scores(
 
     key = ["date", "ticker", "phase"]
     out = ps2.merge(pl2, on=key, how="outer", validate="one_to_one")
-    
+
     # [Stage 4] sector_name carry (dataset_daily에서 가져오기)
     if dataset_daily is not None and "sector_name" in dataset_daily.columns:
         # dataset_daily에서 (date, ticker) 기준으로 sector_name 가져오기
@@ -182,13 +183,13 @@ def build_rebalance_scores(
 
     s_s = out["score_short"]
     s_l = out["score_long"]
-    
+
     mask_s = s_s.notna()
     mask_l = s_l.notna()
-    
+
     den = (w_s * mask_s.astype(float)) + (w_l * mask_l.astype(float))
     num = (w_s * s_s.fillna(0.0)) + (w_l * s_l.fillna(0.0))
-    
+
     # 둘 다 없으면 NaN 유지, 하나라도 있으면 있는 쪽으로 스코어 생성
     out["score_ens"] = num / den.replace(0.0, np.nan)
 
@@ -226,7 +227,7 @@ def build_rebalance_scores(
             f"[L6] Universe coverage is low BEFORE filtering: {universe_ratio_before:.1%}. "
             f"(dropped_rows={dropped_rows}) Check universe_k200_membership_monthly completeness/mapping."
         )
-    
+
     # [예측력 개선] Score 부호 반전 옵션 (음의 상관관계 해결)
     # Score와 실제 수익률이 음의 상관관계를 보일 때 부호 반전
     # 이는 임시 해결책이며, 근본적으로는 모델 예측력 개선이 필요함

@@ -3,8 +3,10 @@
 Alpha 증폭 전략 개발 - 간단 버전
 """
 
-import yaml
 from pathlib import Path
+
+import yaml
+
 
 def main():
     print("🚀 Alpha 증폭 전략 개발")

@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import List, Optional
+
 import pandas as pd
+
 
 def artifact_exists(out_base: Path, formats: Optional[List[str]] = None) -> bool:
     formats = formats or ["parquet", "csv"]
@@ -42,9 +44,9 @@ def save_artifact(
     """
     out_base = .../data/interim/<name> or .../data/interim/{run_tag}/<name>
     formats: ["parquet","csv"]
-    
+
     [Stage0] 태그 폴더 구조 강제: out_base의 부모 디렉토리가 반드시 생성됨
-    
+
     [공통 프롬프트 v2] force-rebuild 모드:
     - force=True면 기존 파일이 있어도 무조건 덮어쓰기 (skip_if_exists 무시)
     - L2 산출물(fundamentals_annual.parquet)은 이 함수를 통해 저장되지 않음 (재사용 고정)
@@ -52,7 +54,7 @@ def save_artifact(
     formats = formats or ["parquet", "csv"]
     # [Stage0] 부모 디렉토리 강제 생성 (태그 폴더 구조 보장)
     out_base.parent.mkdir(parents=True, exist_ok=True)
-    
+
     # [Stage0] 디버그: 실제 저장 경로 확인
     import logging
     logger = logging.getLogger(__name__)

@@ -117,4 +117,3 @@
 - **측정 시간**: 2025-01-XX (스크립트 실행 시점)
 - **Config 파일**: `configs/config.yaml`
 - **스크립트**: `scripts/measure_ranking_hit_ratio.py`
-

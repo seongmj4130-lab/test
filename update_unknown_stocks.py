@@ -3,10 +3,11 @@
 Unknown 종목명을 수동으로 추가하여 100% 매칭 확인
 """
 
-import pandas as pd
+import sys
 from pathlib import Path
 from typing import Dict, List
-import sys
+
+import pandas as pd
 
 # 프로젝트 경로 설정
 project_root = Path("C:/Users/seong/OneDrive/Desktop/bootcamp/000_code")

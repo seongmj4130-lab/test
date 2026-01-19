@@ -109,4 +109,3 @@ l7_bt20_short:
 2. 더 강한 정규화 (ridge_alpha 1.5+)
 3. 교차 검증 개선 (embargo_days 30+)
 4. 각 변경 후 결과 확인
-

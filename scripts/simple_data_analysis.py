@@ -3,11 +3,12 @@
 기존 데이터 파일들의 결측치 분석 스크립트
 """
 
-from pathlib import Path
-import pandas as pd
-import numpy as np
-from datetime import datetime
 import sys
+from datetime import datetime
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))

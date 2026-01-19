@@ -54,7 +54,7 @@
 
 #### L6R 랭킹 스코어링
 - `alpha_short`: 0.5
-- `regime_alpha`: 
+- `regime_alpha`:
   - bull_strong: 0.6
   - bull_weak: 0.6
   - neutral: 0.5
@@ -101,4 +101,3 @@
 - **로그 확인**: `[L8-L5 통일] Loaded 22 features` 메시지 확인됨
 - **피처 통일**: L5와 L8이 동일한 피처셋 사용 확인
 - **과적합**: 정상 범위 (low)
-

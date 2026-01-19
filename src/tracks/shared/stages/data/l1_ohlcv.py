@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import pandas as pd
 
+
 def _require_pykrx():
     try:
         from pykrx import stock
@@ -24,13 +25,13 @@ def download_ohlcv_panel(
 ) -> pd.DataFrame:
     """
     OHLCV 데이터 다운로드 및 기술적 지표 계산
-    
+
     Args:
         tickers: 종목코드 리스트
         start_date: 시작일 (YYYY-MM-DD)
         end_date: 종료일 (YYYY-MM-DD)
         calculate_technical_features: 기술적 지표 계산 여부 (기본값: True)
-    
+
     Returns:
         date, ticker, open, high, low, close, volume, value 및 기술적 지표 컬럼 포함
     """
@@ -80,11 +81,13 @@ def download_ohlcv_panel(
 
     out = pd.concat(frames, ignore_index=True)
     out = out.sort_values(["date", "ticker"]).reset_index(drop=True)
-    
+
     # [FEATURESET_COMPLETE] 기술적 지표 계산
     if calculate_technical_features:
         try:
-            from src.tracks.shared.stages.data.l1_technical_features import calculate_technical_features
+            from src.tracks.shared.stages.data.l1_technical_features import (
+                calculate_technical_features,
+            )
             out = calculate_technical_features(out)
         except ImportError as e:
             import warnings
@@ -92,5 +95,5 @@ def download_ohlcv_panel(
         except Exception as e:
             import warnings
             warnings.warn(f"기술적 지표 계산 중 오류 발생: {e}. 기술적 지표 없이 진행합니다.")
-    
+
     return out

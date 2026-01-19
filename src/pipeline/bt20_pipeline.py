@@ -9,13 +9,14 @@ BT20(20일 보유 기간) 전략의 전체 파이프라인을 실행합니다.
 - 랭킹 생성
 - 백테스트 실행
 """
+import logging
 from pathlib import Path
 from typing import Dict, Optional
-import logging
+
 import pandas as pd
 
-from src.utils.config import load_config, get_path
-from src.utils.io import load_artifact, artifact_exists, save_artifact
+from src.utils.config import get_path, load_config
+from src.utils.io import artifact_exists, load_artifact, save_artifact
 
 logger = logging.getLogger(__name__)
 
@@ -27,12 +28,12 @@ def run_bt20_pipeline(
 ) -> Dict:
     """
     BT20 전체 파이프라인을 실행합니다.
-    
+
     Args:
         config_path: 설정 파일 경로
         strategy: "short" (단기 랭킹만) or "ens" (통합 랭킹)
         force_rebuild: True면 캐시 무시하고 재계산
-    
+
     Returns:
         dict: 파이프라인 실행 결과
         {
@@ -49,12 +50,12 @@ def run_bt20_pipeline(
     logger.info("BT20 파이프라인 실행 시작")
     logger.info(f"전략: {strategy}")
     logger.info("=" * 80)
-    
+
     # 설정 로드
     cfg = load_config(config_path)
     interim_dir = Path(get_path(cfg, "data_interim"))
     interim_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # BT20 설정 선택
     if strategy == "short":
         l7_config_key = "l7_bt20_short"
@@ -62,15 +63,15 @@ def run_bt20_pipeline(
         l7_config_key = "l7_bt20_ens"
     else:
         raise ValueError(f"Unknown strategy: {strategy}. Use 'short' or 'ens'")
-    
+
     l7_cfg = cfg.get(l7_config_key, {})
     if not l7_cfg:
         raise ValueError(f"Config key '{l7_config_key}' not found in config.yaml")
-    
+
     # 1. 중간 산출물 로드 (캐시 우선)
     artifacts = {}
     artifacts_path = {}
-    
+
     # L0: 유니버스
     logger.info("[L0] 유니버스 로드")
     uni_path = interim_dir / "universe_k200_membership_monthly"
@@ -82,7 +83,7 @@ def run_bt20_pipeline(
         logger.warning("  ✗ 유니버스 데이터가 없습니다. L0부터 실행이 필요합니다.")
         logger.warning("  python scripts/run_pipeline_l0_l7.py 를 먼저 실행하세요.")
         raise FileNotFoundError("universe_k200_membership_monthly not found")
-    
+
     # L3: 패널 데이터
     logger.info("[L3] 패널 데이터 로드")
     panel_path = interim_dir / "panel_merged_daily"
@@ -93,16 +94,16 @@ def run_bt20_pipeline(
     else:
         logger.warning("  ✗ 패널 데이터가 없습니다. L0~L3까지 실행이 필요합니다.")
         raise FileNotFoundError("panel_merged_daily not found")
-    
+
     # L4: CV 분할 및 타겟
     logger.info("[L4] CV 분할 데이터 로드")
     dataset_path = interim_dir / "dataset_daily"
     cv_short_path = interim_dir / "cv_folds_short"
     cv_long_path = interim_dir / "cv_folds_long"
-    
-    if (artifact_exists(dataset_path) and 
-        artifact_exists(cv_short_path) and 
-        artifact_exists(cv_long_path) and 
+
+    if (artifact_exists(dataset_path) and
+        artifact_exists(cv_short_path) and
+        artifact_exists(cv_long_path) and
         not force_rebuild):
         artifacts["dataset_daily"] = load_artifact(dataset_path)
         artifacts["cv_folds_short"] = load_artifact(cv_short_path)
@@ -114,14 +115,14 @@ def run_bt20_pipeline(
     else:
         logger.warning("  ✗ CV 분할 데이터가 없습니다. L4까지 실행이 필요합니다.")
         raise FileNotFoundError("dataset_daily or cv_folds not found")
-    
+
     # L5: 모델 예측
     logger.info("[L5] 모델 예측 로드")
     pred_short_path = interim_dir / "pred_short_oos"
     pred_long_path = interim_dir / "pred_long_oos"
-    
-    if (artifact_exists(pred_short_path) and 
-        artifact_exists(pred_long_path) and 
+
+    if (artifact_exists(pred_short_path) and
+        artifact_exists(pred_long_path) and
         not force_rebuild):
         artifacts["pred_short_oos"] = load_artifact(pred_short_path)
         artifacts["pred_long_oos"] = load_artifact(pred_long_path)
@@ -131,11 +132,11 @@ def run_bt20_pipeline(
     else:
         logger.warning("  ✗ 모델 예측이 없습니다. L5까지 실행이 필요합니다.")
         raise FileNotFoundError("pred_short_oos or pred_long_oos not found")
-    
+
     # L6: 스코어 생성
     logger.info("[L6] 스코어 생성")
     scores_path = interim_dir / "rebalance_scores"
-    
+
     if artifact_exists(scores_path) and not force_rebuild:
         artifacts["rebalance_scores"] = load_artifact(scores_path)
         artifacts_path["scores"] = str(scores_path)
@@ -144,11 +145,11 @@ def run_bt20_pipeline(
         # L6 재실행
         logger.info("  → L6 재실행")
         from src.stages.modeling.l6_scoring import build_rebalance_scores
-        
+
         l6 = cfg.get("l6", {}) or {}
         w_s = float(l6.get("weight_short", 0.5))
         w_l = float(l6.get("weight_long", 0.5))
-        
+
         scores, summary, quality, warns = build_rebalance_scores(
             pred_short_oos=artifacts["pred_short_oos"],
             pred_long_oos=artifacts["pred_long_oos"],
@@ -160,11 +161,14 @@ def run_bt20_pipeline(
         save_artifact(scores, scores_path, force=True)
         artifacts_path["scores"] = str(scores_path)
         logger.info(f"  ✓ 생성 완료: {len(scores):,}행")
-    
+
     # L7: 백테스트 실행
     logger.info("[L7] 백테스트 실행")
-    from src.tracks.track_b.stages.backtest.l7_backtest import run_backtest, BacktestConfig
-    
+    from src.tracks.track_b.stages.backtest.l7_backtest import (
+        BacktestConfig,
+        run_backtest,
+    )
+
     # BacktestConfig 생성
     # [개선안 37번] l7_bt20_* 설정 전달 누락(regime/overlapping/slippage/diversify) 보완
     l7_regime = (l7_cfg.get("regime", {}) or {}) if isinstance(l7_cfg.get("regime", {}), dict) else {}
@@ -214,18 +218,20 @@ def run_bt20_pipeline(
         regime_exposure_bull=(float(l7_regime["exposure_bull"]) if "exposure_bull" in l7_regime else None),
         regime_exposure_bear=(float(l7_regime["exposure_bear"]) if "exposure_bear" in l7_regime else None),
     )
-    
+
     # 시장 국면 데이터 (regime_enabled일 때)
     market_regime_df = None
     if l7_cfg.get("regime", {}).get("enabled", False):
         logger.info("  → 시장 국면 데이터 생성")
-        from src.tracks.shared.stages.regime.l1d_market_regime import build_market_regime
-        
+        from src.tracks.shared.stages.regime.l1d_market_regime import (
+            build_market_regime,
+        )
+
         rebalance_dates = artifacts["rebalance_scores"]["date"].unique()
         start_date = cfg["params"]["start_date"]
         end_date = cfg["params"]["end_date"]
         regime_cfg = l7_cfg.get("regime", {})
-        
+
         market_regime_df = build_market_regime(
             rebalance_dates=rebalance_dates,
             start_date=start_date,
@@ -234,7 +240,7 @@ def run_bt20_pipeline(
             threshold_pct=regime_cfg.get("threshold_pct", 0.0),
         )
         logger.info(f"  ✓ 시장 국면 데이터 생성: {len(market_regime_df):,}행")
-    
+
     # 백테스트 실행
     result = run_backtest(
         rebalance_scores=artifacts["rebalance_scores"],
@@ -242,7 +248,7 @@ def run_bt20_pipeline(
         config_cost_bps=float(l7_cfg.get("cost_bps", 10.0)),
         market_regime=market_regime_df,
     )
-    
+
     # 결과 처리
     if len(result) == 10:
         bt_pos, bt_ret, bt_eq, bt_met, quality, warns, selection_diagnostics, bt_returns_diagnostics, runtime_profile, bt_regime_metrics = result
@@ -257,23 +263,23 @@ def run_bt20_pipeline(
         bt_regime_metrics = None
     else:
         raise ValueError(f"Unexpected return value count: {len(result)}")
-    
+
     # 결과 저장
     suffix = "_bt20"
     save_artifact(bt_pos, interim_dir / f"bt_positions{suffix}", force=True)
     save_artifact(bt_ret, interim_dir / f"bt_returns{suffix}", force=True)
     save_artifact(bt_eq, interim_dir / f"bt_equity_curve{suffix}", force=True)
     save_artifact(bt_met, interim_dir / f"bt_metrics{suffix}", force=True)
-    
+
     artifacts_path["bt_positions"] = str(interim_dir / f"bt_positions{suffix}")
     artifacts_path["bt_returns"] = str(interim_dir / f"bt_returns{suffix}")
     artifacts_path["bt_equity_curve"] = str(interim_dir / f"bt_equity_curve{suffix}")
     artifacts_path["bt_metrics"] = str(interim_dir / f"bt_metrics{suffix}")
-    
+
     logger.info("=" * 80)
     logger.info("✅ BT20 파이프라인 실행 완료")
     logger.info("=" * 80)
-    
+
     return {
         "rebalance_scores": artifacts["rebalance_scores"],
         "bt_positions": bt_pos,
@@ -292,8 +298,7 @@ if __name__ == "__main__":
         format="[%(asctime)s] [%(levelname)s] %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S"
     )
-    
+
     strategy = sys.argv[1] if len(sys.argv) > 1 else "short"
     result = run_bt20_pipeline(strategy=strategy)
     print(f"\n✅ 완료: {len(result['bt_metrics'])}개 메트릭 생성")
-

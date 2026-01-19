@@ -1,5 +1,7 @@
-import pandas as pd
 import os
+
+import pandas as pd
+
 
 def analyze_conservative_changes_impact():
     """보수적 변경사항이 Track A 성과지표에 미친 영향을 분석"""

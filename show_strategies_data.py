@@ -6,6 +6,7 @@
 
 import pandas as pd
 
+
 def main():
     # 3전략 6구간 월별 누적 수익률 데이터 로드
     df = pd.read_csv('data/ui_strategies_cumulative_comparison_updated.csv')

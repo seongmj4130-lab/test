@@ -4,12 +4,13 @@ Holdout 전체 기간 일별 랭킹 top20 생성 (단기/장기 모두)
 Unknown 종목들은 별도 목록화
 """
 
-import pandas as pd
-import yaml
+import os
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional
-import sys
-import os
+
+import pandas as pd
+import yaml
 
 # 프로젝트 경로 설정
 project_root = Path("C:/Users/seong/OneDrive/Desktop/bootcamp/000_code")
@@ -19,7 +20,7 @@ from src.components.ranking.contribution_engine import (
     ContributionConfig,
     compute_group_contributions_for_day,
     load_group_map_from_yaml,
-    pick_top_groups_per_row
+    pick_top_groups_per_row,
 )
 
 

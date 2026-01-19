@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 import sys
+from pathlib import Path
+
 import pandas as pd
 
 # ----------------------------
@@ -86,7 +87,7 @@ def _transform_to_nx1(df: pd.DataFrame) -> pd.DataFrame:
     # 행별 적용 (axis=1)
     # 결과는 Series 형태가 되므로 to_frame()으로 DataFrame 변환
     series_nx1 = df.apply(row_to_string, axis=1)
-    
+
     return series_nx1.to_frame(name="row_data")
 
 def _save_both(df: pd.DataFrame, out_base: Path):
@@ -128,7 +129,7 @@ def _dump_full_to_txt(df: pd.DataFrame, txt_path: Path, chunk_rows: int = 2000):
             part = df.iloc[start:end]
             f.write(f"\n--- rows {start} ~ {end-1} ---\n")
             # index=False로 설정하여 순수 데이터만 출력 (row_data 컬럼 내용)
-            f.write(part.to_string(index=False, header=False)) 
+            f.write(part.to_string(index=False, header=False))
             f.write("\n")
 
 # ----------------------------
@@ -166,7 +167,7 @@ def main():
         try:
             # 1. 로드
             df_origin = _load_artifact(interim_dir, name)
-            
+
             # 2. n행 1열 변환
             df_nx1 = _transform_to_nx1(df_origin)
 

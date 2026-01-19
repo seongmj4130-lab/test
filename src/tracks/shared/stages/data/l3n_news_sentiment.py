@@ -9,6 +9,7 @@ from typing import List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
+
 @dataclass(frozen=True)
 class NewsSentimentConfig:
     """

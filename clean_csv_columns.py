@@ -3,9 +3,11 @@
 CSV 파일에서 불필요한 컬럼들 제거
 """
 
-import pandas as pd
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
+import pandas as pd
+
 
 def clean_csv_columns():
     """warnings, timestamp, strategy_name 컬럼 제거"""

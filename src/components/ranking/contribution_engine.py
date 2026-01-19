@@ -194,5 +194,3 @@ def pick_top_groups_per_row(
         out[f"group_top{k+1}_value"] = vals
 
     return out
-
-

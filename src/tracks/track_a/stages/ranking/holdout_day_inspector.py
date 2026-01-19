@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Optional, Tuple, Literal
+from typing import Dict, Literal, Optional, Tuple
 
 import pandas as pd
 import yaml
@@ -15,7 +15,6 @@ from src.components.ranking.contribution_engine import (
     load_group_map_from_yaml,
     pick_top_groups_per_row,
 )
-
 
 Horizon = Literal["short", "long", "both"]
 
@@ -201,5 +200,3 @@ def inspect_holdout_day(
         short=out_short,
         long=out_long,
     )
-
-

@@ -3,9 +3,11 @@
 백테스트 데이터 오류 검증 - 상세 코드 분석
 """
 
-import pandas as pd
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
 
 def comprehensive_backtest_validation():
     """백테스트 데이터 오류 검증 - 코드 로직 상세 분석"""

@@ -65,14 +65,14 @@ feature_groups:
       - debt_ratio
       - debt_ratio_sector_z
     target_weight: 0.25  # 전체 피처 중 25% 가중치 목표
-  
+
   # 수익성(Profitability) 그룹
   profitability:
     features:
       - roe
       - roe_sector_z
     target_weight: 0.25  # 전체 피처 중 25% 가중치 목표
-  
+
   # 기술적(Technical) 그룹
   technical:
     features:
@@ -91,7 +91,7 @@ feature_groups:
       - max_drawdown_60d
       - downside_volatility_60d
     target_weight: 0.50  # [Phase 5 전략1] 전체 피처 중 50% 가중치 목표 (기술적 팩터 강화)
-  
+
   # 기타(Other) 그룹
   other:
     features:
@@ -116,7 +116,3 @@ balancing:
   method: "equal_weight"  # "equal_weight" | "proportional" | "none"
   min_features_per_group: 1  # 그룹당 최소 피처 수 (이보다 적으면 그룹 제외)
   apply_during_training: true  # 학습 중 밸런싱 적용 여부
-
-
-
-

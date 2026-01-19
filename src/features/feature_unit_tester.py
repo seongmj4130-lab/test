@@ -5,11 +5,13 @@
 개별 피쳐의 IC 기여도, 품질, 안정성을 평가합니다.
 """
 
+import warnings
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Tuple, Optional
-from pathlib import Path
-import warnings
+
 warnings.filterwarnings('ignore')
 
 
@@ -319,9 +321,10 @@ class FeatureUnitTester:
 
 def test_feature_unit_tester():
     """피쳐 단위 테스트 시스템 테스트"""
+    from pathlib import Path
+
     from src.utils.config import load_config
     from src.utils.io import load_artifact
-    from pathlib import Path
 
     # 설정 로드
     cfg = load_config('configs/config.yaml')

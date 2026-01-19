@@ -311,7 +311,7 @@
 │       └── weight_long: 0.8 (이유: 장기 랭킹 가중치, 장기 추세 중심)
 ├── 코드 예시 (핵심 함수 20줄 내외):
 │   ```python
-│   def build_ranking_daily(df, feature_cols, feature_weights, 
+│   def build_ranking_daily(df, feature_cols, feature_weights,
 │                           normalization_method="percentile"):
 │       # 1. 날짜별 cross-sectional 정규화
 │       for date, group in df.groupby("date"):
@@ -320,14 +320,14 @@
 │                   # Percentile rank (0~1) - 극단값에 강건
 │                   ranks = group[feat].rank(pct=True, method="first")
 │                   df.loc[group.index, f"{feat}_norm"] = ranks.values
-│       
+│
 │       # 2. 피처 그룹별 가중치 합산 → score_total
 │       score_total = pd.Series(0.0, index=df.index)
 │       for feat, weight in feature_weights.items():
 │           if f"{feat}_norm" in df.columns:
 │               score_total += df[f"{feat}_norm"] * weight
 │       df["score_total"] = score_total
-│       
+│
 │       # 3. in_universe=True 대상 rank_total 생성
 │       universe_df = df[df["in_universe"] == True].copy()
 │       universe_df["rank_total"] = universe_df.groupby("date")["score_total"].rank(ascending=False)
@@ -486,19 +486,19 @@
 │   ```python
 │   def run_backtest(rebalance_scores, daily_prices, config):
 │       positions_at_rebalance = {}
-│       
+│
 │       # 리밸런싱 날짜별 처리
 │       for date, group in rebalance_scores.groupby("date"):
 │           # 1. Top-K 종목 선택 (결측/거래정지 필터링)
 │           selected, diag = select_topk_with_fallback(
 │               group, top_k=config.top_k, buffer_k=config.buffer_k
 │           )
-│           
+│
 │           # 2. 동일 비중 포트폴리오 구성
 │           scores = selected[config.score_col]
 │           weights = _weights_from_scores(scores, config.weighting, config.softmax_temp)
 │           positions_at_rebalance[date] = dict(zip(selected["ticker"], weights))
-│       
+│
 │       # 3. 일별 수익률 계산 (포지션 × 수익률)
 │       daily_returns = []
 │       for date in sorted(daily_prices["date"].unique()):
@@ -510,7 +510,7 @@
 │               # 4. 거래비용 차감 (cost_bps + slippage_bps)
 │               cost = abs(portfolio_ret) * (config.cost_bps + config.slippage_bps) / 10000
 │               daily_returns.append(portfolio_ret - cost)
-│       
+│
 │       # 5. 성과 지표 계산 (Sharpe, CAGR, MDD 등)
 │       return calculate_metrics(daily_returns)
 │   ```
@@ -549,7 +549,7 @@
 │   ├── cumulative_return(누적 수익률): 시간에 따른 누적 수익률
 │   ├── drawdown(최대 낙폭): 최고점 대비 하락폭
 │   ├── turnover(회전율): 포트폴리오 회전율 (거래 빈도)
-│   └── metrics(성과 지표): Sharpe(샤프비율), CAGR(연평균수익률), 
+│   └── metrics(성과 지표): Sharpe(샤프비율), CAGR(연평균수익률),
 │                           MDD(최대낙폭), Calmar(칼마비율) 등
 ├── 핵심: Track B는 Track A의 랭킹을 받아서 백테스트만 수행
 │   └── 별도의 피처 학습 없음 (랭킹 기반 포트폴리오 구성)
@@ -1258,14 +1258,14 @@ NaN(비ESG) 카테고리는 ESG와 무관한 일반 비즈니스 뉴스를 필�
 - 기관 투자자: 협상된 낮은 수수료 + 증권거래세 + 스프레드 = 약 5~10 bps
 - 우리의 10 bps 설정은 개인 투자자와 기관 투자자 사이의 중간 수준으로, 보수적인(conservative) 추정입니다.
 
-**4. 계산 예시**: 
+**4. 계산 예시**:
 - 포트폴리오 가치 1억 원을 리밸런싱할 때:
   - 거래비용 = 1억 원 × 10 bps = 1억 원 × 0.001 = 10만 원
 - 연간 턴오버가 500%인 경우:
   - 연간 거래비용 = 1억 원 × 500% × 10 bps = 5억 원 × 0.001 = 50만 원
   - 연간 수익률에 미치는 영향 = 50만 원 / 1억 원 = 0.5%
 
-**5. 슬리피지와의 구분**: 
+**5. 슬리피지와의 구분**:
 - **거래비용 10 bps**: 명시적 비용(수수료, 세금, 스프레드)으로 거래 시점에 확정적으로 발생
 - **슬리피지 5 bps**: 시장 임팩트 비용으로, 대량 주문 시 가격 변동으로 인한 암묵적 비용
 - 합계 15 bps (10 + 5)가 실제 투자 시 발생하는 총 비용입니다.

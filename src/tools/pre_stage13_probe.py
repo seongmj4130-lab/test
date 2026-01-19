@@ -13,6 +13,7 @@ import argparse
 import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+
 import pandas as pd
 import pyarrow.parquet as pq
 import yaml
@@ -21,18 +22,19 @@ import yaml
 BASE_DIR = Path(r"C:\Users\seong\OneDrive\Desktop\bootcamp\03_code")
 sys.path.insert(0, str(BASE_DIR / "src"))
 
-from src.utils.config import load_config, get_path
-from src.utils.io import load_artifact, artifact_exists
+from src.utils.config import get_path, load_config
+from src.utils.io import artifact_exists, load_artifact
+
 
 def analyze_l7_code_scan(base_dir: Path) -> Dict:
     """
     [1] L7가 "정말로" 무엇을 수행하는지 확인 (코드 스캔)
     """
     print("[1] L7 코드 스캔 중...")
-    
+
     l7_backtest_file = base_dir / "src" / "stages" / "l7_backtest.py"
     run_all_file = base_dir / "src" / "run_all.py"
-    
+
     results = {
         "entry_function": "run_backtest (src/stages/l7_backtest.py)",
         "call_path": "run_all.py::run_L7_backtest() → stages.l7_backtest.run_backtest()",
@@ -65,7 +67,7 @@ def analyze_l7_code_scan(base_dir: Path) -> Dict:
             "Required cols: ['date', 'phase'] for bt_returns",
         ],
     }
-    
+
     # 코드에서 실제 루프 확인
     if l7_backtest_file.exists():
         content = l7_backtest_file.read_text(encoding="utf-8")
@@ -73,7 +75,7 @@ def analyze_l7_code_scan(base_dir: Path) -> Dict:
             results["main_loops"].append("Phase별 그룹화 루프")
         if "for dt, g in dphase.groupby(date_col)" in content:
             results["main_loops"].append("날짜별 그룹화 루프")
-    
+
     return results
 
 def measure_input_files(
@@ -85,11 +87,11 @@ def measure_input_files(
     [2] Stage13 실행에 필요한 "입력 파일 존재/크기/행수"만 빠르게 측정
     """
     print("[2] 입력 파일 존재/크기/행수 측정 중...")
-    
+
     base_interim_dir = base_dir / "data" / "interim"
     pipeline_dir = base_interim_dir / pipeline_tag
     global_dir = base_interim_dir / global_tag
-    
+
     files_to_check = [
         # Pipeline baseline (stage6)
         (pipeline_dir / "rebalance_scores.parquet", "rebalance_scores", "pipeline"),
@@ -102,7 +104,7 @@ def measure_input_files(
         (global_dir / "market_regime.parquet", "market_regime", "global"),
         (global_dir / "market_regime.csv", "market_regime", "global"),
     ]
-    
+
     rows = []
     for file_path, name, source in files_to_check:
         row = {
@@ -117,19 +119,19 @@ def measure_input_files(
             "date_min": None,
             "date_max": None,
         }
-        
+
         if file_path.exists():
             row["exists"] = True
             row["file_size_bytes"] = file_path.stat().st_size
             row["file_size_mb"] = round(row["file_size_bytes"] / (1024 * 1024), 2)
-            
+
             try:
                 # Parquet 메타데이터로 빠르게 행수 추정
                 if file_path.suffix == ".parquet":
                     parquet_file = pq.ParquetFile(file_path)
                     row["rows"] = parquet_file.metadata.num_rows
                     row["cols"] = len(parquet_file.schema)
-                    
+
                     # 날짜 범위 확인 (date 컬럼이 있으면)
                     try:
                         df_sample = pd.read_parquet(file_path, columns=["date"] if "date" in parquet_file.schema.names else [])
@@ -155,9 +157,9 @@ def measure_input_files(
                         pass
             except Exception as e:
                 print(f"  [WARN] {name} 읽기 실패: {e}")
-        
+
         rows.append(row)
-    
+
     df = pd.DataFrame(rows)
     return df
 
@@ -169,22 +171,22 @@ def profile_rebalance_scores(
     [3] rebalance_scores 품질 점검 (L7 실행시간 결정 1순위)
     """
     print("[3] rebalance_scores 품질 점검 중...")
-    
+
     rebalance_scores_path = base_dir / "data" / "interim" / pipeline_tag / "rebalance_scores.parquet"
-    
+
     if not rebalance_scores_path.exists():
         return {
             "error": f"rebalance_scores not found: {rebalance_scores_path}",
             "rows": None,
             "cols": None,
         }
-    
+
     # 최소한의 컬럼만 로드하여 빠르게 분석
     try:
         # 먼저 스키마 확인
         parquet_file = pq.ParquetFile(rebalance_scores_path)
         all_cols = [field.name for field in parquet_file.schema]
-        
+
         # 필수 컬럼만 로드
         essential_cols = ["date", "ticker", "phase"]
         if "score_ens" in all_cols:
@@ -193,16 +195,16 @@ def profile_rebalance_scores(
             essential_cols.append("true_short")
         if "sector_name" in all_cols:
             essential_cols.append("sector_name")
-        
+
         df = pd.read_parquet(rebalance_scores_path, columns=essential_cols)
-        
+
         # 날짜 변환
         if "date" in df.columns:
             df["date"] = pd.to_datetime(df["date"])
-        
+
         # 리밸런싱 날짜 수
         n_rebalances = df["date"].nunique() if "date" in df.columns else None
-        
+
         # 각 리밸런싱당 종목 수 분포
         if "date" in df.columns:
             tickers_per_rebalance = df.groupby("date")["ticker"].nunique()
@@ -215,13 +217,13 @@ def profile_rebalance_scores(
             }
         else:
             ticker_stats = None
-        
+
         # Null 비율 (상위 컬럼만)
         null_pct = {}
         for col in essential_cols:
             if col in df.columns:
                 null_pct[col] = float(df[col].isna().mean() * 100)
-        
+
         return {
             "rows": len(df),
             "cols": len(df.columns),
@@ -250,11 +252,11 @@ def check_regime_coverage(
     [4] "regime 컬럼 결측 95% 문제" 재발 가능성 사전 판정
     """
     print("[4] regime 컬럼 결측 문제 재발 가능성 판정 중...")
-    
+
     base_interim_dir = base_dir / "data" / "interim"
     pipeline_dir = base_interim_dir / pipeline_tag
     global_dir = base_interim_dir / global_tag
-    
+
     # rebalance_scores의 날짜 범위 확인
     rebalance_scores_path = pipeline_dir / "rebalance_scores.parquet"
     if not rebalance_scores_path.exists():
@@ -262,7 +264,7 @@ def check_regime_coverage(
             "error": "rebalance_scores not found",
             "coverage_pct": None,
         }
-    
+
     try:
         # rebalance_scores의 날짜만 로드
         df_rebalance = pd.read_parquet(rebalance_scores_path, columns=["date", "phase"])
@@ -275,7 +277,7 @@ def check_regime_coverage(
             "error": f"Failed to load rebalance_scores: {e}",
             "coverage_pct": None,
         }
-    
+
     # market_regime 찾기
     regime_paths = [
         global_dir / "market_regime.parquet",
@@ -283,13 +285,13 @@ def check_regime_coverage(
         base_interim_dir / "market_regime.parquet",
         base_interim_dir / "market_regime.csv",
     ]
-    
+
     regime_path = None
     for path in regime_paths:
         if path.exists():
             regime_path = path
             break
-    
+
     if not regime_path:
         return {
             "error": "market_regime not found in any expected location",
@@ -299,23 +301,23 @@ def check_regime_coverage(
                 "max": str(rebalance_date_max),
             },
         }
-    
+
     try:
         # market_regime 로드
         if regime_path.suffix == ".parquet":
             df_regime = pd.read_parquet(regime_path, columns=["date", "regime"])
         else:
             df_regime = pd.read_csv(regime_path, usecols=["date", "regime"])
-        
+
         df_regime["date"] = pd.to_datetime(df_regime["date"])
         regime_dates = set(df_regime["date"].unique())
         regime_date_min = df_regime["date"].min()
         regime_date_max = df_regime["date"].max()
-        
+
         # 겹침 계산
         overlap_dates = rebalance_dates & regime_dates
         coverage_pct = (len(overlap_dates) / len(rebalance_dates) * 100) if rebalance_dates else 0.0
-        
+
         return {
             "regime_source_path": str(regime_path),
             "rebalance_date_range": {
@@ -343,10 +345,10 @@ def analyze_min_run_plan(base_dir: Path) -> Dict:
     [5] Stage13 시간을 줄일 수 있는 "최소 실행 플랜" 후보 도출
     """
     print("[5] 최소 실행 플랜 분석 중...")
-    
+
     l7_backtest_file = base_dir / "src" / "stages" / "l7_backtest.py"
     run_all_file = base_dir / "src" / "run_all.py"
-    
+
     results = {
         "A_bt_returns_column_cleanup_only": {
             "possible": False,
@@ -369,7 +371,7 @@ def analyze_min_run_plan(base_dir: Path) -> Dict:
             "code_location": "run_all.py:1164-1174",
         },
     }
-    
+
     # 코드 확인
     if l7_backtest_file.exists():
         content = l7_backtest_file.read_text(encoding="utf-8")
@@ -379,14 +381,14 @@ def analyze_min_run_plan(base_dir: Path) -> Dict:
                 results["B_date_range_limit"]["possible"] = False
             else:
                 results["B_date_range_limit"]["possible"] = True
-    
+
     return results
 
 def save_scan_report(base_dir: Path, scan_results: Dict):
     """[1] L7 코드 스캔 결과 저장"""
     output_path = base_dir / "reports" / "analysis" / "pre_stage13_scan.md"
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     md_content = f"""# Stage13 사전 분석: L7 코드 스캔
 
 ## 1. L7 실행 함수명 / 호출 경로
@@ -421,7 +423,7 @@ def save_inputs_report(base_dir: Path, df_inputs: pd.DataFrame):
     """[2] 입력 파일 존재/크기/행수 저장"""
     output_path = base_dir / "reports" / "analysis" / "pre_stage13_inputs.csv"
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     df_inputs.to_csv(output_path, index=False, encoding="utf-8-sig")
     print(f"  [OK] 저장 완료: {output_path}")
 
@@ -429,7 +431,7 @@ def save_rebalance_profile(base_dir: Path, profile: Dict):
     """[3] rebalance_scores 품질 점검 결과 저장"""
     output_path = base_dir / "reports" / "analysis" / "pre_stage13_rebalance_scores_profile.md"
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     if "error" in profile:
         md_content = f"# Stage13 사전 분석: rebalance_scores 품질 점검\n\n## 오류\n\n{profile['error']}\n"
     else:
@@ -444,7 +446,7 @@ def save_rebalance_profile(base_dir: Path, profile: Dict):
 - P95: {stats['p95']:.1f}개
 """
         null_pct_str = "\n".join(f"- {col}: {pct:.2f}%" for col, pct in profile.get("null_pct", {}).items())
-        
+
         md_content = f"""# Stage13 사전 분석: rebalance_scores 품질 점검
 
 ## 기본 정보
@@ -477,14 +479,14 @@ def save_regime_coverage(base_dir: Path, coverage: Dict):
     """[4] regime 컬럼 결측 문제 재발 가능성 판정 결과 저장"""
     output_path = base_dir / "reports" / "analysis" / "pre_stage13_regime_coverage.md"
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     if "error" in coverage:
         md_content = f"# Stage13 사전 분석: regime 컬럼 결측 문제 재발 가능성 판정\n\n## 오류\n\n{coverage['error']}\n"
     else:
         risk_msg = ""
         if coverage.get("coverage_pct", 0) < 50:
             risk_msg = "\n\n**⚠️ 경고**: Coverage가 50% 미만입니다. Stage13에서 bt_returns에 regime 포함은 원천적으로 위험합니다."
-        
+
         md_content = f"""# Stage13 사전 분석: regime 컬럼 결측 문제 재발 가능성 판정
 
 ## Regime 소스
@@ -517,7 +519,7 @@ def save_min_run_plan(base_dir: Path, plan: Dict):
     """[5] 최소 실행 플랜 후보 저장"""
     output_path = base_dir / "reports" / "analysis" / "pre_stage13_min_run_plan.md"
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     plan_items = []
     for key, value in plan.items():
         status = "✅ 가능" if value["possible"] else "❌ 불가능"
@@ -530,7 +532,7 @@ def save_min_run_plan(base_dir: Path, plan: Dict):
 
 **코드 위치**: {value['code_location']}
 """)
-    
+
     md_content = f"""# Stage13 사전 분석: 최소 실행 플랜 후보
 
 {''.join(plan_items)}
@@ -545,36 +547,36 @@ def main():
     parser.add_argument("--global-tag", type=str, required=True,
                        help="Global baseline 태그 (예: stage12_final_export_20251221_013411)")
     args = parser.parse_args()
-    
+
     base_dir = BASE_DIR
-    
+
     print("=" * 60)
     print("Stage13 사전 분석 시작")
     print("=" * 60)
     print(f"Pipeline baseline: {args.pipeline_tag}")
     print(f"Global baseline: {args.global_tag}")
     print()
-    
+
     # [1] L7 코드 스캔
     scan_results = analyze_l7_code_scan(base_dir)
     save_scan_report(base_dir, scan_results)
-    
+
     # [2] 입력 파일 측정
     df_inputs = measure_input_files(base_dir, args.pipeline_tag, args.global_tag)
     save_inputs_report(base_dir, df_inputs)
-    
+
     # [3] rebalance_scores 품질 점검
     profile = profile_rebalance_scores(base_dir, args.pipeline_tag)
     save_rebalance_profile(base_dir, profile)
-    
+
     # [4] regime coverage 확인
     coverage = check_regime_coverage(base_dir, args.pipeline_tag, args.global_tag)
     save_regime_coverage(base_dir, coverage)
-    
+
     # [5] 최소 실행 플랜 분석
     plan = analyze_min_run_plan(base_dir)
     save_min_run_plan(base_dir, plan)
-    
+
     print()
     print("=" * 60)
     print("Stage13 사전 분석 완료")

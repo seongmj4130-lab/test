@@ -3,9 +3,11 @@
 총수익률 과대 문제 해결 - L6 데이터 정규화
 """
 
-import pandas as pd
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
+import pandas as pd
+
 
 def fix_total_return_data():
     """L6 데이터의 true_short/true_long을 백분율에서 소수점으로 변환"""

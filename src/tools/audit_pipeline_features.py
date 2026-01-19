@@ -12,6 +12,7 @@ from typing import Dict, List, Tuple
 
 import yaml
 
+
 def search_in_file(file_path: Path, keywords: List[str], case_sensitive: bool = False) -> List[Tuple[int, str]]:
     """파일에서 키워드 검색"""
     matches = []
@@ -32,18 +33,18 @@ def search_in_directory(root: Path, patterns: List[str], keywords: List[str], ex
     """디렉토리에서 패턴과 키워드로 검색"""
     exclude_dirs = exclude_dirs or ["__pycache__", ".git", "node_modules", ".venv", "venv"]
     results = {}
-    
+
     for pattern in patterns:
         for file_path in root.rglob(pattern):
             # 제외 디렉토리 스킵
             if any(exclude in str(file_path) for exclude in exclude_dirs):
                 continue
-            
+
             matches = search_in_file(file_path, keywords)
             if matches:
                 rel_path = str(file_path.relative_to(root))
                 results[rel_path] = matches
-    
+
     return results
 
 def audit_dynamic_k200_universe(root: Path) -> Tuple[bool, Dict]:
@@ -54,9 +55,9 @@ def audit_dynamic_k200_universe(root: Path) -> Tuple[bool, Dict]:
         "k200_membership",
         "dynamic_universe",
     ]
-    
+
     results = search_in_directory(root, ["*.py"], keywords)
-    
+
     # config.yaml에서도 확인
     config_path = root / "configs" / "config.yaml"
     config_evidence = []
@@ -68,14 +69,14 @@ def audit_dynamic_k200_universe(root: Path) -> Tuple[bool, Dict]:
                     config_evidence.append(f"config.yaml: filter_k200_members_only = {cfg['params']['filter_k200_members_only']}")
         except Exception:
             pass
-    
+
     found = len(results) > 0 or len(config_evidence) > 0
-    
+
     evidence = {
         "code_matches": {k: v[:5] for k, v in results.items()} if results else {},
         "config_evidence": config_evidence,
     }
-    
+
     return found, evidence
 
 def audit_regime_switching(root: Path) -> Tuple[bool, Dict]:
@@ -88,15 +89,15 @@ def audit_regime_switching(root: Path) -> Tuple[bool, Dict]:
         "bear_market",
         "vix_regime",
     ]
-    
+
     results = search_in_directory(root, ["*.py"], keywords)
-    
+
     found = len(results) > 0
-    
+
     evidence = {
         "code_matches": {k: v[:5] for k, v in results.items()} if results else {},
     }
-    
+
     return found, evidence
 
 def audit_sector_relative_debt_ratio(root: Path) -> Tuple[bool, Dict]:
@@ -108,15 +109,15 @@ def audit_sector_relative_debt_ratio(root: Path) -> Tuple[bool, Dict]:
         "sector_debt_ratio",
         "relative_debt",
     ]
-    
+
     results = search_in_directory(root, ["*.py"], keywords)
-    
+
     found = len(results) > 0
-    
+
     evidence = {
         "code_matches": {k: v[:5] for k, v in results.items()} if results else {},
     }
-    
+
     return found, evidence
 
 def audit_feature_explainability_report(root: Path) -> Tuple[bool, Dict]:
@@ -129,9 +130,9 @@ def audit_feature_explainability_report(root: Path) -> Tuple[bool, Dict]:
         "explainability_report",
         "feature_explainability",
     ]
-    
+
     results = search_in_directory(root, ["*.py"], keywords)
-    
+
     # 리포트 파일 존재 여부 확인
     report_paths = [
         root / "reports" / "feature_importance",
@@ -145,14 +146,14 @@ def audit_feature_explainability_report(root: Path) -> Tuple[bool, Dict]:
                 report_files.append(str(f.relative_to(root)))
             for f in rp.glob("*.md"):
                 report_files.append(str(f.relative_to(root)))
-    
+
     found = len(results) > 0 or len(report_files) > 0
-    
+
     evidence = {
         "code_matches": {k: v[:5] for k, v in results.items()} if results else {},
         "report_files": report_files[:10],  # 최대 10개만
     }
-    
+
     return found, evidence
 
 def audit_kfold_cv(root: Path) -> Tuple[bool, Dict]:
@@ -166,9 +167,9 @@ def audit_kfold_cv(root: Path) -> Tuple[bool, Dict]:
         "TimeSeriesSplit",
         "walkforward_split",
     ]
-    
+
     results = search_in_directory(root, ["*.py"], keywords)
-    
+
     # config.yaml에서 embargo_days 확인
     config_path = root / "configs" / "config.yaml"
     config_evidence = []
@@ -183,14 +184,14 @@ def audit_kfold_cv(root: Path) -> Tuple[bool, Dict]:
                     config_evidence.append(f"config.yaml: l4.step_days = {l4['step_days']}")
         except Exception:
             pass
-    
+
     found = len(results) > 0 or len(config_evidence) > 0
-    
+
     evidence = {
         "code_matches": {k: v[:5] for k, v in results.items()} if results else {},
         "config_evidence": config_evidence,
     }
-    
+
     return found, evidence
 
 def audit_diversification_constraints(root: Path) -> Tuple[bool, Dict]:
@@ -205,15 +206,15 @@ def audit_diversification_constraints(root: Path) -> Tuple[bool, Dict]:
         "constraint",
         "optimization",
     ]
-    
+
     results = search_in_directory(root, ["*.py"], keywords)
-    
+
     found = len(results) > 0
-    
+
     evidence = {
         "code_matches": {k: v[:5] for k, v in results.items()} if results else {},
     }
-    
+
     return found, evidence
 
 def audit_factor_count_balancing(root: Path) -> Tuple[bool, Dict]:
@@ -225,9 +226,9 @@ def audit_factor_count_balancing(root: Path) -> Tuple[bool, Dict]:
         "factor_weight",
         "equal_weight_factors",
     ]
-    
+
     results = search_in_directory(root, ["*.py"], keywords)
-    
+
     # config.yaml에서 weight_short, weight_long 확인
     config_path = root / "configs" / "config.yaml"
     config_evidence = []
@@ -241,14 +242,14 @@ def audit_factor_count_balancing(root: Path) -> Tuple[bool, Dict]:
                         config_evidence.append(f"config.yaml: l6.weight_short = {l6['weight_short']}, weight_long = {l6['weight_long']} (balanced)")
         except Exception:
             pass
-    
+
     found = len(results) > 0 or len(config_evidence) > 0
-    
+
     evidence = {
         "code_matches": {k: v[:5] for k, v in results.items()} if results else {},
         "config_evidence": config_evidence,
     }
-    
+
     return found, evidence
 
 def main():
@@ -257,18 +258,18 @@ def main():
     parser.add_argument("--run-tag", type=str, required=True, help="Run tag")
     parser.add_argument("--out-dir", type=str, default="reports/audit", help="Output directory")
     args = parser.parse_args()
-    
+
     # 루트 경로 결정
     if args.root:
         root = Path(args.root)
     else:
         root = Path(__file__).resolve().parents[2]
-    
+
     out_dir = root / args.out_dir
     out_dir.mkdir(parents=True, exist_ok=True)
-    
+
     print("[Audit] Starting pipeline feature audit...")
-    
+
     # 각 항목 감사
     audits = {
         "dynamic_k200_universe_used": audit_dynamic_k200_universe(root),
@@ -279,7 +280,7 @@ def main():
         "diversification_constraints_used": audit_diversification_constraints(root),
         "factor_count_balancing_used": audit_factor_count_balancing(root),
     }
-    
+
     # 결과 정리
     results = {}
     for feature_name, (found, evidence) in audits.items():
@@ -287,12 +288,12 @@ def main():
             "used": found,
             "evidence": evidence,
         }
-    
+
     # JSON 저장
     json_path = out_dir / f"audit__{args.run_tag}.json"
     with open(json_path, 'w', encoding='utf-8') as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
-    
+
     # Markdown 저장
     md_path = out_dir / f"audit__{args.run_tag}.md"
     md_lines = [
@@ -303,23 +304,23 @@ def main():
         "| Feature | Used |",
         "|---|---|",
     ]
-    
+
     for feature_name, result in results.items():
         status = "✅ Yes" if result["used"] else "❌ No"
         md_lines.append(f"| {feature_name} | {status} |")
-    
+
     md_lines.extend([
         "",
         "## Details",
         "",
     ])
-    
+
     for feature_name, result in results.items():
         md_lines.append(f"### {feature_name}")
         md_lines.append("")
         md_lines.append(f"**Used**: {result['used']}")
         md_lines.append("")
-        
+
         evidence = result["evidence"]
         if evidence.get("code_matches"):
             md_lines.append("**Code Matches:**")
@@ -328,28 +329,28 @@ def main():
                 for line_num, line in matches[:3]:
                     md_lines.append(f"  - Line {line_num}: `{line[:80]}`")
             md_lines.append("")
-        
+
         if evidence.get("config_evidence"):
             md_lines.append("**Config Evidence:**")
             for ev in evidence["config_evidence"]:
                 md_lines.append(f"- {ev}")
             md_lines.append("")
-        
+
         if evidence.get("report_files"):
             md_lines.append("**Report Files:**")
             for rf in evidence["report_files"][:5]:
                 md_lines.append(f"- `{rf}`")
             md_lines.append("")
-    
+
     md_path.write_text("\n".join(md_lines), encoding="utf-8")
-    
+
     print(f"[Audit] JSON saved: {json_path}")
     print(f"[Audit] Markdown saved: {md_path}")
     print("\n=== Audit Results ===")
     for feature_name, result in results.items():
         status = "[OK]" if result["used"] else "[NO]"
         print(f"{status} {feature_name}: {result['used']}")
-    
+
     return json_path, md_path
 
 if __name__ == "__main__":

@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """백테스트 결과 요약"""
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 
 base_dir = Path('C:/Users/seong/OneDrive/Desktop/bootcamp/03_code')
 strategies = ['bt20_short', 'bt20_ens', 'bt120_long', 'bt120_ens']
@@ -16,14 +17,14 @@ for strategy in strategies:
     metrics_path = base_dir / 'data' / 'interim' / f'bt_metrics_{strategy}.parquet'
     if not metrics_path.exists():
         continue
-    
+
     df = pd.read_parquet(metrics_path)
-    
+
     for phase in ['dev', 'holdout']:
         phase_df = df[df['phase'] == phase]
         if len(phase_df) == 0:
             continue
-        
+
         row = phase_df.iloc[0]
         results.append({
             'strategy': strategy,
@@ -54,4 +55,3 @@ output_path = base_dir / 'artifacts' / 'reports' / 'backtest_results_current.csv
 output_path.parent.mkdir(parents=True, exist_ok=True)
 df_results.to_csv(output_path, index=False)
 print(f"\n결과 저장: {output_path}")
-

@@ -1,6 +1,6 @@
 # 백테스트 결과값에 해당하는 설정값 매핑
 
-**작성일**: 2026-01-07  
+**작성일**: 2026-01-07
 **결과 기준**: rebalance_interval=20 적용 후 최신 실행 결과
 
 ## ⚠️ 결과값 출처 및 시점
@@ -342,7 +342,7 @@ l8_long:
 
 1. **rebalance_interval**: 반드시 `holding_days`와 동일하게 설정
    - `rebalance_interval=1`이면 전략 본질이 변질됨
-   
+
 2. **BT120 오버래핑 트랜치**: 필수 설정
    - `overlapping_tranches_enabled: true`
    - `tranche_holding_days: 120`
@@ -359,4 +359,3 @@ l8_long:
 
 - **03_code**: `configs/config.yaml`
 - **06_code22**: `configs/config.yaml` (동일한 설정 적용됨)
-

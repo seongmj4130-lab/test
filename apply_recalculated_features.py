@@ -3,12 +3,13 @@
 재계산된 피처 영향도를 원본 CSV 파일에 적용
 """
 
-import pandas as pd
-import numpy as np
+import os
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional
-import sys
-import os
+
+import numpy as np
+import pandas as pd
 import yaml
 
 # 프로젝트 경로 설정
@@ -19,7 +20,7 @@ from src.components.ranking.contribution_engine import (
     ContributionConfig,
     compute_group_contributions_for_day,
     load_group_map_from_yaml,
-    pick_top_groups_per_row
+    pick_top_groups_per_row,
 )
 
 

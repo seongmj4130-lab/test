@@ -5,5 +5,3 @@
 from src.tracks.track_b.stages.backtest.l7c_benchmark import run_l7c_benchmark
 
 __all__ = ["run_l7c_benchmark"]
-
-

@@ -5,11 +5,13 @@ Top-K 방향 적중률 재계산
 - Top-K 종목들의 forward return이 0보다 큰 비율
 """
 
-import pandas as pd
-import numpy as np
+import os
 from pathlib import Path
 from typing import Dict, List, Tuple
-import os
+
+import numpy as np
+import pandas as pd
+
 
 def calculate_topk_direction_hit_ratio(
     ranking_df: pd.DataFrame,

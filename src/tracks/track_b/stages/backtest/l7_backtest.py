@@ -2,15 +2,15 @@
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/backtest/l7_backtest.py
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Dict, List, Tuple, Optional
-
 import logging
 import time
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
 import numpy as np
 import pandas as pd
 import yaml
-from pathlib import Path
 
 # [Stage13] selector import
 from src.components.portfolio.selector import select_topk_with_fallback
@@ -30,7 +30,7 @@ class BacktestConfig:
     ret_col: str = "true_short"
     weighting: str = "equal"  # equal | softmax
     softmax_temp: float = 1.0
-    
+
     # [개선안 36번] 오버래핑 트랜치(필수): 월별 신규 포트 추가로 Rebalances 증가 → 타이밍 럭 제거
     overlapping_tranches_enabled: bool = False
     tranche_holding_days: int = 120  # 캘린더 day 기준 만기(예: 120일)
@@ -41,18 +41,18 @@ class BacktestConfig:
     # 이전 보유 종목이 상위(top_k + buffer_k) 안에 있으면 유지 후보로 인정
     # [리팩토링] config.yaml과 통일: 모든 전략에서 15 사용 (bt20_ens는 20)
     buffer_k: int = 15
-    
+
     # [Phase 7 Step 2] Turnover 제어: 리밸런싱 주기 완화
     # rebalance_interval=1이면 모든 리밸런싱 실행, 2면 매 2번째만 실행 (빈도 50% 감소)
     # 목표: Avg Turnover ≤ 500% 달성
     # [리팩토링] config.yaml과 통일: 모든 전략에서 20 사용 (holding_days와 동일)
     rebalance_interval: int = 20  # 기본값 20 (월별 리밸런싱)
-    
+
     # [Stage 4] 업종 분산 제약 옵션
     diversify_enabled: bool = False
     group_col: str = "sector_name"
     max_names_per_group: int = 4
-    
+
     # [Stage5] 시장 국면(regime) 기반 전략 옵션
     regime_enabled: bool = False
     # [국면 세분화] 5단계 국면별 설정
@@ -71,7 +71,7 @@ class BacktestConfig:
     regime_top_k_bear: Optional[int] = None  # bear 시장에서 사용할 top_k (5단계 미지정 시 사용)
     regime_exposure_bull: Optional[float] = None  # bull 시장에서 사용할 exposure (5단계 미지정 시 사용)
     regime_exposure_bear: Optional[float] = None  # bear 시장에서 사용할 exposure (5단계 미지정 시 사용)
-    
+
     # [Phase 8 Step 2 방안1] 리밸런싱 규칙/버퍼/노출 튜닝: Dev 붕괴 완화
     # [리팩토링] config.yaml과 통일: 모든 전략에서 True 사용
     smart_buffer_enabled: bool = True  # 스마트 버퍼링 활성화
@@ -82,7 +82,7 @@ class BacktestConfig:
     target_volatility: float = 0.15  # 목표 변동성 (15%)
     volatility_adjustment_max: float = 1.2  # 변동성 조정 최대 배수
     volatility_adjustment_min: float = 0.6  # 변동성 조정 최소 배수
-    
+
     # [Phase 8 Step 2 방안2] 국면 필터/리스크 스케일링: Bear 구간 방어 강화
     # [리팩토링] config.yaml과 통일: 모든 전략에서 True 사용
     risk_scaling_enabled: bool = True  # 국면별 리스크 스케일링 활성화
@@ -464,7 +464,7 @@ def _select_with_diversification(
 ) -> pd.DataFrame:
     """
     [Stage 4] 업종 분산 제약을 적용한 종목 선택
-    
+
     Args:
         g_sorted: score desc 정렬된 DataFrame
         ticker_col: 티커 컬럼명
@@ -473,33 +473,33 @@ def _select_with_diversification(
         prev_holdings: 이전 보유 종목 리스트
         group_col: 그룹 컬럼명 (예: "sector_name")
         max_names_per_group: 그룹당 최대 종목 수
-    
+
     Returns:
         선택된 종목 DataFrame
     """
     top_k = int(top_k)
     buffer_k = int(buffer_k)
-    
+
     # [Stage 4] 업종 분산 제약이 없으면 기존 로직 사용
     if group_col is None or max_names_per_group is None or group_col not in g_sorted.columns:
         return _select_with_buffer(g_sorted, ticker_col=ticker_col, top_k=top_k, buffer_k=buffer_k, prev_holdings=prev_holdings)
-    
+
     # [Stage 4] 업종 분산 제약 적용
     allow_n = top_k + buffer_k if buffer_k > 0 else top_k
     allow = g_sorted.head(allow_n).copy()
-    
+
     # 이전 보유 종목 중 허용 범위에 있는 것들
     allow_set = set(allow[ticker_col].astype(str).tolist())
     keep = [t for t in prev_holdings if t in allow_set]
-    
+
     # cap keep to top_k
     if len(keep) > top_k:
         keep = keep[:top_k]
-    
+
     selected = []
     selected_set = set()
     group_counts: Dict[str, int] = {}
-    
+
     # 1) keep 먼저 (업종 제약 고려)
     for t in keep:
         ticker_row = allow[allow[ticker_col].astype(str) == t]
@@ -510,28 +510,28 @@ def _select_with_diversification(
                 selected.append(t)
                 selected_set.add(t)
                 group_counts[sector] = current_count + 1
-    
+
     # 2) 부족한 만큼 상위에서 채움 (업종 제약 고려)
     for _, row in allow.iterrows():
         if len(selected) >= top_k:
             break
-        
+
         t = str(row[ticker_col])
         if t in selected_set:
             continue
-        
+
         sector = str(row[group_col]) if pd.notna(row[group_col]) else "기타"
         current_count = group_counts.get(sector, 0)
-        
+
         if current_count < max_names_per_group:
             selected.append(t)
             selected_set.add(t)
             group_counts[sector] = current_count + 1
-    
+
     # final safety: never exceed top_k
     if len(selected) > top_k:
         selected = selected[:top_k]
-    
+
     return g_sorted[g_sorted[ticker_col].astype(str).isin(selected)].copy()
 
 def _select_with_smart_buffer(
@@ -545,11 +545,11 @@ def _select_with_smart_buffer(
 ) -> pd.DataFrame:
     """
     [Phase 8 Step 2 방안1] 스마트 버퍼링: 기존 보유 종목에 더 높은 우선순위 부여
-    
+
     기존 _select_with_buffer와 차이:
     - 보유 종목이 상위 X% 내에 있으면 더 강력하게 유지
     - 안정적인 포지션 유지로 Dev 구간 붕괴 완화
-    
+
     Args:
         g_sorted: score desc 정렬된 DataFrame
         ticker_col: 티커 컬럼명
@@ -557,7 +557,7 @@ def _select_with_smart_buffer(
         buffer_k: 버퍼 종목 수
         prev_holdings: 이전 보유 종목 리스트
         stability_threshold: 보유 종목 안정성 임계값 (0.0~1.0)
-    
+
     Returns:
         선택된 종목 DataFrame
     """
@@ -572,7 +572,7 @@ def _select_with_smart_buffer(
 
     allow_set = set(allow[ticker_col].astype(str).tolist())
     total_count = len(g_sorted)
-    
+
     # [Phase 8 Step 2 방안1] 스마트 버퍼링: 안정성 임계값 기반 필터링
     keep = []
     for t in prev_holdings:
@@ -585,7 +585,7 @@ def _select_with_smart_buffer(
                 # 순위가 상위 X% 내에 있으면 유지 (낮을수록 상위)
                 if rank_pct <= stability_threshold:
                     keep.append(t)
-    
+
     # cap keep to top_k
     if len(keep) > top_k:
         keep = keep[:top_k]
@@ -675,36 +675,36 @@ def _calculate_volatility_adjustment(
 ) -> float:
     """
     [Phase 8 Step 2 방안1] 변동성 기반 exposure 조정
-    
+
     Args:
         recent_returns: 최근 수익률 배열
         target_vol: 목표 변동성 (예: 0.15 = 15%)
         lookback_days: 변동성 계산 기간
         max_mult: 최대 조정 배수
         min_mult: 최소 조정 배수
-    
+
     Returns:
         exposure 조정 배수 (0.6 ~ 1.2)
     """
     if len(recent_returns) < 2:
         return 1.0
-    
+
     # 최근 N일 수익률의 표준편차 계산 (연율화)
     recent_window = recent_returns[-lookback_days:] if len(recent_returns) >= lookback_days else recent_returns
     if len(recent_window) < 2:
         return 1.0
-    
+
     current_vol = float(np.std(recent_window)) * np.sqrt(252.0)  # 연율화
-    
+
     if current_vol <= 0 or target_vol <= 0:
         return 1.0
-    
+
     # 목표 변동성 대비 현재 변동성 비율
     vol_ratio = target_vol / current_vol
-    
+
     # 조정 배수 계산 (클리핑)
     adjustment = float(np.clip(vol_ratio, min_mult, max_mult))
-    
+
     return adjustment
 
 def _apply_risk_scaling(
@@ -1327,10 +1327,10 @@ def run_backtest(
     cost_bps_config = float(config_cost_bps) if config_cost_bps is not None else float(cfg.cost_bps)
     cost_bps_used = float(cfg.cost_bps)  # 실제 백테스트에 사용된 cost_bps
     cost_bps_mismatch_flag = bool(abs(cost_bps_used - cost_bps_config) > 1e-6)  # 부동소수점 오차 고려
-    
+
     if cost_bps_mismatch_flag:
         warns.append(f"[Stage1] cost_bps mismatch: config={cost_bps_config}, used={cost_bps_used}")
-    
+
     # [Stage5] 시장 국면(regime) 처리
     regime_dict: Dict[pd.Timestamp, str] = {}
     if cfg.regime_enabled:
@@ -1363,7 +1363,7 @@ def run_backtest(
     df_cols = [date_col, ticker_col, phase_col, score_col, ret_col]
     if cfg.diversify_enabled and cfg.group_col in rebalance_scores.columns:
         df_cols.append(cfg.group_col)
-    
+
     df = rebalance_scores[df_cols].copy()
     df[date_col] = _ensure_datetime(df[date_col])
     df[ticker_col] = df[ticker_col].astype(str)
@@ -1384,7 +1384,7 @@ def run_backtest(
     returns_rows: List[dict] = []
     # [Stage13] selection diagnostics 저장용
     selection_diagnostics_rows: List[dict] = []
-    
+
     # [Stage13] 런타임 프로파일 저장용
     runtime_profile_rows: List[dict] = []
     t_load_inputs = time.time()
@@ -1393,13 +1393,13 @@ def run_backtest(
     for phase, dphase in df_sorted.groupby(phase_col, sort=False):
         t_phase_start = time.time()
         rebalance_dates_all = sorted(dphase[date_col].unique())
-        
+
         # [Phase 7 Step 2] Turnover 제어: 리밸런싱 주기 완화
         # [rebalance_interval 개선] L6R에서 이미 필터링했으므로, L7에서는 rebalance_interval=1로 고정
         # (L6R에서 rebalance_interval > 1일 때 이미 일별 데이터에서 필터링했으므로, L7에서는 추가 필터링 불필요)
         # [bt20 프로페셔널] 적응형 리밸런싱의 경우 L7에서 직접 필터링 적용
         rebalance_interval = int(cfg.rebalance_interval) if hasattr(cfg, 'rebalance_interval') else 1
-        
+
         # [bt20 프로페셔널] 적응형 리밸런싱 적용
         if cfg.adaptive_rebalancing_enabled:
             logger.info("[bt20 프로페셔널] 적응형 리밸런싱 적용 시작")
@@ -1457,17 +1457,17 @@ def run_backtest(
         else:
             # 예외 처리
             rebalance_dates_filtered = rebalance_dates_all
-        
+
         logger.info(f"[L7 Runtime] Phase '{phase}' 시작 (리밸런싱 {len(rebalance_dates_filtered)}개)")
         prev_w: Dict[str, float] = {}
         prev_holdings: List[str] = []
-        
+
         rebalance_dates = sorted(dphase[date_col].unique())
         rebalance_count = 0
-        
+
         # [Phase 8 Step 2 방안1] 변동성 기반 exposure 조정을 위한 수익률 히스토리 추적
         recent_returns_history: List[float] = []  # 최근 수익률 저장
-        
+
         # [개선안 36번] 오버래핑 트랜치 모드: 트랜치 리스트를 유지
         tranches: List[dict] = []  # each: {"open_date": pd.Timestamp, "w": Dict[str,float], "top_k": int}
         tranche_max_active = max(int(getattr(cfg, "tranche_max_active", 4)), 1)
@@ -1484,14 +1484,14 @@ def run_backtest(
             current_regime = None
             current_top_k = int(cfg.top_k)
             current_exposure = 1.0
-            
+
             if regime_enabled_actual:
                 # 가장 가까운 rebalance 날짜의 regime 조회 (forward fill)
                 regime_dates = sorted([d for d in regime_dict.keys() if d <= dt_ts])
                 if len(regime_dates) > 0:
                     nearest_date = regime_dates[-1]
                     current_regime = regime_dict[nearest_date]
-                    
+
                     # [국면 세분화] 5단계 국면별 top_k/exposure 결정
                     if current_regime == "bull_strong":
                         if cfg.regime_top_k_bull_strong is not None:
@@ -1661,7 +1661,7 @@ def run_backtest(
                 k_eff = diagnostics["selected_count"]
                 eligible_count = diagnostics["eligible_count"]
                 filled_count = diagnostics["filled_from_next_rank"]
-                
+
                 # [Stage13] selection_diagnostics 기록 (트랜치 모드에서도 유지)
                 selection_diagnostics_rows.append(
                     {
@@ -1678,7 +1678,7 @@ def run_backtest(
                         "mode": "overlapping_tranches",
                     }
                 )
-                
+
                 # [Stage13] runtime_profile 기록
                 runtime_profile_rows.append(
                     {
@@ -1790,7 +1790,7 @@ def run_backtest(
             else:
                 diag_row["drop_reasons"] = None
             selection_diagnostics_rows.append(diag_row)
-            
+
             # [Stage13] 런타임 프로파일 기록
             t_rebalance_end = time.time()
             rebalance_time = t_rebalance_end - t_rebalance_start
@@ -1803,7 +1803,7 @@ def run_backtest(
                 "holding_days": int(cfg.holding_days),
                 "eligible_count": diagnostics["eligible_count"],
             })
-            
+
             # 매 10회마다 요약 로그
             if rebalance_count % 10 == 0:
                 elapsed_phase = t_rebalance_end - t_phase_start
@@ -1826,7 +1826,7 @@ def run_backtest(
             ls_alpha = _long_short_alpha(g_alpha[score_col], g_alpha[ret_col], k=int(current_top_k)) if len(g_alpha) else float("nan")
 
             gross_ret = float(np.dot(w, g_sel[ret_col].astype(float).to_numpy()))
-            
+
             # [Phase 8 Step 2 방안1] 변동성 기반 exposure 조정
             volatility_adjustment = 1.0
             if cfg.volatility_adjustment_enabled and len(recent_returns_history) >= 2:
@@ -1838,7 +1838,7 @@ def run_backtest(
                     max_mult=cfg.volatility_adjustment_max,
                     min_mult=cfg.volatility_adjustment_min,
                 )
-            
+
             # [Phase 8 Step 2 방안2] 국면별 리스크 스케일링 적용
             adjusted_exposure = _apply_risk_scaling(
                 base_exposure=current_exposure,
@@ -1848,11 +1848,11 @@ def run_backtest(
                 neutral_multiplier=cfg.risk_scaling_neutral_multiplier,
                 bull_multiplier=cfg.risk_scaling_bull_multiplier,
             )
-            
+
             # [Stage5] exposure 적용 (변동성 조정 포함)
             final_exposure = adjusted_exposure * volatility_adjustment
             gross_ret = gross_ret * final_exposure
-            
+
             # [Phase 8 Step 2] 수익률 히스토리 업데이트 (변동성 조정용)
             if cfg.volatility_adjustment_enabled:
                 recent_returns_history.append(gross_ret)
@@ -1860,7 +1860,7 @@ def run_backtest(
                 max_history = cfg.volatility_lookback_days * 2
                 if len(recent_returns_history) > max_history:
                     recent_returns_history = recent_returns_history[-max_history:]
-            
+
             # [개선안 1번][개선안 3번] 거래비용/슬리피지 반영 (턴오버 기반)
             # - traded_value = turnover_oneway * |final_exposure|
             # - total_cost = traded_value * (cost_bps + slippage_bps) / 10000
@@ -1881,12 +1881,12 @@ def run_backtest(
 
             # [Stage 4] sector_name을 positions에 포함
             sector_col = cfg.group_col if cfg.diversify_enabled and cfg.group_col in g_sel.columns else None
-            
+
             # [Stage13] k_eff, eligible_count, filled_count 계산
             k_eff = diagnostics["selected_count"]
             eligible_count = diagnostics["eligible_count"]
             filled_count = diagnostics["filled_from_next_rank"]
-            
+
             for idx, (t, wi, sc, tr) in enumerate(zip(g_sel[ticker_col], w, g_sel[score_col], g_sel[ret_col])):
                 pos_row = {
                     "date": dt,
@@ -1934,7 +1934,7 @@ def run_backtest(
                 "traded_value": float(traded_value),  # [개선안 1번] 거래된 비중(턴오버*노출)
                 "total_cost": float(total_cost),  # [개선안 1번][개선안 3번] 실제 적용된 총 비용
             }
-            
+
             # [Stage5] regime 및 exposure 기록
             # [Stage13] market_regime이 없으면 regime 컬럼을 생성하지 않음 (결측률 95%+ 방지)
             if regime_enabled_actual:
@@ -1946,12 +1946,12 @@ def run_backtest(
             if cfg.risk_scaling_enabled or cfg.volatility_adjustment_enabled:
                 returns_row["final_exposure"] = float(final_exposure)
             # else: regime_enabled_actual이 False면 regime/exposure 컬럼을 추가하지 않음
-            
+
             returns_rows.append(returns_row)
 
             prev_w = new_w
             prev_holdings = g_sel[ticker_col].tolist()
-        
+
         # Phase 종료 로그
         t_phase_end = time.time()
         phase_time = t_phase_end - t_phase_start
@@ -1959,7 +1959,7 @@ def run_backtest(
 
     bt_positions = pd.DataFrame(positions_rows).sort_values(["phase", "date", "ticker"]).reset_index(drop=True)
     bt_returns = pd.DataFrame(returns_rows).sort_values(["phase", "date"]).reset_index(drop=True)
-    
+
     # [Stage13] bt_returns를 core와 diagnostics로 분리
     # 필수 컬럼: date, phase, net_return, gross_return, turnover_oneway 등 (validation 통과용)
     REQUIRED_CORE_COLS = [
@@ -1971,7 +1971,7 @@ def run_backtest(
         # [개선안 34번] Alpha Quality
         "ic", "rank_ic", "long_short_alpha"
     ]
-    
+
     # 진단 컬럼: regime, exposure 등 (결측 허용, 별도 저장)
     # [개선안 43번] 오버래핑 트랜치/리스크 스케일링 관련 컬럼이 Stage13 분리 과정에서 유실되지 않도록
     # diagnostics에 포함한다. (core는 최소 스키마 유지)
@@ -1988,11 +1988,11 @@ def run_backtest(
         "volatility_adjustment",
         "final_exposure",
     ]
-    
+
     # core: 필수 컬럼만 포함 (validation 통과용)
     available_core_cols = [c for c in REQUIRED_CORE_COLS if c in bt_returns.columns]
     bt_returns_core = bt_returns[available_core_cols].copy()
-    
+
     # diagnostics: 진단 컬럼만 포함 (결측 허용)
     available_diag_cols = [c for c in DIAGNOSTIC_COLS if c in bt_returns.columns]
     if available_diag_cols:
@@ -2000,7 +2000,7 @@ def run_backtest(
     else:
         # 진단 컬럼이 없으면 빈 DataFrame 생성
         bt_returns_diagnostics = pd.DataFrame(columns=["date", "phase"])
-    
+
     # [Stage13] selection_diagnostics DataFrame 생성
     # [Stage13] selection_diagnostics: empty-safe
     selection_diagnostics = pd.DataFrame(selection_diagnostics_rows)
@@ -2030,12 +2030,12 @@ def run_backtest(
         g = g.sort_values("date").reset_index(drop=True)
         r_gross = g["gross_return"].astype(float).to_numpy()
         r_net = g["net_return"].astype(float).to_numpy()
-        
+
         # [개선안 34번] Alpha Quality aggregates
         ic_s = pd.to_numeric(g.get("ic"), errors="coerce") if "ic" in g.columns else pd.Series([], dtype=float)
         ric_s = pd.to_numeric(g.get("rank_ic"), errors="coerce") if "rank_ic" in g.columns else pd.Series([], dtype=float)
         ls_s = pd.to_numeric(g.get("long_short_alpha"), errors="coerce") if "long_short_alpha" in g.columns else pd.Series([], dtype=float)
-        
+
         def _icir(x: pd.Series) -> float:
             x = x.dropna()
             if len(x) < 5:
@@ -2044,7 +2044,7 @@ def run_backtest(
             if sd < 1e-12:
                 return float("nan")
             return float((x.mean() / sd) * np.sqrt(periods_per_year))
-        
+
         ic_mean = float(ic_s.dropna().mean()) if len(ic_s) else float("nan")
         ric_mean = float(ric_s.dropna().mean()) if len(ric_s) else float("nan")
         icir = _icir(ic_s) if len(ic_s) else float("nan")
@@ -2084,7 +2084,7 @@ def run_backtest(
                 logger.warning(f"Phase {phase}: CAGR calculation error ({type(e).__name__}: {e}). Setting CAGR=-100%")
         else:
             gross_cagr = -1.0
-        
+
         if eq_n <= 0:
             net_cagr = -1.0  # -100% (완전 손실)
             if eq_n < 0:
@@ -2116,7 +2116,7 @@ def run_backtest(
 
         mdd_g = _mdd(r_gross) if len(r_gross) else 0.0
         mdd_n = _mdd(r_net) if len(r_net) else 0.0
-        
+
         # [오류 수정] 포트폴리오가 손실이면 MDD도 -100%로 설정
         if eq_g <= 0:
             mdd_g = -1.0
@@ -2127,10 +2127,10 @@ def run_backtest(
         gross_total_return_pct = float(eq_g - 1.0)
         net_total_return_pct = float(eq_n - 1.0)
         gross_minus_net_total_return_pct = float(gross_total_return_pct - net_total_return_pct)
-        
+
         # [Stage1] avg_cost_pct 계산: 평균 비용을 퍼센트로 (total_cost의 평균)
         avg_cost_pct = float(g["total_cost"].mean() * 100.0) if "total_cost" in g.columns and len(g) > 0 else 0.0
-        
+
         # [최종 수치셋] Calmar Ratio 계산: CAGR / |MDD|
         def _calculate_calmar_ratio(cagr: float, mdd: float) -> float:
             """Calmar Ratio = CAGR / |MDD|"""
@@ -2140,10 +2140,10 @@ def run_backtest(
             if abs_mdd < 1e-9:  # MDD가 거의 0이면
                 return float('inf') if cagr > 0 else 0.0
             return float(cagr / abs_mdd)
-        
+
         gross_calmar = _calculate_calmar_ratio(gross_cagr, mdd_g)
         net_calmar = _calculate_calmar_ratio(net_cagr, mdd_n)
-        
+
         # [최종 수치셋] Profit Factor 계산: 총 이익 / 총 손실
         def _calculate_profit_factor(returns: np.ndarray) -> float:
             """Profit Factor = sum(양수 수익) / abs(sum(음수 수익))"""
@@ -2152,10 +2152,10 @@ def run_backtest(
             if losses == 0:
                 return float('inf') if profits > 0 else 0.0
             return float(profits / losses)
-        
+
         gross_profit_factor = _calculate_profit_factor(r_gross) if len(r_gross) > 0 else 0.0
         net_profit_factor = _calculate_profit_factor(r_net) if len(r_net) > 0 else 0.0
-        
+
         # [최종 수치셋] Avg Trade Duration 계산: 평균 보유 일수
         # positions 데이터에서 각 종목의 보유 기간 계산
         avg_trade_duration = np.nan
@@ -2164,7 +2164,7 @@ def run_backtest(
             if len(phase_positions) > 0:
                 phase_positions["date"] = pd.to_datetime(phase_positions["date"])
                 phase_positions = phase_positions.sort_values(["ticker", "date"])
-                
+
                 # 각 종목별로 연속 보유 기간 계산
                 durations = []
                 for ticker, ticker_positions in phase_positions.groupby("ticker", sort=False):
@@ -2177,13 +2177,13 @@ def run_backtest(
                             days_diff = pd.Timedelta(dates[i+1] - dates[i]).days
                             if days_diff <= cfg.holding_days * 2:  # 리밸런싱 주기 내 연속 보유
                                 durations.append(days_diff)
-                
+
                 if len(durations) > 0:
                     avg_trade_duration = float(np.mean(durations))
                 else:
                     # 보유 기간을 직접 계산할 수 없으면 holding_days를 기본값으로 사용
                     avg_trade_duration = float(cfg.holding_days)
-        
+
         met_rows.append(
             {
                 "phase": phase,
@@ -2233,7 +2233,7 @@ def run_backtest(
         )
 
     bt_metrics = pd.DataFrame(met_rows)
-    
+
     # [최종 수치셋] 국면별 성과 계산 (bt_positions, bt_returns_core 생성 후)
     regime_metrics_rows: List[dict] = []
     if regime_enabled_actual and len(bt_returns_diagnostics) > 0 and "regime" in bt_returns_diagnostics.columns:
@@ -2243,27 +2243,27 @@ def run_backtest(
             on=["date", "phase"],
             how="left"
         )
-        
+
         # 국면별로 그룹화하여 성과 계산
         for phase, phase_data in bt_returns_with_regime.groupby("phase", sort=False):
             phase_data = phase_data.sort_values("date").reset_index(drop=True)
-            
+
             for regime, regime_data in phase_data.groupby("regime", sort=False):
                 if pd.isna(regime) or len(regime_data) == 0:
                     continue
-                
+
                 regime_data = regime_data.sort_values("date").reset_index(drop=True)
                 r_net_regime = regime_data["net_return"].astype(float).to_numpy()
-                
+
                 if len(r_net_regime) == 0:
                     continue
-                
+
                 eq_n_regime = float((1.0 + pd.Series(r_net_regime)).cumprod().iloc[-1])
                 d0_regime = pd.to_datetime(regime_data["date"].iloc[0])
                 d1_regime = pd.to_datetime(regime_data["date"].iloc[-1])
                 # [오류 수정] timedelta64 호환성: pd.Timedelta로 변환하여 .days 사용
                 years_regime = max((pd.Timedelta(d1_regime - d0_regime).days / 365.25) if pd.notna(d0_regime) and pd.notna(d1_regime) else 1e-9, 1e-9)
-                
+
                 # [개선안 26번] Overflow 방지: regime 구간이 매우 짧을 때 (years_regime≈0) CAGR 계산이 폭주할 수 있음
                 # - log 기반으로 계산하고, exp 입력을 clip하여 런타임 크래시를 방지
                 net_cagr_regime = -1.0
@@ -2277,14 +2277,14 @@ def run_backtest(
                         net_cagr_regime = -1.0
                 net_vol_regime = float(np.std(r_net_regime, ddof=1) * np.sqrt(periods_per_year)) if len(r_net_regime) > 1 else 0.0
                 net_sharpe_regime = float((np.mean(r_net_regime) / (np.std(r_net_regime, ddof=1) + 1e-12)) * np.sqrt(periods_per_year)) if len(r_net_regime) > 1 else 0.0
-                
+
                 mdd_regime = _mdd(r_net_regime) if len(r_net_regime) else 0.0
                 if eq_n_regime <= 0:
                     mdd_regime = -1.0
-                
+
                 net_hit_ratio_regime = float((r_net_regime > 0).mean()) if len(r_net_regime) else np.nan
                 net_total_return_regime = float(eq_n_regime - 1.0)
-                
+
                 regime_metrics_rows.append({
                     "phase": phase,
                     "regime": str(regime),
@@ -2297,7 +2297,7 @@ def run_backtest(
                     "date_start": d0_regime,
                     "date_end": d1_regime,
                 })
-    
+
     bt_regime_metrics = pd.DataFrame(regime_metrics_rows) if regime_metrics_rows else pd.DataFrame()
 
     quality = {
@@ -2322,7 +2322,7 @@ def run_backtest(
         runtime_profile = runtime_profile.sort_values(["phase", "date"]).reset_index(drop=True)
     else:
         runtime_profile = pd.DataFrame(columns=["date", "phase"])
-    
+
     # [Stage13] selection_diagnostics 반환
     # bt_returns_core를 bt_returns로 사용 (validation 통과용)
     # bt_returns_diagnostics는 별도로 저장

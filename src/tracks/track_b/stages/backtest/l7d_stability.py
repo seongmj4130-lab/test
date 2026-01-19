@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Optional, Tuple, List
+from typing import List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
+
 
 def _resolve_section(cfg: dict, name: str) -> dict:
     """config.yaml이 params 아래에 섹션을 두는 구조를 지원한다."""

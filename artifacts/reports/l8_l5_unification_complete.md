@@ -81,7 +81,7 @@
 
 ### L8 실행 시 확인 사항
 
-1. **로그 확인**: 
+1. **로그 확인**:
    ```
    [L8-L5 통일] Loaded 22 features from configs/features_short_v1.yaml
    [L8-L5 통일] Loaded 19 features from configs/features_long_v1.yaml
@@ -129,4 +129,3 @@
 - `configs/features_short_v1.yaml` (신규 생성)
 - `configs/feature_weights_short_hitratio_optimized.yaml` (수정)
 - `configs/feature_weights_long_ic_optimized.yaml` (수정)
-

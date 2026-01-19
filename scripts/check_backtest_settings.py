@@ -23,4 +23,3 @@ for s in strategies:
         if 'softmax_temperature' in h and pd.notna(h['softmax_temperature']):
             print(f'    softmax_temperature: {h["softmax_temperature"]}')
         print(f'    n_rebalances (holdout): {h["n_rebalances"]}')
-

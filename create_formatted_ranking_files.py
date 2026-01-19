@@ -3,8 +3,10 @@
 단기/장기 랭킹 데이터를 지정된 양식으로 변환하여 CSV와 Parquet 파일 생성
 """
 
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
+
 
 def create_formatted_ranking_files():
     """단기/장기 랭킹 파일 생성"""

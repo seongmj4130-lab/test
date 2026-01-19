@@ -1,6 +1,6 @@
-import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 # 데이터 로드
 df = pd.read_csv('data/ui_strategies_cumulative_comparison.csv')

@@ -70,5 +70,3 @@
   - Alpha Quality (4)
   - Operational Viability (4)
   - Regime Robustness (3개 국면 × 4개 지표)
-
-

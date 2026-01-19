@@ -3,9 +3,10 @@
 Track A/B 파이프라인 상태 간단 점검
 """
 
-from pathlib import Path
-import pandas as pd
 import sys
+from pathlib import Path
+
+import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))

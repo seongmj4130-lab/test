@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 
 # 데이터 파일 경로
 data_path = Path(__file__).parent / 'baseline_20260112_145649' / 'data' / 'interim' / 'rebalance_scores.parquet'

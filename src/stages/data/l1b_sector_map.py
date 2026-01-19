@@ -5,5 +5,3 @@
 from src.tracks.shared.stages.data.l1b_sector_map import build_sector_map
 
 __all__ = ["build_sector_map"]
-
-

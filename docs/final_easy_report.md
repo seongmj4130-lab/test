@@ -1,8 +1,8 @@
 # KOSPI200 투트랙 퀀트 투자 시스템 통합 기술 보고서
 
-**작성일**: 2026-01-07 (최종 업데이트)  
-**버전**: Phase 9 + 랭킹산정모델 최종 픽스 (2026-01-07)  
-**대상 독자**: 금융 지식이 없는 소프트웨어 엔지니어, 데이터 사이언티스트, 학생, 일반 기술자  
+**작성일**: 2026-01-07 (최종 업데이트)
+**버전**: Phase 9 + 랭킹산정모델 최종 픽스 (2026-01-07)
+**대상 독자**: 금융 지식이 없는 소프트웨어 엔지니어, 데이터 사이언티스트, 학생, 일반 기술자
 **목적**: 전체 시스템(Track A: 랭킹 엔진 + Track B: 투자 모델)을 코드와 데이터 기준으로 쉽게 설명
 
 ---
@@ -29,7 +29,7 @@
 
 이 시스템은 마치 **"학생 성적 평가 시스템 + 장학금 수여 시뮬레이션"**과 같습니다:
 
-1. **Track A (랭킹 엔진)**: 
+1. **Track A (랭킹 엔진)**:
    - 200명의 학생(주식)에게 매일 시험을 보게 하고
    - 과거 성적 데이터를 분석해서 "점수 계산 규칙"을 만들고
    - 오늘의 학생들을 점수로 평가해 **1등~200등 순위**를 매깁니다.
@@ -45,7 +45,7 @@
 
 **문제**: 주식 투자는 불확실합니다. 어떤 주식을 살지 결정하기 어렵습니다.
 
-**해결책**: 
+**해결책**:
 - 데이터와 머신러닝으로 객관적인 랭킹을 만듭니다.
 - 과거 데이터로 시뮬레이션해서 "이 전략이 실제로 작동하는지" 미리 검증합니다.
 
@@ -97,10 +97,10 @@
 
 **목적**: 피처들로 KOSPI200의 랭킹을 산정하여 이용자에게 제공
 
-**입력**: 원시 데이터 (주가, 재무 정보, 뉴스 등)  
+**입력**: 원시 데이터 (주가, 재무 정보, 뉴스 등)
 **출력**: 매일 각 주식의 점수와 순위 (`ranking_short_daily.parquet`, `ranking_long_daily.parquet`)
 
-**역할**: 
+**역할**:
 - 데이터를 수집하고 정리합니다 (L0~L4, 공통 데이터)
 - 머신러닝 모델을 학습시킵니다 (L5, 선택적)
 - 각 주식에 점수를 매기고 순위를 매깁니다 (L8)
@@ -115,7 +115,7 @@ python -m src.pipeline.track_a_pipeline
 
 **목적**: 랭킹을 기반으로 다양한 투자모델 예시를 만들어 이용자에게 정보 제공
 
-**입력**: Track A의 랭킹 결과 (`ranking_short_daily.parquet`, `ranking_long_daily.parquet`)  
+**입력**: Track A의 랭킹 결과 (`ranking_short_daily.parquet`, `ranking_long_daily.parquet`)
 **출력**: 성과 지표 (수익률, 리스크, 거래비용 등)
 
 **역할**:
@@ -177,7 +177,7 @@ date        ym        ticker
 
 **비유**: 학생의 일일 출석부와 시험 성적을 정리하고, "최근 성적 추세", "성적 변동성" 같은 파생 지표를 만드는 단계
 
-**코드 위치**: 
+**코드 위치**:
 - `src/tracks/shared/stages/data/l1_ohlcv.py` (OHLCV 다운로드)
 - `src/tracks/shared/stages/data/l1_technical_features.py` (기술적 지표 계산)
 
@@ -293,7 +293,7 @@ date        ticker    close    momentum_20d    roe      sector_name
 
 ### 3.5 L4: Walk-Forward CV 분할 + 타깃 변수 생성 - "공정한 시험지 만들기"
 
-**비유**: 
+**비유**:
 - 시험을 볼 때 "미래 문제를 미리 보면 안 되므로" 시간 순서를 지켜서 학습/평가 구간을 나누는 단계
 - "20일 후 성적", "120일 후 성적" 같은 목표 변수를 만드는 단계
 
@@ -388,7 +388,7 @@ pipeline.fit(X_train, y_train)
 
 **비유**: 모델이 예측한 점수를 받아서, 날짜별로 종목들을 순위로 줄 세우는 단계
 
-**코드 위치**: 
+**코드 위치**:
 - `src/components/ranking/score_engine.py` (점수 계산 엔진)
 - `src/tracks/track_a/stages/ranking/l8_dual_horizon.py` (단기/장기 랭킹 생성)
 
@@ -421,7 +421,7 @@ def normalize_feature_cross_sectional(df, feature_col, method='percentile'):
 
 # score_engine.py: 점수 합산
 score_total = sum(
-    normalized_feature * feature_weight 
+    normalized_feature * feature_weight
     for normalized_feature, feature_weight in zip(normalized_features, weights)
 )
 
@@ -448,7 +448,7 @@ score_ens = alpha_short * ranking_short + alpha_long * ranking_long
 
 **비유**: "과거로 되돌아가서 이 전략대로 투자했다면 얼마나 벌었을까?"를 시뮬레이션하는 것
 
-**입력**: 
+**입력**:
 - `ranking_short_daily.parquet`: Track A에서 생성된 단기 랭킹
 - `ranking_long_daily.parquet`: Track A에서 생성된 장기 랭킹
 - `dataset_daily.parquet`: 공통 데이터 (수익률 정보 포함)
@@ -886,10 +886,10 @@ l7_bt120:
 
 ### 6.4 Dev vs Holdout
 
-**Dev (개발 구간)**: 모델을 튜닝하고 검증하는 구간  
+**Dev (개발 구간)**: 모델을 튜닝하고 검증하는 구간
 **Holdout (실전 시험 구간)**: 최종적으로 실전 성과를 평가하는 구간
 
-**비유**: 
+**비유**:
 - Dev = 연습 시험 (여러 번 시험을 보면서 실력을 키움)
 - Holdout = 최종 시험 (한 번만 보고 실전 성과 평가)
 
@@ -1125,9 +1125,9 @@ l7_bt120:
 
 ---
 
-**작성 완료일**: 2026-01-06 (최종 업데이트)  
-**버전**: Phase 9 + 뉴스 피처 추가 (2026-01-04) + 투트랙 구조 리팩토링 (2026-01-05) + Ridge Alpha 최적화 (2026-01-06)  
-**최종 검토**: 
+**작성 완료일**: 2026-01-06 (최종 업데이트)
+**버전**: Phase 9 + 뉴스 피처 추가 (2026-01-04) + 투트랙 구조 리팩토링 (2026-01-05) + Ridge Alpha 최적화 (2026-01-06)
+**최종 검토**:
 - 코드와 데이터 기준 100% 반영
 - 뉴스 피처 추가 반영
 - 투트랙 구조 반영 (Track A/B 분리)
@@ -1140,4 +1140,3 @@ l7_bt120:
 - **가중치 방식(equal vs softmax) 비교 최적화** (2026-01-06): 4가지 전략 모두에 대해 equal과 softmax 비교
   - 결과: 모든 전략에서 equal이 softmax보다 우수 (Holdout Total Return 기준)
   - 상세 리포트: `artifacts/reports/weighting_comparison_optimization_report.md`
-

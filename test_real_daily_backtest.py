@@ -4,9 +4,14 @@
 실제 프로젝트 데이터로 일별 mark-to-market 백테스트 테스트
 """
 
-import pandas as pd
 import numpy as np
-from src.tracks.track_b.stages.backtest.l7_backtest import BacktestConfig, _run_daily_backtest
+import pandas as pd
+
+from src.tracks.track_b.stages.backtest.l7_backtest import (
+    BacktestConfig,
+    _run_daily_backtest,
+)
+
 
 def test_real_daily_backtest():
     """실제 프로젝트 데이터로 일별 백테스트 테스트"""

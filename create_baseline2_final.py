@@ -1,5 +1,6 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 
 def create_baseline2_final():
     """Baseline2 기준 최종 UI 데이터 생성 (합리적인 값 사용)"""

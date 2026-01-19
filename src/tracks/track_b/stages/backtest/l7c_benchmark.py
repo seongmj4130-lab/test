@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/backtest/l7c_benchmark.py
 from __future__ import annotations
-from typing import List, Tuple, Optional
+
+from typing import List, Optional, Tuple
+
 import numpy as np
 import pandas as pd
+
 
 def _require_pykrx():
     """
@@ -51,7 +54,7 @@ def _pick_strategy_return_series(bt_returns: pd.DataFrame) -> Tuple[pd.Series, s
         for cc in cost_candidates:
             if cc in cols:
                 return (g - bt_returns[cc].astype(float)), f"{gross_col}-({cc})"
-        
+
         turnover_candidates = ["turnover_oneway", "turnover", "oneway_turnover"]
         cost_bps_candidates = ["cost_bps", "tcost_bps"]
         tcol = next((c for c in turnover_candidates if c in cols), None)
@@ -198,7 +201,7 @@ def compare_strategy_vs_benchmark(
     holding_days: int,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, dict, List[str]]:
     warns: List[str] = []
-    
+
     br = bt_returns.copy()
     br["date"] = pd.to_datetime(br["date"])
     br["phase"] = br["phase"].astype(str)
@@ -222,10 +225,10 @@ def compare_strategy_vs_benchmark(
         ex = g["excess_return"].astype(float).to_numpy()
         te = float(np.std(ex, ddof=1) * np.sqrt(periods_per_year)) if len(ex) > 1 else 0.0
         ir = float((np.mean(ex) / (np.std(ex, ddof=1) + 1e-12)) * np.sqrt(periods_per_year)) if len(ex) > 1 else 0.0
-        
+
         strat = g["_strategy_return_"].astype(float).to_numpy()
         b = g["bench_return"].astype(float).to_numpy()
-        
+
         corr = float(np.corrcoef(strat, b)[0, 1]) if len(ex) > 1 else np.nan
         beta = float(np.cov(strat, b, ddof=1)[0, 1] / (np.var(b, ddof=1) + 1e-12)) if len(ex) > 1 else np.nan
 
@@ -304,7 +307,7 @@ def run_l7c_benchmark(cfg, artifacts, *, force=False):
         raise KeyError("run_l7c_benchmark requires 'rebalance_scores' in artifacts")
     if "bt_returns" not in artifacts:
         raise KeyError("run_l7c_benchmark requires 'bt_returns' in artifacts")
-        
+
     rebalance_scores = artifacts["rebalance_scores"]
     bt_returns = artifacts["bt_returns"]
 
@@ -365,7 +368,7 @@ def run_l7c_benchmark(cfg, artifacts, *, force=False):
         "bt_vs_benchmark_multi": bt_vs_bench_multi,
         "bt_benchmark_compare_multi": metrics_multi,
     }
-    
-    # quality는 메타데이터 용도지만 여기서는 outputs 위주로 반환, 
+
+    # quality는 메타데이터 용도지만 여기서는 outputs 위주로 반환,
     # 필요하다면 artifacts["_l7c_quality"] = quality 같은 처리를 runner에서 수행
     return outputs, warns

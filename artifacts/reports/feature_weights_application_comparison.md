@@ -1,6 +1,6 @@
 # 피처 가중치 적용 전후 Hit Ratio 비교 리포트
 
-**생성일시**: 2025-01-XX  
+**생성일시**: 2025-01-XX
 **비교 기준**: L8 설정 파일 경로 수정 전후
 
 ---
@@ -154,4 +154,3 @@ l8_long:
 **비교 파일**:
 - 수정 전: `artifacts/reports/ranking_hit_ratio_individual.csv`
 - 수정 후: `artifacts/reports/ranking_hit_ratio_with_feature_weights_final.csv`
-

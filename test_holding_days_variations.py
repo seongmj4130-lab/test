@@ -1,17 +1,19 @@
 import sys
-from pathlib import Path
-import yaml
-import pandas as pd
 from datetime import datetime
+from pathlib import Path
+
+import pandas as pd
+import yaml
 
 project_root = Path(__file__).resolve().parent
 sys.path.insert(0, str(project_root))
 
-from src.utils.config import load_config, get_path
-from src.utils.io import load_artifact, save_artifact, artifact_exists
 from src.stages.modeling.l5_train_models import train_oos_predictions
 from src.stages.modeling.l6_scoring import build_rebalance_scores
-from src.tracks.track_b.stages.backtest.l7_backtest import run_backtest, BacktestConfig
+from src.tracks.track_b.stages.backtest.l7_backtest import BacktestConfig, run_backtest
+from src.utils.config import get_path, load_config
+from src.utils.io import artifact_exists, load_artifact, save_artifact
+
 
 def test_holding_days_variations():
     """통합 전략에서 holding_days를 40, 60, 80, 100으로 변경해서 백테스트 실행"""

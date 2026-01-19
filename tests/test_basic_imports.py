@@ -3,8 +3,8 @@ Basic import smoke tests for the quant trading system.
 
 This module tests that all core modules can be imported without errors.
 """
-import sys
 import os
+import sys
 
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -13,11 +13,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 def test_core_dependencies():
     """Test that core data science dependencies can be imported."""
     try:
+        import lightgbm
         import numpy as np
         import pandas as pd
         import sklearn
         import xgboost
-        import lightgbm
         assert True, "Core dependencies imported successfully"
     except ImportError as e:
         assert False, f"Failed to import core dependencies: {e}"
@@ -51,8 +51,9 @@ def test_project_modules():
 def test_config_loading():
     """Test that configuration can be loaded."""
     try:
-        import yaml
         import os
+
+        import yaml
 
         config_path = os.path.join(os.path.dirname(__file__), '..', 'configs', 'config.yaml')
         if os.path.exists(config_path):

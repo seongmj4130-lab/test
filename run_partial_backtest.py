@@ -3,10 +3,11 @@
 부분 백테스트 실행: 전략별로 나누어 실행
 """
 
-import sys
-from pathlib import Path
-from datetime import datetime
 import logging
+import sys
+from datetime import datetime
+from pathlib import Path
+
 import pandas as pd
 import yaml
 
@@ -22,9 +23,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from src.utils.config import load_config, get_path
+from src.tracks.track_b.stages.backtest.l7_backtest import BacktestConfig, run_backtest
+from src.utils.config import get_path, load_config
 from src.utils.io import load_artifact, save_artifact
-from src.tracks.track_b.stages.backtest.l7_backtest import run_backtest, BacktestConfig
+
 
 def get_strategy_config(cfg: dict, strategy_name: str, holding_days: int) -> dict:
     """전략별 설정을 가져와서 holding_days에 맞게 수정"""

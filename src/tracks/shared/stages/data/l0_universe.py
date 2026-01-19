@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pandas as pd
 
+
 def _require_pykrx():
     try:
         from pykrx import stock

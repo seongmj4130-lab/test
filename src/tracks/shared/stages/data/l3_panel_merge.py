@@ -5,6 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+
 def build_panel_merged_daily(
     *,
     ohlcv_daily: pd.DataFrame,
@@ -157,7 +158,7 @@ def build_panel_merged_daily(
         merged["ticker"] = _normalize_ticker(merged["ticker"])
     if "date" in merged.columns:
         merged["date"] = _to_dt(merged["date"])
-    
+
     if universe_membership_monthly is not None and len(universe_membership_monthly) > 0:
         un = universe_membership_monthly.copy()
         # universe 쪽 date/ym 정리
@@ -178,7 +179,7 @@ def build_panel_merged_daily(
         merged = merged.merge(un_key, on=["ym", "ticker"], how="left", indicator=True)
         merged["in_universe"] = merged["_merge"].eq("both")
         merged.drop(columns=["_merge"], inplace=True)
-    
+
         # 월별 멤버십 누락 체크(데이터 자체 문제)
         ym_in_data = set(merged["ym"].dropna().unique().tolist())
         ym_in_univ = set(un_key["ym"].dropna().unique().tolist())
@@ -189,7 +190,7 @@ def build_panel_merged_daily(
     else:
         merged["in_universe"] = True
         warns.append("[L3] universe_membership_monthly is empty -> in_universe forced True (NOT OK for K200 strategy)")
-    
+
     if filter_k200_members_only:
         before = len(merged)
         merged = merged.loc[merged["in_universe"]].copy()
@@ -205,12 +206,12 @@ def build_panel_merged_daily(
             sector["date"] = pd.to_datetime(sector["date"], errors="coerce")
             sector["ticker"] = sector["ticker"].astype(str).str.zfill(6)
             sector = sector.dropna(subset=["date", "ticker", "sector_name"])
-            
+
             if not sector.empty:
                 # 날짜별로 가장 최근 업종 정보를 사용 (asof merge)
                 merged_sorted = merged.sort_values(["date", "ticker"], kind="mergesort").reset_index(drop=True)
                 sector_sorted = sector.sort_values(["date", "ticker"], kind="mergesort").reset_index(drop=True)
-                
+
                 merged = pd.merge_asof(
                     merged_sorted,
                     sector_sorted[["date", "ticker", "sector_name"]],
@@ -233,7 +234,7 @@ def build_panel_merged_daily(
     # -------------------------
     if pykrx_fundamentals_daily is not None and not pykrx_fundamentals_daily.empty:
         pykrx = pykrx_fundamentals_daily.copy()
-        
+
         # 키 표준화
         if "date" not in pykrx.columns or "ticker" not in pykrx.columns:
             warns.append("[L1B] pykrx_fundamentals_daily에 date/ticker가 없어 병합을 건너뜁니다.")
@@ -241,21 +242,21 @@ def build_panel_merged_daily(
             pykrx["date"] = pd.to_datetime(pykrx["date"], errors="coerce")
             pykrx["ticker"] = pykrx["ticker"].astype(str).str.zfill(6)
             pykrx = pykrx.dropna(subset=["date", "ticker"])
-            
+
             if not pykrx.empty:
                 # date, ticker 기준으로 병합
                 merged_sorted = merged.sort_values(["date", "ticker"], kind="mergesort").reset_index(drop=True)
                 pykrx_sorted = pykrx.sort_values(["date", "ticker"], kind="mergesort").reset_index(drop=True)
-                
+
                 # 중복 제거 (같은 date, ticker에 여러 행이 있을 수 있음)
                 pykrx_sorted = pykrx_sorted.drop_duplicates(subset=["date", "ticker"], keep="last")
-                
+
                 merged = merged_sorted.merge(
                     pykrx_sorted,
                     on=["date", "ticker"],
                     how="left"
                 )
-                
+
                 pykrx_cols = ["PER", "PBR", "EPS", "BPS", "DIV", "market_cap"]
                 added_cols = [c for c in pykrx_cols if c in merged.columns]
                 warns.append(f"[L1B] pykrx 재무데이터 병합 완료: {len(added_cols)}개 컬럼 추가 ({', '.join(added_cols)})")
@@ -277,7 +278,7 @@ def build_panel_merged_daily(
             warns.append("[L1B] value 컬럼이 없어 volume * close로 거래대금 계산")
         else:
             trading_value = None
-        
+
         if trading_value is not None:
             merged["turnover_ratio"] = trading_value / merged["market_cap"]
             # 0으로 나누기 방지
@@ -310,10 +311,10 @@ def build_panel_merged_daily(
                     result = (series - mean_val) / std_val
                     result[series.isna()] = np.nan  # 원본이 NaN이면 결과도 NaN
                     return result
-                
+
                 # transform을 사용하여 원본 인덱스 유지
                 merged[z_col] = merged.groupby(["date", "sector_name"], group_keys=False)[base_col].transform(calc_sector_z)
-                
+
                 # z-score가 계산된 행 수 확인
                 z_count = merged[z_col].notna().sum()
                 warns.append(f"[Stage6] {z_col} 생성 완료: {z_count:,} / {len(merged):,} 행 (NaN={merged[z_col].isna().sum():,})")
@@ -326,7 +327,9 @@ def build_panel_merged_daily(
     # [개선안: 현재 데이터 기반 팩터 추가] Momentum, Volatility, Liquidity
     # -------------------------
     try:
-        from src.tracks.shared.stages.data.l3_feature_engineering import add_price_based_features
+        from src.tracks.shared.stages.data.l3_feature_engineering import (
+            add_price_based_features,
+        )
         merged, feat_warns = add_price_based_features(
             merged,
             price_col="close",
@@ -338,7 +341,7 @@ def build_panel_merged_daily(
         warns.extend(feat_warns or [])
     except Exception as e:
         warns.append(f"[L3 Features] 팩터 추가 실패 (계속 진행): {type(e).__name__}: {e}")
-    
+
     # -------------------------
     # 4) 후처리: downstream 편의 위해 ticker-date 정렬로 되돌림
     # -------------------------

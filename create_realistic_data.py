@@ -1,5 +1,6 @@
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 
 print('=== 합리적인 실제 데이터로 더미 파일 교체 ===')
 

@@ -27,7 +27,7 @@ from src.data_collection.pipeline import DataCollectionPipeline
 from src.pipeline.track_a_pipeline import run_track_a_pipeline
 from src.pipeline.track_b_pipeline import run_track_b_pipeline
 from src.tools.export_final_outputs import export_final_outputs
-from src.utils.config import load_config, get_path
+from src.utils.config import get_path, load_config
 from src.utils.io import artifact_exists, load_artifact
 
 logger = logging.getLogger(__name__)
@@ -179,7 +179,9 @@ def run(
     # 4) Track B 요약표 생성(이미 존재하는 스크립트 재사용)
     logger.info("[Two-Track] 4) Track B 4전략 요약표 생성")
     try:
-        from scripts.generate_trackb_4strategy_final_summary import main as generate_summary
+        from scripts.generate_trackb_4strategy_final_summary import (
+            main as generate_summary,
+        )
 
         generate_summary()
     except Exception as e:
@@ -237,5 +239,3 @@ if __name__ == "__main__":
         print("\n=== WARNINGS ===")
         for w in res["warnings"]:
             print("-", w)
-
-

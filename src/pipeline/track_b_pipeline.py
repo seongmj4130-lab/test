@@ -7,13 +7,14 @@ Track B: 투자 모델 (Investment Model)
 - L6R: 랭킹 스코어 변환
 - L7: 백테스트 실행
 """
+import logging
 from pathlib import Path
 from typing import Dict, Optional
-import logging
+
 import pandas as pd
 
-from src.utils.config import load_config, get_path
-from src.utils.io import load_artifact, artifact_exists, save_artifact
+from src.utils.config import get_path, load_config
+from src.utils.io import artifact_exists, load_artifact, save_artifact
 
 logger = logging.getLogger(__name__)
 
@@ -25,14 +26,14 @@ def run_track_b_pipeline(
 ) -> Dict:
     """
     Track B 전체 파이프라인을 실행합니다.
-    
+
     Track B는 랭킹을 기반으로 투자 모델을 실행하여 이용자에게 정보를 제공합니다.
-    
+
     Args:
         config_path: 설정 파일 경로
         strategy: 투자 전략 ("bt20_short", "bt20_ens", "bt120_long", "bt120_ens")
         force_rebuild: True면 캐시 무시하고 재계산
-    
+
     Returns:
         dict: 파이프라인 실행 결과
         {
@@ -49,12 +50,12 @@ def run_track_b_pipeline(
     logger.info("Track B: 투자 모델 파이프라인 실행 시작")
     logger.info(f"전략: {strategy}")
     logger.info("=" * 80)
-    
+
     # 설정 로드
     cfg = load_config(config_path)
     interim_dir = Path(get_path(cfg, "data_interim"))
     interim_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # 전략별 설정 매핑
     strategy_config_map = {
         "bt20_short": "l7_bt20_short",
@@ -63,21 +64,21 @@ def run_track_b_pipeline(
         "bt120_long": "l7_bt120_long",
         "bt120_ens": "l7_bt120_ens",
     }
-    
+
     l7_config_key = strategy_config_map.get(strategy)
     if not l7_config_key:
         raise ValueError(f"Unknown strategy: {strategy}. Use one of {list(strategy_config_map.keys())}")
-    
+
     l7_cfg = cfg.get(l7_config_key, {})
     if not l7_cfg:
         raise ValueError(f"Config key '{l7_config_key}' not found in config.yaml")
-    
+
     artifacts = {}
     artifacts_path = {}
-    
+
     # 공통 데이터 확인
     logger.info("[공통 데이터 확인]")
-    
+
     # L0: 유니버스
     uni_path = interim_dir / "universe_k200_membership_monthly"
     # [개선안 41번] force_rebuild 의미 정리:
@@ -90,11 +91,11 @@ def run_track_b_pipeline(
     else:
         logger.warning("  ✗ 유니버스 데이터가 없습니다. L0부터 실행이 필요합니다.")
         raise FileNotFoundError("universe_k200_membership_monthly not found")
-    
+
     # L4: CV 분할
     dataset_path = interim_dir / "dataset_daily"
     cv_short_path = interim_dir / "cv_folds_short"
-    
+
     if (artifact_exists(dataset_path) and artifact_exists(cv_short_path)):
         artifacts["dataset_daily"] = load_artifact(dataset_path)
         artifacts["cv_folds_short"] = load_artifact(cv_short_path)
@@ -104,12 +105,12 @@ def run_track_b_pipeline(
     else:
         logger.warning("  ✗ 데이터셋이 없습니다. L4까지 실행이 필요합니다.")
         raise FileNotFoundError("dataset_daily or cv_folds_short not found")
-    
+
     # Track A 산출물 확인 (랭킹 데이터)
     logger.info("[Track A 산출물 확인]")
     ranking_short_path = interim_dir / "ranking_short_daily"
     ranking_long_path = interim_dir / "ranking_long_daily"
-    
+
     if (artifact_exists(ranking_short_path) and artifact_exists(ranking_long_path)):
         artifacts["ranking_short_daily"] = load_artifact(ranking_short_path)
         artifacts["ranking_long_daily"] = load_artifact(ranking_long_path)
@@ -120,15 +121,17 @@ def run_track_b_pipeline(
         logger.warning("  ✗ 랭킹 데이터가 없습니다. Track A를 먼저 실행하세요.")
         logger.warning("  python -m src.pipeline.track_a_pipeline 를 먼저 실행하세요.")
         raise FileNotFoundError("ranking_short_daily or ranking_long_daily not found")
-    
+
     # L6R: 랭킹 스코어 변환
     logger.info("[L6R] 랭킹 스코어 변환")
-    from src.tracks.track_b.stages.modeling.l6r_ranking_scoring import run_L6R_ranking_scoring
-    
+    from src.tracks.track_b.stages.modeling.l6r_ranking_scoring import (
+        run_L6R_ranking_scoring,
+    )
+
     # [rebalance_interval 개선] 모델별 rebalance_interval을 캐시 키에 포함
     rebalance_interval = l7_cfg.get("rebalance_interval", 1)
     scores_path = interim_dir / f"rebalance_scores_from_ranking_interval_{rebalance_interval}"
-    
+
     if artifact_exists(scores_path) and not force_rebuild:
         artifacts["rebalance_scores"] = load_artifact(scores_path)
         artifacts_path["scores"] = str(scores_path)
@@ -141,11 +144,11 @@ def run_track_b_pipeline(
         ohlcv_daily = None
         if artifact_exists(ohlcv_path):
             ohlcv_daily = load_artifact(ohlcv_path)
-        
+
         # [rebalance_interval 개선] l7_cfg를 cfg에 임시로 추가하여 L6R에서 읽을 수 있도록 함
         cfg_with_l7 = cfg.copy()
         cfg_with_l7["l7"] = l7_cfg
-        
+
         outputs, warns = run_L6R_ranking_scoring(
             cfg=cfg_with_l7,  # l7_cfg 포함
             artifacts={
@@ -162,21 +165,24 @@ def run_track_b_pipeline(
         save_artifact(artifacts["rebalance_scores"], scores_path, force=True)
         artifacts_path["scores"] = str(scores_path)
         logger.info(f"  ✓ 생성 완료: {len(artifacts['rebalance_scores']):,}행 (rebalance_interval={rebalance_interval})")
-    
+
     # L7: 백테스트 실행
     logger.info("[L7] 백테스트 실행")
-    from src.tracks.track_b.stages.backtest.l7_backtest import run_backtest, BacktestConfig
-    
+    from src.tracks.track_b.stages.backtest.l7_backtest import (
+        BacktestConfig,
+        run_backtest,
+    )
+
     # BacktestConfig 생성
     # [리팩토링] config.yaml 우선 적용 구조로 변경
     # - config.yaml → BacktestConfig 기본값 순서로 적용
     # - .get() 기본값을 BacktestConfig 클래스 기본값으로 통일
     l7_regime = (l7_cfg.get("regime", {}) or {}) if isinstance(l7_cfg.get("regime", {}), dict) else {}
     l7_div = (l7_cfg.get("diversify", {}) or {}) if isinstance(l7_cfg.get("diversify", {}), dict) else {}
-    
+
     # [리팩토링] BacktestConfig 기본값 가져오기 (config.yaml 우선 적용)
     default_cfg = BacktestConfig()
-    
+
     bt_cfg = BacktestConfig(
         holding_days=int(l7_cfg.get("holding_days", default_cfg.holding_days)),
         top_k=int(l7_cfg.get("top_k", default_cfg.top_k)),
@@ -226,13 +232,15 @@ def run_track_b_pipeline(
         regime_exposure_bull=(float(l7_regime["exposure_bull"]) if "exposure_bull" in l7_regime else default_cfg.regime_exposure_bull),
         regime_exposure_bear=(float(l7_regime["exposure_bear"]) if "exposure_bear" in l7_regime else default_cfg.regime_exposure_bear),
     )
-    
+
     # 시장 국면 데이터 (regime_enabled일 때)
     market_regime_df = None
     if l7_cfg.get("regime", {}).get("enabled", False):
         logger.info("  → 시장 국면 데이터 생성 (외부 API 없이 ohlcv_daily 사용)")
-        from src.tracks.shared.stages.regime.l1d_market_regime import build_market_regime
-        
+        from src.tracks.shared.stages.regime.l1d_market_regime import (
+            build_market_regime,
+        )
+
         # ohlcv_daily 데이터 로드
         ohlcv_path = interim_dir / "ohlcv_daily"
         if not artifact_exists(ohlcv_path):
@@ -241,7 +249,7 @@ def run_track_b_pipeline(
             ohlcv_daily = load_artifact(ohlcv_path)
             rebalance_dates = artifacts["rebalance_scores"]["date"].unique()
             regime_cfg = l7_cfg.get("regime", {})
-            
+
             market_regime_df = build_market_regime(
                 rebalance_dates=rebalance_dates,
                 ohlcv_daily=ohlcv_daily,
@@ -251,7 +259,7 @@ def run_track_b_pipeline(
                 use_volatility=regime_cfg.get("use_volatility", True),
             )
             logger.info(f"  ✓ 시장 국면 데이터 생성: {len(market_regime_df):,}행")
-    
+
     # 백테스트 실행
     result = run_backtest(
         rebalance_scores=artifacts["rebalance_scores"],
@@ -259,7 +267,7 @@ def run_track_b_pipeline(
         config_cost_bps=bt_cfg.cost_bps,  # [리팩토링] BacktestConfig에서 가져옴 (config.yaml 우선 적용)
         market_regime=market_regime_df,
     )
-    
+
     # 결과 처리
     if len(result) == 10:
         bt_pos, bt_ret, bt_eq, bt_met, quality, warns, selection_diagnostics, bt_returns_diagnostics, runtime_profile, bt_regime_metrics = result
@@ -274,7 +282,7 @@ def run_track_b_pipeline(
         bt_regime_metrics = None
     else:
         raise ValueError(f"Unexpected return value count: {len(result)}")
-    
+
     # 결과 저장
     suffix = f"_{strategy}"
     save_artifact(bt_pos, interim_dir / f"bt_positions{suffix}", force=True)
@@ -302,16 +310,16 @@ def run_track_b_pipeline(
     if bt_regime_metrics is not None and isinstance(bt_regime_metrics, pd.DataFrame) and len(bt_regime_metrics) > 0:
         save_artifact(bt_regime_metrics, interim_dir / f"bt_regime_metrics{suffix}", force=True)
         artifacts_path["bt_regime_metrics"] = str(interim_dir / f"bt_regime_metrics{suffix}")
-    
+
     artifacts_path["bt_positions"] = str(interim_dir / f"bt_positions{suffix}")
     artifacts_path["bt_returns"] = str(interim_dir / f"bt_returns{suffix}")
     artifacts_path["bt_equity_curve"] = str(interim_dir / f"bt_equity_curve{suffix}")
     artifacts_path["bt_metrics"] = str(interim_dir / f"bt_metrics{suffix}")
-    
+
     logger.info("=" * 80)
     logger.info("✅ Track B: 투자 모델 파이프라인 실행 완료")
     logger.info("=" * 80)
-    
+
     return {
         "rebalance_scores": artifacts["rebalance_scores"],
         "bt_positions": bt_pos,
@@ -330,8 +338,7 @@ if __name__ == "__main__":
         format="[%(asctime)s] [%(levelname)s] %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S"
     )
-    
+
     strategy = sys.argv[1] if len(sys.argv) > 1 else "bt20_short"
     result = run_track_b_pipeline(strategy=strategy)
     print(f"\n✅ 완료: {len(result['bt_metrics'])}개 메트릭 생성")
-

@@ -1,6 +1,6 @@
 # Track A 랭킹산정 Hit Ratio 개선 방안
 
-**생성일시**: 2025-01-XX  
+**생성일시**: 2025-01-XX
 **분석 대상**: Track A 랭킹산정 파이프라인 실제 코드
 
 ---
@@ -31,7 +31,7 @@
 
 **개선안**: `normalization_method: zscore`
 
-**코드 위치**: 
+**코드 위치**:
 - `src/tracks/track_a/stages/ranking/l8_dual_horizon.py` (line 45, 191)
 - `src/components/ranking/score_engine.py` (line 47-124)
 
@@ -59,7 +59,7 @@ l8_long:
 
 **개선안**: 시장 국면별 피처 가중치 적용
 
-**코드 위치**: 
+**코드 위치**:
 - `src/tracks/track_a/stages/ranking/l8_dual_horizon.py` (line 136, 282)
 - `src/components/ranking/score_engine.py` (line 244-302)
 
@@ -85,7 +85,7 @@ if ohlcv_daily is not None:
         ohlcv_daily=ohlcv_daily,
         lookback_days=60,
     )
-    
+
     # 국면별 가중치 로드
     regime_weights_config = load_regime_weights(...)
 else:
@@ -97,13 +97,13 @@ else:
 
 ### 3️⃣ 피처 가중치 극단화 (즉시 적용 가능)
 
-**현재**: 
+**현재**:
 - 단기: Value 0.04, Profitability 0.075, Technical 0.025
 - 장기: Value 0.05, Profitability 0.1, Technical 0.02
 
 **개선안**: 예측력 높은 피처에 가중치 집중
 
-**코드 위치**: 
+**코드 위치**:
 - `configs/feature_weights_short_hitratio_optimized.yaml`
 - `configs/feature_weights_long_ic_optimized.yaml`
 
@@ -126,11 +126,11 @@ feature_weights:
 
 **현재**: `use_sector_relative: true`
 
-**개선안**: 
+**개선안**:
 - Option A: `use_sector_relative: false` (전체 시장 기준)
 - Option B: 섹터별 정규화 유지하되 가중치 조정
 
-**코드 위치**: 
+**코드 위치**:
 - `src/components/ranking/score_engine.py` (line 47-124)
 - `src/tracks/track_a/stages/ranking/l8_dual_horizon.py` (line 48, 194)
 
@@ -148,7 +148,7 @@ feature_weights:
 
 **개선안**: IC 기반 피처 필터링 추가
 
-**코드 위치**: 
+**코드 위치**:
 - `src/components/ranking/score_engine.py` (line 25-45)
 
 **수정 방법**:
@@ -156,12 +156,12 @@ feature_weights:
 def _pick_feature_cols(df: pd.DataFrame, min_ic: float = 0.0) -> List[str]:
     """IC 기반 피처 필터링 추가"""
     cols = _pick_feature_cols_original(df)
-    
+
     # IC 파일에서 필터링
     ic_df = pd.read_csv("artifacts/reports/feature_ic_dev.csv")
     good_features = set(ic_df[ic_df["rank_ic"] > min_ic]["feature"].tolist())
     cols = [c for c in cols if c in good_features]
-    
+
     return cols
 ```
 
@@ -215,7 +215,7 @@ ohlcv_path = interim_dir / "ohlcv_daily"
 if artifact_exists(ohlcv_path):
     ohlcv_daily = load_artifact(ohlcv_path)
     from src.tracks.shared.stages.regime.l1d_market_regime import build_market_regime
-    
+
     dates = input_df["date"].unique()
     market_regime_df = build_market_regime(
         rebalance_dates=dates,
@@ -225,7 +225,7 @@ if artifact_exists(ohlcv_path):
         use_volume=True,
         use_volatility=True,
     )
-    
+
     # 국면별 가중치 로드
     regime_weights_config = load_regime_weights(
         config_path=l8_short.get("regime_aware_weights_config"),
@@ -296,6 +296,5 @@ feature_weights:
 
 ---
 
-**분석 기준**: Track A 랭킹산정 파이프라인 실제 코드  
+**분석 기준**: Track A 랭킹산정 파이프라인 실제 코드
 **코드 경로**: `src/pipeline/track_a_pipeline.py`, `src/tracks/track_a/stages/ranking/l8_dual_horizon.py`, `src/components/ranking/score_engine.py`
-

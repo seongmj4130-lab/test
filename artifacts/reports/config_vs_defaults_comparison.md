@@ -1,7 +1,7 @@
 # config.yaml vs BacktestConfig 기본값 비교 리포트
 
-**분석 일시**: 2026-01-08  
-**분석 대상**: 03_code  
+**분석 일시**: 2026-01-08
+**분석 대상**: 03_code
 **분석 목적**: config.yaml 설정값과 BacktestConfig 기본값의 차이 확인
 
 ## 요약
@@ -167,8 +167,8 @@ config.yaml 설정값 (있으면) → BacktestConfig 기본값 (없으면)
 
 ### 3. 리팩토링의 효과는?
 
-✅ **일관성 확보**: 모든 기본값이 BacktestConfig에서 단일 소스로 관리됨  
-✅ **명확한 우선순위**: config.yaml → BacktestConfig 기본값 순서 명확  
+✅ **일관성 확보**: 모든 기본값이 BacktestConfig에서 단일 소스로 관리됨
+✅ **명확한 우선순위**: config.yaml → BacktestConfig 기본값 순서 명확
 ✅ **유지보수성 향상**: 기본값 변경 시 한 곳만 수정하면 됨
 
 ### 4. 주의사항
@@ -185,4 +185,3 @@ config.yaml 설정값 (있으면) → BacktestConfig 기본값 (없으면)
 - 비교 스크립트: `scripts/compare_config_vs_defaults.py`
 - BacktestConfig 클래스: `src/tracks/track_b/stages/backtest/l7_backtest.py`
 - config.yaml: `configs/config.yaml`
-

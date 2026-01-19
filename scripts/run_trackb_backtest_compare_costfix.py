@@ -25,7 +25,6 @@ sys.path.insert(0, str(project_root))
 
 from src.tracks.track_b.backtest_service import run_backtest_strategy
 
-
 STRATEGIES = ["bt20_short", "bt20_ens", "bt120_long", "bt120_ens"]
 
 
@@ -173,5 +172,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-

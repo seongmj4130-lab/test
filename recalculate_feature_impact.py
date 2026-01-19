@@ -4,12 +4,13 @@
 단기(short)와 장기(long) 각각 적용
 """
 
-import pandas as pd
-import yaml
+import os
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional
-import sys
-import os
+
+import pandas as pd
+import yaml
 
 # 프로젝트 경로 설정
 project_root = Path("C:/Users/seong/OneDrive/Desktop/bootcamp/000_code")
@@ -19,7 +20,7 @@ from src.components.ranking.contribution_engine import (
     ContributionConfig,
     compute_group_contributions_for_day,
     load_group_map_from_yaml,
-    pick_top_groups_per_row
+    pick_top_groups_per_row,
 )
 
 

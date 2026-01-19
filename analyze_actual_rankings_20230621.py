@@ -1,5 +1,6 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 
 # 실제 holdout 데이터에서 2023년 6월 21일 랭킹 추출
 def extract_rankings_for_date(date_str='2023-06-21'):

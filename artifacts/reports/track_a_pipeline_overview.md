@@ -1,6 +1,6 @@
 # Track A 최적화 작업 파이프라인 전체 개요
 
-**작성일**: 2026-01-08  
+**작성일**: 2026-01-08
 **목적**: Track A 최적화 작업의 전체 파이프라인 구조 및 진행 상황 정리
 
 ---
@@ -347,5 +347,5 @@ python scripts/optimize_track_a_ridge_learning.py --horizon long
 
 ---
 
-**작성자**: Cursor AI  
+**작성자**: Cursor AI
 **최종 업데이트**: 2026-01-08

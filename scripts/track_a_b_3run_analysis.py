@@ -5,13 +5,14 @@ Track A/B 3번 실행 분석 스크립트
 현재 설정 기반으로 Track A/B 백테스트를 3번 반복 실행하고 결과를 분석합니다.
 """
 
-from pathlib import Path
 import shutil
 import subprocess
-import pandas as pd
-import numpy as np
-from datetime import datetime
 import sys
+from datetime import datetime
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))

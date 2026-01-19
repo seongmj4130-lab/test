@@ -1,6 +1,6 @@
 # Track A 전체 파이프라인 및 최적화 작업 위치
 
-**작성일**: 2026-01-08  
+**작성일**: 2026-01-08
 **목적**: Track A 전체 파이프라인 구조와 최적화 작업이 이루어지는 단계 파악
 
 ---
@@ -270,7 +270,7 @@ L8: 랭킹 엔진 실행 ⭐ 최적화 3
 
 ### L5: 모델 학습 (Ridge Regression) ⭐ 최적화 1
 - **목적**: 개별 피처 가중치 학습
-- **최적화**: 
+- **최적화**:
   - Ridge Alpha 튜닝 (현재: 16.0)
   - 피처 선택 및 가중치
 - **파일**: `src/stages/modeling/l5_train_models.py`
@@ -292,7 +292,7 @@ L8: 랭킹 엔진 실행 ⭐ 최적화 3
 
 ### L7: 백테스트 실행 ⭐ 최적화 2
 - **목적**: 실제 운용 시뮬레이션
-- **최적화**: 
+- **최적화**:
   - top_k, holding_days, cost_bps 등 파라미터 최적화
   - Track B Grid Search (조건부)
 - **파일**: `src/tracks/track_b/stages/backtest/l7_backtest.py`
@@ -300,7 +300,7 @@ L8: 랭킹 엔진 실행 ⭐ 최적화 3
 
 ### L8: 랭킹 엔진 실행 ⭐ 최적화 3
 - **목적**: Baseline 랭킹 생성
-- **최적화**: 
+- **최적화**:
   - 피처 그룹별 가중치 최적화 (Grid Search)
   - 개별 피처 가중치 학습 (Ridge)
   - 앙상블 랭킹 최적화 (예정)
@@ -476,5 +476,5 @@ python scripts/optimize_track_a_ensemble.py
 
 ---
 
-**작성자**: Cursor AI  
+**작성자**: Cursor AI
 **최종 업데이트**: 2026-01-08

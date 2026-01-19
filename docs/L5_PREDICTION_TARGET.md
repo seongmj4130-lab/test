@@ -226,11 +226,11 @@ for fold in cv_folds:
     # 학습 데이터
     X_train = dataset[train_start:train_end][피처들]
     y_train = dataset[train_start:train_end]["ret_fwd_20d"]
-    
+
     # 모델 학습
     model = Ridge(alpha=8.0)
     model.fit(X_train, y_train)
-    
+
     # 테스트 데이터 예측
     X_test = dataset[test_start:test_end][피처들]
     y_pred = model.predict(X_test)
@@ -354,7 +354,6 @@ returns = calculate_portfolio_returns(positions)
 
 ---
 
-**작성일**: 2025-01-XX  
-**작성자**: Cursor AI  
+**작성일**: 2025-01-XX
+**작성자**: Cursor AI
 **버전**: 1.0
-

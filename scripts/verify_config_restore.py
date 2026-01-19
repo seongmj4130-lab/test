@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """설정 복원 확인"""
-import yaml
 from pathlib import Path
+
+import yaml
 
 config_path = Path('configs/config.yaml')
 with open(config_path, 'r', encoding='utf-8') as f:
@@ -34,4 +35,3 @@ print("  ✓ rebalance_interval: 20 → 1 (모든 전략)")
 print("  ✓ BT120 return_col: true_short → true_long")
 print("  ✓ BT120 overlapping_tranches_enabled: true → false")
 print("=" * 80)
-

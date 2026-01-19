@@ -6,17 +6,20 @@ UI에서 import 가능한 형태로 백테스트 실행 함수를 제공합니�
 
 [리팩토링 2단계] 함수/모듈화 - UI에서 import 가능한 형태
 """
-from typing import Dict, Optional, Literal
-from pathlib import Path
-import pandas as pd
 import logging
+from pathlib import Path
+from typing import Dict, Literal, Optional
 
-from src.utils.config import load_config, get_path
-from src.utils.io import load_artifact, artifact_exists, save_artifact
+import pandas as pd
+
 from src.tracks.shared.data_pipeline import prepare_common_data
 from src.tracks.track_a.ranking_service import generate_rankings
-from src.tracks.track_b.stages.modeling.l6r_ranking_scoring import run_L6R_ranking_scoring
-from src.tracks.track_b.stages.backtest.l7_backtest import run_backtest, BacktestConfig
+from src.tracks.track_b.stages.backtest.l7_backtest import BacktestConfig, run_backtest
+from src.tracks.track_b.stages.modeling.l6r_ranking_scoring import (
+    run_L6R_ranking_scoring,
+)
+from src.utils.config import get_path, load_config
+from src.utils.io import artifact_exists, load_artifact, save_artifact
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +31,9 @@ def run_backtest_strategy(
 ) -> Dict[str, pd.DataFrame]:
     """
     백테스트 전략을 실행하는 함수 (Track B 핵심 기능).
-    
+
     [리팩토링 2단계] UI에서 import 가능한 형태로 모듈화
-    
+
     Args:
         strategy: 전략 이름
             - "bt20_short": BT20 단기 랭킹
@@ -39,7 +42,7 @@ def run_backtest_strategy(
             - "bt120_ens": BT120 통합 랭킹
         config_path: 설정 파일 경로
         force_rebuild: True면 캐시 무시하고 재계산
-    
+
     Returns:
         dict: 백테스트 결과
         {
@@ -48,17 +51,17 @@ def run_backtest_strategy(
             "bt_equity_curve": DataFrame,
             "bt_metrics": DataFrame,
         }
-    
+
     Example:
         >>> from src.tracks.track_b.backtest_service import run_backtest_strategy
         >>> results = run_backtest_strategy("bt20_short")
         >>> metrics = results["bt_metrics"]
     """
     logger.info(f"백테스트 전략 실행 시작: {strategy}")
-    
+
     # 설정 로드
     cfg = load_config(config_path)
-    
+
     # 전략별 설정 매핑
     strategy_config_map = {
         "bt20_short": "l7_bt20_short",
@@ -66,32 +69,32 @@ def run_backtest_strategy(
         "bt120_long": "l7_bt120_long",
         "bt120_ens": "l7_bt120_ens",
     }
-    
+
     l7_config_key = strategy_config_map.get(strategy)
     if not l7_config_key:
         raise ValueError(f"Unknown strategy: {strategy}. Use one of {list(strategy_config_map.keys())}")
-    
+
     l7_cfg = cfg.get(l7_config_key, {})
     if not l7_cfg:
         raise ValueError(f"Config key '{l7_config_key}' not found in config.yaml")
-    
+
     # [개선안 24번] 전략별 rebalance_interval 반영 (bt20=20, bt120=120 등)
     # - L6R은 cfg['l7']['rebalance_interval']을 참조하므로, 전략별 설정으로 override한 cfg를 사용
     strategy_rebalance_interval = int(l7_cfg.get("rebalance_interval", 1) or 1)
     cfg_for_l6r = dict(cfg)
     cfg_for_l6r["l7"] = dict((cfg.get("l7", {}) if isinstance(cfg, dict) else {}) or {})
     cfg_for_l6r["l7"]["rebalance_interval"] = strategy_rebalance_interval
-    
+
     # 공통 데이터 준비
     artifacts = prepare_common_data(config_path=config_path, force_rebuild=force_rebuild)
-    
+
     # Track A 산출물 확인 (랭킹 데이터)
     interim_dir = Path(get_path(cfg, "data_interim"))
     ranking_short_path = interim_dir / "ranking_short_daily"
     ranking_long_path = interim_dir / "ranking_long_daily"
-    
-    if (not artifact_exists(ranking_short_path) or 
-        not artifact_exists(ranking_long_path) or 
+
+    if (not artifact_exists(ranking_short_path) or
+        not artifact_exists(ranking_long_path) or
         force_rebuild):
         logger.info("랭킹 데이터가 없습니다. Track A를 실행합니다...")
         rankings = generate_rankings(config_path=config_path, force_rebuild=force_rebuild)
@@ -100,7 +103,7 @@ def run_backtest_strategy(
     else:
         artifacts["ranking_short_daily"] = load_artifact(ranking_short_path)
         artifacts["ranking_long_daily"] = load_artifact(ranking_long_path)
-    
+
     # L6R: 랭킹 스코어 변환
     logger.info("[L6R] 랭킹 스코어 변환")
     # [개선안 24번] interval별 캐시 분리 (bt120이 bt20 캐시를 공유하는 문제 방지)
@@ -108,7 +111,7 @@ def run_backtest_strategy(
         scores_path = interim_dir / f"rebalance_scores_from_ranking_interval_{strategy_rebalance_interval}"
     else:
         scores_path = interim_dir / "rebalance_scores_from_ranking"
-    
+
     if artifact_exists(scores_path) and not force_rebuild:
         artifacts["rebalance_scores"] = load_artifact(scores_path)
         logger.info(f"  ✓ 캐시에서 로드: {len(artifacts['rebalance_scores']):,}행")
@@ -129,7 +132,7 @@ def run_backtest_strategy(
         artifacts["rebalance_scores"] = outputs["rebalance_scores"]
         save_artifact(artifacts["rebalance_scores"], scores_path, force=True)
         logger.info(f"  ✓ 생성 완료: {len(artifacts['rebalance_scores']):,}행")
-    
+
     # L7: 백테스트 실행
     logger.info("[L7] 백테스트 실행")
     regime_cfg = l7_cfg.get("regime", {}) if isinstance(l7_cfg.get("regime", {}), dict) else {}
@@ -181,13 +184,15 @@ def run_backtest_strategy(
         risk_scaling_neutral_multiplier=float(l7_cfg.get("risk_scaling_neutral_multiplier", 1.0)),
         risk_scaling_bull_multiplier=float(l7_cfg.get("risk_scaling_bull_multiplier", 1.0)),
     )
-    
+
     # 시장 국면 데이터 (regime_enabled일 때)
     market_regime_df = None
     if l7_cfg.get("regime", {}).get("enabled", False):
         logger.info("  → 시장 국면 데이터 생성")
-        from src.tracks.shared.stages.regime.l1d_market_regime import build_market_regime
-        
+        from src.tracks.shared.stages.regime.l1d_market_regime import (
+            build_market_regime,
+        )
+
         rebalance_dates = artifacts["rebalance_scores"]["date"].unique()
         regime_cfg = l7_cfg.get("regime", {})
 
@@ -216,7 +221,7 @@ def run_backtest_strategy(
                 use_volatility=bool(regime_cfg.get("use_volatility", True)),
             )
             logger.info(f"  ✓ 시장 국면 데이터 생성: {len(market_regime_df):,}행")
-    
+
     # 백테스트 실행
     result = run_backtest(
         rebalance_scores=artifacts["rebalance_scores"],
@@ -224,7 +229,7 @@ def run_backtest_strategy(
         config_cost_bps=float(l7_cfg.get("cost_bps", 10.0)),
         market_regime=market_regime_df,
     )
-    
+
     # 결과 처리
     if len(result) == 10:
         bt_pos, bt_ret, bt_eq, bt_met, quality, warns, selection_diagnostics, bt_returns_diagnostics, runtime_profile, bt_regime_metrics = result
@@ -239,14 +244,14 @@ def run_backtest_strategy(
         bt_regime_metrics = None
     else:
         raise ValueError(f"Unexpected return value count: {len(result)}")
-    
+
     # 결과 저장
     suffix = f"_{strategy}"
     save_artifact(bt_pos, interim_dir / f"bt_positions{suffix}", force=True)
     save_artifact(bt_ret, interim_dir / f"bt_returns{suffix}", force=True)
     save_artifact(bt_eq, interim_dir / f"bt_equity_curve{suffix}", force=True)
     save_artifact(bt_met, interim_dir / f"bt_metrics{suffix}", force=True)
-    
+
     # [개선안 28번] 원인 진단 근거 저장 (옵션 산출물)
     if selection_diagnostics is not None:
         save_artifact(selection_diagnostics, interim_dir / f"bt_selection_diagnostics{suffix}", force=True)
@@ -256,9 +261,9 @@ def run_backtest_strategy(
         save_artifact(runtime_profile, interim_dir / f"bt_runtime_profile{suffix}", force=True)
     if bt_regime_metrics is not None:
         save_artifact(bt_regime_metrics, interim_dir / f"bt_regime_metrics{suffix}", force=True)
-    
+
     logger.info("✅ 백테스트 전략 실행 완료")
-    
+
     return {
         "bt_positions": bt_pos,
         "bt_returns": bt_ret,
@@ -274,8 +279,7 @@ if __name__ == "__main__":
         format="[%(asctime)s] [%(levelname)s] %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S"
     )
-    
+
     strategy = sys.argv[1] if len(sys.argv) > 1 else "bt20_short"
     results = run_backtest_strategy(strategy=strategy)
     print(f"\n✅ 완료: {len(results['bt_metrics'])}개 메트릭 생성")
-

@@ -4,10 +4,11 @@
 단기/장기/통합 3가지 전략에 대해 6개 기간(20,40,60,80,100,120일)으로 백테스트 실행
 """
 
-import sys
-from pathlib import Path
-from datetime import datetime
 import logging
+import sys
+from datetime import datetime
+from pathlib import Path
+
 import pandas as pd
 import yaml
 
@@ -23,11 +24,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from src.utils.config import load_config, get_path
-from src.utils.io import load_artifact, save_artifact, artifact_exists
 from src.stages.modeling.l5_train_models import train_oos_predictions
 from src.stages.modeling.l6_scoring import build_rebalance_scores
-from src.tracks.track_b.stages.backtest.l7_backtest import run_backtest, BacktestConfig
+from src.tracks.track_b.stages.backtest.l7_backtest import BacktestConfig, run_backtest
+from src.utils.config import get_path, load_config
+from src.utils.io import artifact_exists, load_artifact, save_artifact
 
 
 def get_strategy_config(cfg: dict, strategy_name: str, holding_days: int) -> dict:

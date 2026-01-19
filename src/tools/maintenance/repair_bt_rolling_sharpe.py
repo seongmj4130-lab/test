@@ -6,9 +6,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from src.utils.config import load_config, get_path
+from src.utils.config import get_path, load_config
 from src.utils.io import artifact_exists, load_artifact, save_artifact
 from src.utils.meta import build_meta, save_meta
+
 
 def _root() -> Path:
     # .../03_code/src/stages/repair_bt_rolling_sharpe.py -> parents[2] == 03_code

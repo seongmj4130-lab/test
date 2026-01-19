@@ -2,8 +2,8 @@
 # [개선안 36번] 팩터셋(그룹) 기여도 계산 최소 테스트 (합=score_total_calc 검증)
 from __future__ import annotations
 
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -53,5 +53,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

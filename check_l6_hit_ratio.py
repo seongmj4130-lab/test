@@ -3,8 +3,10 @@
 L6 단계에서 Hit Ratio가 어떻게 계산되는지 확인
 """
 
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
+
 
 def check_l6_hit_ratio():
     """L6 데이터에서 Hit Ratio 관련 컬럼 확인"""

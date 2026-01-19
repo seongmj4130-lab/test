@@ -15,8 +15,8 @@ import sys
 
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.utils.config import load_config
 from src.tracks.track_a.ranking_service import inspect_holdout_day_rankings
+from src.utils.config import load_config
 
 
 def _maybe_to_markdown(df: pd.DataFrame) -> str:
@@ -74,5 +74,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

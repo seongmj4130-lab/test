@@ -2,8 +2,9 @@
 """
 rebalance_interval 적용 최종 결과 요약
 """
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 
 data_dir = Path("data/interim")
 
@@ -28,23 +29,23 @@ for model_name, info in models.items():
         scores_dates = scores_df['date'].nunique()
     else:
         scores_dates = 0
-    
+
     # 백테스트 결과 확인
     returns_path = data_dir / f"bt_returns_{model_name}.parquet"
     metrics_path = data_dir / f"bt_metrics_{model_name}.parquet"
-    
+
     if returns_path.exists() and metrics_path.exists():
         returns_df = pd.read_parquet(returns_path)
         metrics_df = pd.read_parquet(metrics_path)
-        
+
         total_dates = returns_df['date'].nunique()
         dev_dates = returns_df[returns_df['phase']=='dev']['date'].nunique()
         holdout_dates = returns_df[returns_df['phase']=='holdout']['date'].nunique()
-        
+
         # 지표 추출
         dev_metrics = metrics_df[metrics_df['phase']=='dev'].iloc[0] if len(metrics_df[metrics_df['phase']=='dev']) > 0 else None
         holdout_metrics = metrics_df[metrics_df['phase']=='holdout'].iloc[0] if len(metrics_df[metrics_df['phase']=='holdout']) > 0 else None
-        
+
         results.append({
             "model": model_name,
             "rebalance_interval": info['interval'],

@@ -3,9 +3,11 @@
 실제 KOSPI200 데이터로 수정된 벤치마크 비교 분석
 """
 
-import pandas as pd
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
 
 def get_actual_kospi_data():
     """실제 KOSPI200 데이터 (2023.01~2024.12)"""

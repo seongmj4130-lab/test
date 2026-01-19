@@ -1,5 +1,6 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 
 def analyze_period_difference():
     """기존 vs 신규 결과의 기간 차이 분석"""

@@ -513,8 +513,8 @@ Raw 데이터 준비 (L0~L4 완료)
 - [x] Dev/Holdout 구간 성과 비교 및 과적합 분석
 - [x] 과적합 위험 감지 → Ridge Alpha 조정 권장
 
-**실행 위치**: L8 단계 (Baseline 랭킹)  
-**실행 스크립트**: `scripts/optimize_track_a_feature_groups_grid.py`  
+**실행 위치**: L8 단계 (Baseline 랭킹)
+**실행 스크립트**: `scripts/optimize_track_a_feature_groups_grid.py`
 **병렬 독립 실행**: ✅ 가능 (다른 모델과 독립적)
 
 ##### Phase 1.3: Ridge 학습 모델 ✅ **완료** (2026-01-08)
@@ -523,8 +523,8 @@ Raw 데이터 준비 (L0~L4 완료)
 - [x] 장기: Holdout IC Rank 0.1078 (Dev 0.0292 대비 우수) ✅
 - [x] 과적합 위험 감소 확인 (Holdout 성과 우수)
 
-**실행 위치**: L5 단계 (ML 랭킹)  
-**실행 스크립트**: `scripts/optimize_track_a_ridge_learning.py`  
+**실행 위치**: L5 단계 (ML 랭킹)
+**실행 스크립트**: `scripts/optimize_track_a_ridge_learning.py`
 **병렬 독립 실행**: ✅ 가능 (Grid Search 모델과 독립적)
 
 ##### Phase 1.4: XGBoost 모델 ✅ **완료** (2026-01-08)
@@ -538,7 +538,7 @@ Raw 데이터 준비 (L0~L4 완료)
 - [x] Dev/Holdout 구간 성과 평가 완료
 - [x] 최적 하이퍼파라미터 선택 완료
 
-**실행 위치**: L5 단계 (ML 랭킹)  
+**실행 위치**: L5 단계 (ML 랭킹)
 **병렬 독립 실행**: ✅ 가능 (다른 모델과 독립적)
 
 ##### Phase 1.5: Random Forest 모델 ✅ **완료** (2026-01-08, 개선 완료)
@@ -722,7 +722,7 @@ Raw 데이터 준비 (L0~L4 완료)
 - 4개 모델의 앙상블 가중치 최적화 (ICIR 최대화)
 - Grid Search의 피처 가중치 분석
 
-**실행 위치**: L5 단계 (ML 랭킹)  
+**실행 위치**: L5 단계 (ML 랭킹)
 **병렬 독립 실행**: ✅ 가능 (다른 모델과 독립적)
 
 ---
@@ -830,7 +830,7 @@ Raw 데이터 준비 (L0~L4 완료)
    - **Ridge (높은 가중치)**: Holdout 안정성 확보
    - **XGBoost (중간 가중치)**: Dev 성과 활용
    - **Grid Search (낮은 가중치)**: 장기 전략 보조
-   
+
 2. **XGBoost Holdout 최적화**: 정규화 강화로 일반화 성능 개선
 
 3. **개별 백테스트**: 각 모델별 고유한 백테스트 실행
@@ -850,7 +850,7 @@ Raw 데이터 준비 (L0~L4 완료)
 - [ ] 최적 앙상블 가중치 선택
 - [ ] 앙상블 랭킹 생성 및 검증
 
-**앙상블 방식**: `score_ensemble = α₁×score_grid + α₂×score_ridge + α₃×score_xgb + α₄×score_rf + ...`  
+**앙상블 방식**: `score_ensemble = α₁×score_grid + α₂×score_ridge + α₃×score_xgb + α₄×score_rf + ...`
 **제약 조건**: Σαᵢ = 1.0
 
 #### Phase 3: Track B 고정 백테스트 ⏳ **예정**
@@ -961,8 +961,8 @@ Raw 데이터 준비 (L0~L4 완료)
 
 **목표**: 피처 그룹별 가중치 최적화 (Baseline 랭킹)
 
-**실행 위치**: L8 단계  
-**실행 스크립트**: `scripts/optimize_track_a_feature_groups_grid.py`  
+**실행 위치**: L8 단계
+**실행 스크립트**: `scripts/optimize_track_a_feature_groups_grid.py`
 **병렬 독립 실행**: ✅ 가능 (다른 모델과 독립적)
 
 ##### 1.2.1 피처 그룹별 가중치 최적화 ✅
@@ -1009,8 +1009,8 @@ Raw 데이터 준비 (L0~L4 완료)
 
 **목표**: 개별 피처 가중치 자동 학습 (ML 랭킹)
 
-**실행 위치**: L5 단계  
-**실행 스크립트**: `scripts/optimize_track_a_ridge_learning.py`  
+**실행 위치**: L5 단계
+**실행 스크립트**: `scripts/optimize_track_a_ridge_learning.py`
 **병렬 독립 실행**: ✅ 가능 (Grid Search 모델과 독립적)
 
 ##### 1.3.1 Ridge 학습 파이프라인 구축 ✅
@@ -1042,8 +1042,8 @@ Raw 데이터 준비 (L0~L4 완료)
 
 **목표**: XGBoost 모델 학습 및 평가
 
-**실행 위치**: L5 단계 (ML 랭킹)  
-**실행 스크립트**: `scripts/optimize_track_a_xgboost_learning.py`  
+**실행 위치**: L5 단계 (ML 랭킹)
+**실행 스크립트**: `scripts/optimize_track_a_xgboost_learning.py`
 **병렬 독립 실행**: ✅ 가능 (다른 모델과 독립적)
 
 - [x] XGBoost 모델 학습 스크립트 작성 ✅ **완료**
@@ -1063,7 +1063,7 @@ Raw 데이터 준비 (L0~L4 완료)
 
 **목표**: Random Forest 모델 학습 및 평가
 
-**실행 위치**: L5 단계 (ML 랭킹)  
+**실행 위치**: L5 단계 (ML 랭킹)
 **병렬 독립 실행**: ✅ 가능 (다른 모델과 독립적)
 
 - [x] Random Forest 모델 학습 스크립트 작성 ✅ **완료**
@@ -1171,7 +1171,7 @@ Raw 데이터 준비 (L0~L4 완료)
 - **단기 랭킹**: `configs/feature_groups_short_optimized_grid_20260108_135117.yaml`
 - **장기 랭킹**: `configs/feature_groups_long_optimized_grid_20260108_145118.yaml`
 - **config.yaml 업데이트**: `feature_groups_config` 경로를 Grid Search 결과로 업데이트 완료
-- **구분 방법**: 
+- **구분 방법**:
   - Grid Search 결과: 파일명에 `_grid_` 포함
   - Ridge 학습 결과: 파일명에 `_ridge_` 포함 (추후 Phase 3에서 생성)
   - config.yaml 주석으로 명확히 구분
@@ -1235,7 +1235,7 @@ Raw 데이터 준비 (L0~L4 완료)
   - 실제 Dev가 음수 IC를 보이지만 Holdout은 양수 IC (개선) ✅
   - 하지만 Grid Search Dev 대비 Holdout 성과 저하가 큼
 
-**종합 평가**: 
+**종합 평가**:
 - 두 랭킹 모두 **HIGH 과적합 위험** 확인
 - Grid Search Dev 구간에서의 성과가 Holdout 구간에서 크게 저하됨
 - 특히 ICIR과 Rank ICIR에서 큰 차이 관찰
@@ -1246,7 +1246,7 @@ Raw 데이터 준비 (L0~L4 완료)
   - 다음 단계: 모델 재학습 및 성과 재평가 필요
   - 참고: `artifacts/reports/ridge_alpha_adjustment.md`
 
-**생성된 분석 보고서**: 
+**생성된 분석 보고서**:
 - `artifacts/reports/grid_search_overfitting_analysis_20260108_155005.md` (Grid Search 기반 과적합 분석)
 - `artifacts/reports/dev_holdout_final_comparison_20260108_160851.md` (최종 Dev/Holdout 비교)
 
@@ -1258,8 +1258,8 @@ Raw 데이터 준비 (L0~L4 완료)
 
 **목표**: 개별 피처 가중치 자동 학습 (ML 랭킹)
 
-**실행 위치**: L5 단계  
-**실행 스크립트**: `scripts/optimize_track_a_ridge_learning.py`  
+**실행 위치**: L5 단계
+**실행 스크립트**: `scripts/optimize_track_a_ridge_learning.py`
 **병렬 독립 실행**: ✅ 가능 (Grid Search 모델과 독립적)
 
 ##### 1.3.1 Ridge 학습 파이프라인 구축 ✅
@@ -1321,12 +1321,12 @@ Raw 데이터 준비 (L0~L4 완료)
 **✅ 완전히 독립적인 모델**
 
 1. **모델 차이**
-   - **Grid Search 모델 (Baseline 랭킹)**: 
+   - **Grid Search 모델 (Baseline 랭킹)**:
      - L8 단계에서 실행
      - 피처 그룹별 가중치 최적화 (technical, value, profitability, news 등)
      - 예: technical=-0.5, value=0.5, profitability=0.0, news=0.0
      - 가중치 합산 방식: `score_baseline = Σ(group_weight × group_features)`
-   - **ML 모델 (Ridge/XGBoost/RF)**: 
+   - **ML 모델 (Ridge/XGBoost/RF)**:
      - L5 단계에서 실행
      - 개별 피처 가중치 학습 (roe, roa, pe, pb 등 각 피처별)
      - 예: roe=0.1, roa=0.05, pe=-0.02 등 개별 피처 가중치
@@ -1665,7 +1665,7 @@ Raw 데이터 준비 (L0~L4 완료)
 
 ---
 
-**작성자**: Cursor AI  
+**작성자**: Cursor AI
 **최종 업데이트**: 2026-01-08 20:45
 
 ### 주요 업데이트 내역
@@ -1843,8 +1843,8 @@ Raw 데이터 준비 (L0~L4 완료)
 ### 분석 방법
 실제 데이터를 로드하여 각 모델의 Dev/Holdout 구간 성과를 직접 비교 분석
 
-**실행 스크립트**: `scripts/analyze_model_overfitting.py`  
-**분석 결과 파일**: `artifacts/reports/model_overfitting_analysis_20260108_213534.csv`  
+**실행 스크립트**: `scripts/analyze_model_overfitting.py`
+**분석 결과 파일**: `artifacts/reports/model_overfitting_analysis_20260108_213534.csv`
 **상세 보고서**: `artifacts/reports/model_overfitting_analysis_report.md`
 
 ### 📊 Grid Search 모델 과적합 분석 결과
@@ -1912,7 +1912,7 @@ Raw 데이터 준비 (L0~L4 완료)
 
 #### ⚠️ 과적합 우려 모델 (낮은 가중치 또는 제외)
 
-1. **XGBoost**: 
+1. **XGBoost**:
    - Holdout IC 음수 (-0.0042~-0.0137)
    - Dev-Holdout 차이 큼 (0.34~0.53)
    - **앙상블에 낮은 가중치 권장**

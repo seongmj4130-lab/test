@@ -23,8 +23,7 @@ from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 
-from src.utils.config import load_config, get_path
-
+from src.utils.config import get_path, load_config
 
 FINAL_INTERIM_PREFIXES: Tuple[str, ...] = (
     # Track A (최종)
@@ -361,5 +360,3 @@ def export_final_outputs(
         manifest_path=manifest_path,
         summary_path=summary_path,
     )
-
-

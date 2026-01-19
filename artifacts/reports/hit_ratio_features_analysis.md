@@ -196,11 +196,11 @@ feature_weights:
   net_income: 0.10          # 0.04 → 0.10
   debt_ratio: 0.03          # 0.04 → 0.03
   debt_ratio_sector_z: 0.02 # 0.04 → 0.02
-  
+
   # Profitability 그룹 (감소)
   roe: 0.05                 # 0.075 → 0.05
   roe_sector_z: 0.05        # 0.075 → 0.05
-  
+
   # Technical 그룹 (음수 IC 피처 제거/감소)
   volatility_60d: 0.0       # 0.025 → 0.0 (제거)
   volatility_20d: 0.0       # 0.025 → 0.0 (제거)
@@ -209,11 +209,11 @@ feature_weights:
   price_momentum_20d: 0.0   # 0.025 → 0.0 (제거)
   price_momentum: 0.0       # 0.025 → 0.0 (제거)
   momentum_rank: 0.0        # 0.025 → 0.0 (제거)
-  
+
   # 양수 IC 피처 유지/증가
   volume: 0.05              # 0.025 → 0.05 (증가)
   max_drawdown_60d: 0.03    # 0.025 → 0.03 (증가)
-  
+
   # 기타
   downside_volatility_60d: 0.01
   momentum_3m: 0.01
@@ -248,11 +248,11 @@ feature_weights:
   net_income: 0.12          # 0.05 → 0.12
   debt_ratio: 0.03          # 0.05 → 0.03
   debt_ratio_sector_z: 0.03 # 0.05 → 0.03
-  
+
   # Profitability 그룹 (감소)
   roe: 0.05                 # 0.1 → 0.05
   roe_sector_z: 0.05        # 0.1 → 0.05
-  
+
   # Technical 그룹 (음수 IC 피처 제거)
   volatility_60d: 0.0       # 제거
   volatility_20d: 0.0       # 제거
@@ -262,13 +262,13 @@ feature_weights:
   price_momentum_20d: 0.0   # 제거
   price_momentum: 0.0       # 제거
   momentum_rank: 0.0        # 제거
-  
+
   # 양수 IC 피처 유지/증가
   volume: 0.08              # 0.02 → 0.08
   max_drawdown_60d: 0.08    # 0.02 → 0.08
   momentum_reversal: 0.05   # 0.02 → 0.05
   volume_ratio: 0.03        # 0.02 → 0.03
-  
+
   # 기타
   momentum_3m: 0.01
   momentum_6m: 0.01
@@ -314,4 +314,3 @@ feature_weights:
 2. ⏳ 피처 가중치 재조정 파일 생성
 3. ⏳ Hit Ratio 재측정
 4. ⏳ 결과 비교 및 추가 최적화
-

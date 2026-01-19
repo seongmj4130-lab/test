@@ -7,13 +7,14 @@ Track A: 랭킹 엔진 (Ranking Engine)
 - L8: 랭킹 엔진 실행
 - L11: UI Payload Builder
 """
+import logging
 from pathlib import Path
 from typing import Dict, Optional
-import logging
+
 import pandas as pd
 
-from src.utils.config import load_config, get_path
-from src.utils.io import load_artifact, artifact_exists, save_artifact
+from src.utils.config import get_path, load_config
+from src.utils.io import artifact_exists, load_artifact, save_artifact
 
 logger = logging.getLogger(__name__)
 
@@ -25,13 +26,13 @@ def run_track_a_pipeline(
 ) -> Dict:
     """
     Track A 전체 파이프라인을 실행합니다.
-    
+
     Track A는 랭킹 엔진으로, 피처 기반 랭킹을 생성하여 이용자에게 제공합니다.
-    
+
     Args:
         config_path: 설정 파일 경로
         force_rebuild: True면 캐시 무시하고 재계산
-    
+
     Returns:
         dict: 파이프라인 실행 결과
         {
@@ -45,18 +46,18 @@ def run_track_a_pipeline(
     logger.info("=" * 80)
     logger.info("Track A: 랭킹 엔진 파이프라인 실행 시작")
     logger.info("=" * 80)
-    
+
     # 설정 로드
     cfg = load_config(config_path)
     interim_dir = Path(get_path(cfg, "data_interim"))
     interim_dir.mkdir(parents=True, exist_ok=True)
-    
+
     artifacts = {}
     artifacts_path = {}
-    
+
     # 공통 데이터 확인
     logger.info("[공통 데이터 확인]")
-    
+
     # L3: 패널 데이터
     panel_path = interim_dir / "panel_merged_daily"
     # [개선안 41번] force_rebuild 의미 정리:
@@ -70,7 +71,7 @@ def run_track_a_pipeline(
         logger.warning("  ✗ 패널 데이터가 없습니다. L0~L3까지 실행이 필요합니다.")
         logger.warning("  python -m src.tools.run_two_track_and_export --force-shared  (또는 DataCollectionPipeline) 를 먼저 실행하세요.")
         raise FileNotFoundError("panel_merged_daily not found")
-    
+
     # L4: CV 분할 (랭킹 엔진은 dataset_daily 사용 가능)
     dataset_path = interim_dir / "dataset_daily"
     if artifact_exists(dataset_path):
@@ -80,19 +81,19 @@ def run_track_a_pipeline(
     else:
         logger.info("  → dataset_daily가 없습니다. panel_merged_daily를 사용합니다.")
         artifacts["dataset_daily"] = artifacts["panel_merged_daily"]
-    
+
     # L8: 랭킹 엔진 실행
     logger.info("[L8] 랭킹 엔진 실행")
     from src.tracks.track_a.stages.ranking.l8_dual_horizon import (
-        run_L8_short_rank_engine,
         run_L8_long_rank_engine,
+        run_L8_short_rank_engine,
     )
-    
+
     ranking_short_path = interim_dir / "ranking_short_daily"
     ranking_long_path = interim_dir / "ranking_long_daily"
-    
-    if (artifact_exists(ranking_short_path) and 
-        artifact_exists(ranking_long_path) and 
+
+    if (artifact_exists(ranking_short_path) and
+        artifact_exists(ranking_long_path) and
         not force_rebuild):
         artifacts["ranking_short_daily"] = load_artifact(ranking_short_path)
         artifacts["ranking_long_daily"] = load_artifact(ranking_long_path)
@@ -109,7 +110,7 @@ def run_track_a_pipeline(
             force=force_rebuild,
         )
         artifacts["ranking_short_daily"] = outputs_short["ranking_short_daily"]
-        
+
         # L8_long 실행
         logger.info("  → 장기 랭킹 생성 중...")
         outputs_long, warns_long = run_L8_long_rank_engine(
@@ -118,27 +119,29 @@ def run_track_a_pipeline(
             force=force_rebuild,
         )
         artifacts["ranking_long_daily"] = outputs_long["ranking_long_daily"]
-        
+
         save_artifact(artifacts["ranking_short_daily"], ranking_short_path, force=True)
         save_artifact(artifacts["ranking_long_daily"], ranking_long_path, force=True)
         artifacts_path["ranking_short"] = str(ranking_short_path)
         artifacts_path["ranking_long"] = str(ranking_long_path)
         logger.info(f"  ✓ 생성 완료: 단기 {len(artifacts['ranking_short_daily']):,}행, 장기 {len(artifacts['ranking_long_daily']):,}행")
-    
+
     # L11: UI Payload Builder (선택적)
     # [개선안 41번] L11은 외부 API(지수/벤치마크 등) 의존이 있어 기본 OFF로 둔다.
     if run_ui_payload:
         logger.info("[L11] UI Payload Builder 실행 (선택적)")
         try:
-            from src.tracks.track_a.stages.ranking.ui_payload_builder import run_L11_ui_payload
-            
+            from src.tracks.track_a.stages.ranking.ui_payload_builder import (
+                run_L11_ui_payload,
+            )
+
             ohlcv_path = interim_dir / "ohlcv_daily"
             if artifact_exists(ohlcv_path):
                 ohlcv_daily = load_artifact(ohlcv_path)
                 # ranking_daily는 단기/장기 중 하나를 선택하거나 통합해야 함
                 # 일단 단기 랭킹을 사용 (필요시 통합 랭킹 생성 가능)
                 ranking_daily = artifacts["ranking_short_daily"].copy()
-                
+
                 outputs, warns = run_L11_ui_payload(
                     cfg=cfg,
                     artifacts={
@@ -157,11 +160,11 @@ def run_track_a_pipeline(
             artifacts["ui_payload"] = None
     else:
         artifacts["ui_payload"] = None
-    
+
     logger.info("=" * 80)
     logger.info("✅ Track A: 랭킹 엔진 파이프라인 실행 완료")
     logger.info("=" * 80)
-    
+
     return {
         "ranking_short_daily": artifacts["ranking_short_daily"],
         "ranking_long_daily": artifacts["ranking_long_daily"],
@@ -177,7 +180,6 @@ if __name__ == "__main__":
         format="[%(asctime)s] [%(levelname)s] %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S"
     )
-    
+
     result = run_track_a_pipeline()
     print(f"\n✅ 완료: 단기 랭킹 {len(result['ranking_short_daily']):,}행, 장기 랭킹 {len(result['ranking_long_daily']):,}행")
-

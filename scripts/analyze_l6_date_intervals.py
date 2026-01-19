@@ -1,5 +1,6 @@
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 
 df = pd.read_parquet('data/interim/rebalance_scores.parquet')
 print('L6 rebalance_scores 날짜 간격 분석:')

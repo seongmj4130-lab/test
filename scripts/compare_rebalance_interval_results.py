@@ -2,8 +2,9 @@
 """
 rebalance_interval 적용 전후 결과 비교
 """
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 
 data_dir = Path("data/interim")
 
@@ -58,7 +59,7 @@ for model_name in ["bt20_short", "bt20_ens", "bt120_long", "bt120_ens"]:
         elif "turnover_oneway_mean" in df.columns:
             cols.append("turnover_oneway_mean")
         print(df[cols].to_string())
-        
+
         # 리밸런싱 날짜 수 확인
         returns_path = data_dir / f"bt_returns_{model_name}.parquet"
         if returns_path.exists():
@@ -76,4 +77,3 @@ print("  - 실제 리밸런싱 날짜: 로그에서 확인 필요")
 print("\nBT120 모델 (rebalance_interval=120):")
 print("  - 예상 리밸런싱 날짜: 약 20개 (전체 2,458개 중)")
 print("  - 실제 리밸런싱 날짜: 로그에서 확인 필요")
-

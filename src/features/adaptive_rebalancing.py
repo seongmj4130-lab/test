@@ -6,11 +6,13 @@
 단기 투자자의 민첩성은 유지하면서 비용 효율성을 높입니다.
 """
 
+import warnings
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Tuple
-from pathlib import Path
-import warnings
+
 warnings.filterwarnings('ignore')
 
 
@@ -289,9 +291,10 @@ class AdaptiveRebalancing:
 
 def test_adaptive_rebalancing():
     """적응형 리밸런싱 테스트"""
+    from pathlib import Path
+
     from src.utils.config import load_config
     from src.utils.io import load_artifact
-    from pathlib import Path
 
     print("🧪 적응형 리밸런싱 테스트")
     print("="*40)

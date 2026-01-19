@@ -3,10 +3,10 @@
 # [개선안 16번] 트랙(A/B/공통) 폴더 재정리: 기존 import 경로 호환 래퍼
 
 from src.tracks.track_a.stages.ranking.ranking_explainability import (
+    build_ranking_with_explainability,
     calculate_feature_contributions,
     calculate_group_contributions,
     extract_top_features,
-    build_ranking_with_explainability,
     make_snapshot_with_explainability,
 )
 

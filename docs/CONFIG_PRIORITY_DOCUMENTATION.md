@@ -1,6 +1,6 @@
 # 백테스트 설정값 우선순위 문서
 
-**작성일**: 2026-01-08  
+**작성일**: 2026-01-08
 **목적**: 백테스트 설정값 적용 우선순위 및 기본값 통일 정책 문서화
 
 ---
@@ -199,7 +199,7 @@ BacktestConfig 기본값을 변경할 경우:
 
 ## 7. 변경 이력
 
-**2026-01-08**: 
+**2026-01-08**:
 - BacktestConfig 기본값을 config.yaml과 통일
 - 변경된 기본값:
   - `buffer_k`: 0 → 15
@@ -207,4 +207,3 @@ BacktestConfig 기본값을 변경할 경우:
   - `smart_buffer_enabled`: False → True
   - `volatility_adjustment_enabled`: False → True
   - `risk_scaling_enabled`: False → True
-

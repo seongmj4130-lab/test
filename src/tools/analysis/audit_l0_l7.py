@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/analysis/audit_l0_l7.py
-import sys
 import json
+import sys
 from pathlib import Path
 
-from src.utils.config import load_config, get_path
+from src.utils.config import get_path, load_config
 from src.utils.io import artifact_exists, load_artifact
 
 ARTIFACTS = [

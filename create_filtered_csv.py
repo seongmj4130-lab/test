@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 def create_filtered_csv():
     """전략별 누적 비교 그래프용 필터링된 CSV 생성"""
 

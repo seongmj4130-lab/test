@@ -187,7 +187,7 @@ KOSPI200 주식을 대상으로 한 **투트랙(Two-Track)** 퀀트 투자 전�
 
 ### 투트랙 실행 흐름
 
-1. **공통 데이터 준비 (L0~L4)**  
+1. **공통 데이터 준비 (L0~L4)**
    Track A/B 모두 `data/interim` 아티팩트가 필요합니다.
 
    - 방법 A (권장, 코드 흐름 그대로): `src/data_collection` 사용
@@ -209,7 +209,7 @@ pipeline.run_all()  # L0~L4
 python scripts/run_pipeline_l0_l7.py
 ```
 
-2. **Track A 실행 (랭킹 생성: L8 + 옵션 L11)**  
+2. **Track A 실행 (랭킹 생성: L8 + 옵션 L11)**
    - 엔트리포인트: `src/pipeline/track_a_pipeline.py`
    - 산출물(캐시): `data/interim/ranking_short_daily.parquet`, `data/interim/ranking_long_daily.parquet`
 
@@ -217,7 +217,7 @@ python scripts/run_pipeline_l0_l7.py
 python -m src.pipeline.track_a_pipeline
 ```
 
-3. **Track B 실행 (투자 모델 예시: L6R → L7)**  
+3. **Track B 실행 (투자 모델 예시: L6R → L7)**
    - 엔트리포인트: `src/pipeline/track_b_pipeline.py`
    - **Track A 산출물(랭킹 2개)이 반드시 선행**되어야 합니다.
    - 산출물(캐시):
@@ -255,7 +255,7 @@ python -m src.pipeline.track_a_pipeline
 python -m src.pipeline.track_b_pipeline bt120_long  # 주요 목표 전략
 ```
 
-5. **(선택) 06_code22를 “최종 산출물 저장소”로 정리(기존 워크스페이스는 archive로 이동)**  
+5. **(선택) 06_code22를 “최종 산출물 저장소”로 정리(기존 워크스페이스는 archive로 이동)**
    - 엔트리포인트: `src/tools/cleanup_06_code22_to_outputs_only.py`
    - 동작: `06_code22/src, data, configs, docs, scripts...` 등을 삭제하지 않고 `_archive_pre_outputs_*/`로 이동
 
@@ -1286,7 +1286,7 @@ l7_bt120_long:
 
 **참고**: 모든 지표는 거래비용(cost_bps=10.0)을 반영한 Net 지표이며, 시장 국면 기능은 외부 API 없이 ohlcv_daily 데이터로 자동 분류됩니다.
 
-**참고**: 
+**참고**:
 - 모든 지표는 `phase` 컬럼으로 구간별(`dev`/`holdout`) 구분됩니다.
 - Gross 지표는 거래비용 차감 전 성과를 나타냅니다.
 - Net 지표는 거래비용 차감 후 실제 수익을 나타냅니다.

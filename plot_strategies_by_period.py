@@ -4,11 +4,11 @@
 특정 기간 선택 시 3개 전략 + KOSPI200 비교 그래프
 """
 
-import pandas as pd
-import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from matplotlib.widgets import CheckButtons
+import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+from matplotlib.widgets import CheckButtons
 
 # 한글 폰트 설정
 plt.rcParams['font.family'] = 'Malgun Gothic'

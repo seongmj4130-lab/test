@@ -2,9 +2,10 @@
 """
 rebalance_interval이 지표에 미치는 영향 확인
 """
-import pandas as pd
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
 
 # 백테스트 결과 파일 확인
 data_dir = Path("data/interim")
@@ -39,7 +40,7 @@ for f in sorted(bt_metrics_files):
     if "turnover_oneway_mean" in df.columns:
         cols.append("turnover_oneway_mean")
     print(df[cols].to_string())
-    
+
 print("\n" + "=" * 80)
 print("핵심 발견: 리밸런싱 날짜 수 분석")
 print("=" * 80)
@@ -52,4 +53,3 @@ print("  - 이는 rebalance_interval=120으로 설정된 것으로 보입니다"
 print("\n⚠️  만약 rebalance_interval을 1→20 또는 6→120으로 변경했다면,")
 print("   리밸런싱 날짜 수가 크게 줄어야 하는데, 이미 줄어든 상태입니다.")
 print("   이는 이전 백테스트가 이미 rebalance_interval을 적용한 상태였을 수 있습니다.")
-

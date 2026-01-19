@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/core/pipeline.py
 import argparse
-import logging
-import sys
+import hashlib
 import inspect
+import logging
 import os
 import shutil
-import hashlib
+import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, Tuple, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 # [Stage14] 출력 버퍼링 비활성화 (진행 상황 즉시 표시)
 if sys.stdout.isatty():
@@ -22,33 +22,61 @@ if sys.stdout.isatty():
 
 import pandas as pd
 
-from src.utils.config import load_config, get_path
-from src.utils.io import save_artifact, load_artifact, artifact_exists
-from src.utils.meta import build_meta, save_meta
-from src.utils.validate import validate_df, raise_if_invalid
+from src.stages.backtest.l1d_market_regime import (
+    build_market_regime,  # → src/tracks/shared/stages/regime/
+)
+
+# [트랙 재정리] 백테스트 (src/tracks/track_b/stages/backtest/)
+from src.stages.backtest.l7_backtest import (  # → src/tracks/track_b/stages/backtest/
+    BacktestConfig,
+    run_backtest,
+)
+from src.stages.backtest.l7b_sensitivity import (
+    run_l7b_sensitivity,  # → src/tracks/track_b/stages/backtest/
+)
+from src.stages.backtest.l7c_benchmark import (
+    run_l7c_benchmark,  # → src/tracks/track_b/stages/backtest/
+)
+from src.stages.backtest.l7d_stability import (
+    run_l7d_stability_from_artifacts,  # → src/tracks/track_b/stages/backtest/
+)
 
 # [트랙 재정리] 공통 데이터 (src/tracks/shared/stages/data/)
-from src.stages.data.l0_universe import build_k200_membership_month_end  # → src/tracks/shared/stages/data/
-from src.stages.data.l1_ohlcv import download_ohlcv_panel  # → src/tracks/shared/stages/data/
-from src.stages.data.l1b_sector_map import build_sector_map  # → src/tracks/shared/stages/data/
-from src.stages.backtest.l1d_market_regime import build_market_regime  # → src/tracks/shared/stages/regime/
-from src.stages.data.l2_fundamentals_dart import download_annual_fundamentals  # → src/tracks/shared/stages/data/
-from src.stages.data.l3_panel_merge import build_panel_merged_daily  # → src/tracks/shared/stages/data/
+from src.stages.data.l0_universe import (
+    build_k200_membership_month_end,  # → src/tracks/shared/stages/data/
+)
+from src.stages.data.l1_ohlcv import (
+    download_ohlcv_panel,  # → src/tracks/shared/stages/data/
+)
+from src.stages.data.l1b_sector_map import (
+    build_sector_map,  # → src/tracks/shared/stages/data/
+)
+from src.stages.data.l2_fundamentals_dart import (
+    download_annual_fundamentals,  # → src/tracks/shared/stages/data/
+)
+from src.stages.data.l3_panel_merge import (
+    build_panel_merged_daily,  # → src/tracks/shared/stages/data/
+)
 
-from src.utils.quality import fundamental_coverage_report, walkforward_quality_report
 # [트랙 재정리] 모델링 (src/tracks/track_b/stages/modeling/)
 from src.stages.modeling.l5_train_models import train_oos_predictions  # (랭킹 모드에서는 스킵)
 from src.stages.modeling.l6_scoring import build_rebalance_scores  # (랭킹 모드에서는 스킵)
-from src.stages.modeling.l6r_ranking_scoring import run_L6R_ranking_scoring  # → src/tracks/track_b/stages/modeling/ [개선안 13번] 랭킹 기반 리밸런싱 스코어
+from src.stages.modeling.l6r_ranking_scoring import (
+    run_L6R_ranking_scoring,  # → src/tracks/track_b/stages/modeling/ [개선안 13번] 랭킹 기반 리밸런싱 스코어
+)
 
-# [트랙 재정리] 백테스트 (src/tracks/track_b/stages/backtest/)
-from src.stages.backtest.l7_backtest import BacktestConfig, run_backtest  # → src/tracks/track_b/stages/backtest/
-from src.stages.backtest.l7b_sensitivity import run_l7b_sensitivity  # → src/tracks/track_b/stages/backtest/
-from src.stages.backtest.l7c_benchmark import run_l7c_benchmark  # → src/tracks/track_b/stages/backtest/
-from src.stages.backtest.l7d_stability import run_l7d_stability_from_artifacts  # → src/tracks/track_b/stages/backtest/
 # [트랙 재정리] 랭킹 엔진 (src/tracks/track_a/stages/ranking/)
-from src.stages.ranking.l8_rank_engine import run_L8_rank_engine  # → src/tracks/track_a/stages/ranking/
-from src.stages.ranking.ui_payload_builder import run_L11_ui_payload  # → src/tracks/track_a/stages/ranking/
+from src.stages.ranking.l8_rank_engine import (
+    run_L8_rank_engine,  # → src/tracks/track_a/stages/ranking/
+)
+from src.stages.ranking.ui_payload_builder import (
+    run_L11_ui_payload,  # → src/tracks/track_a/stages/ranking/
+)
+from src.utils.config import get_path, load_config
+from src.utils.io import artifact_exists, load_artifact, save_artifact
+from src.utils.meta import build_meta, save_meta
+from src.utils.quality import fundamental_coverage_report, walkforward_quality_report
+from src.utils.validate import raise_if_invalid, validate_df
 
 logging.basicConfig(
     level=logging.INFO,
@@ -202,18 +230,18 @@ def run_L1B_sector_map(cfg, artifacts, *, force=False):
     """
     # [트랙 재정리] → src/tracks/shared/stages/data/l1b_sector_map.py
     from src.stages.data.l1b_sector_map import build_sector_map
-    
+
     uni = artifacts["universe_k200_membership_monthly"]
     tickers = sorted(uni["ticker"].astype(str).unique().tolist())
-    
+
     # 월말 날짜 추출
     asof_dates = pd.DatetimeIndex(uni["date"].unique()).sort_values()
-    
+
     df = build_sector_map(
         asof_dates=asof_dates,
         tickers=tickers,
     )
-    
+
     return {"sector_map": df}, []
 
 def run_L1D_market_regime(cfg, artifacts, *, force=False):
@@ -224,19 +252,19 @@ def run_L1D_market_regime(cfg, artifacts, *, force=False):
     p = cfg.get("params", {}) or {}
     l7 = _resolve_section(cfg, "l7")
     regime_cfg = l7.get("regime", {}) or {}
-    
+
     # regime이 비활성화되어 있으면 스킵
     if not regime_cfg.get("enabled", False):
         logger.info("[L1D] regime.enabled=False, 시장 국면 계산을 건너뜁니다.")
         return {}, []
-    
+
     # rebalance_scores에서 날짜 추출 (L6 이후에 실행되어야 함)
     if "rebalance_scores" not in artifacts:
         raise KeyError("[L1D] rebalance_scores가 없습니다. L6 이후에 실행해야 합니다.")
-    
+
     rebalance_scores = artifacts["rebalance_scores"]
     rebalance_dates = rebalance_scores["date"].unique()
-    
+
     df = build_market_regime(
         rebalance_dates=rebalance_dates,
         start_date=p.get("start_date", "2015-01-02"),
@@ -246,7 +274,7 @@ def run_L1D_market_regime(cfg, artifacts, *, force=False):
         threshold_pct=float(regime_cfg.get("threshold_pct", 0.0)),  # 하위호환을 위해 유지
         neutral_band=float(regime_cfg.get("neutral_band", 0.05)),  # [Phase 2] ±5% 범위를 neutral로 분류
     )
-    
+
     return {"market_regime": df}, []
 
 def run_L2_merge(cfg, artifacts, *, force=False):
@@ -259,25 +287,25 @@ def run_L2_merge(cfg, artifacts, *, force=False):
     # 루트 interim 디렉토리에서 기존 파일 로드
     base_interim_dir = get_path(cfg, "data_interim")
     source_file = base_interim_dir / "fundamentals_annual.parquet"
-    
+
     if not artifact_exists(source_file):
         raise RuntimeError(
             f"[L2 재사용 규칙 위반] 기존 fundamentals_annual.parquet 파일이 없습니다: {source_file}\n"
             "L2 재무데이터는 무조건 기존 파일을 재사용해야 하며, API 재호출로 재생성할 수 없습니다.\n"
             "파일이 없다면 이전 실행에서 생성된 파일을 확인하거나, 수동으로 준비해야 합니다."
         )
-    
+
     # 기존 파일 로드
     logger.info(f"[L2 재사용] 기존 파일에서 로드: {source_file}")
     df = load_artifact(source_file)
-    
+
     # 파일 수정 시간 기록 (보고서/로그용)
     import os
     mtime = os.path.getmtime(source_file)
     from datetime import datetime
     mtime_str = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
     logger.info(f"[L2 재사용] 파일 수정 시간: {mtime_str}")
-    
+
     return {"fundamentals_annual": df}, []
 
 def run_L3_features(cfg, artifacts, *, force=False):
@@ -311,7 +339,7 @@ def run_L3_features(cfg, artifacts, *, force=False):
         warns.extend(w_news or [])
     except Exception as e:
         warns.append(f"[L3N] news sentiment merge hook failed (ignored): {type(e).__name__}: {e}")
-    
+
     # [ESG 통합] ESG 감성 피처 머지
     # - enabled=True인데 파일이 없으면 스킵(경고만) -> 현재 데이터 없는 상태에서도 안전
     try:
@@ -320,14 +348,20 @@ def run_L3_features(cfg, artifacts, *, force=False):
         warns.extend(w_esg or [])
     except Exception as e:
         warns.append(f"[L3E] ESG sentiment merge hook failed (ignored): {type(e).__name__}: {e}")
-    
+
     return {"panel_merged_daily": df}, warns
 
 def run_L4_split(cfg, artifacts, *, force=False):
     # [트랙 재정리] → src/tracks/shared/stages/data/l4_walkforward_split.py
-    from src.stages.data.l4_walkforward_split import build_targets_and_folds, build_inner_cv_folds
+    from src.stages.data.l4_walkforward_split import (
+        build_inner_cv_folds,
+        build_targets_and_folds,
+    )
+
     # [트랙 재정리] → src/tracks/shared/stages/data/news_sentiment_features.py
-    from src.stages.data.news_sentiment_features import attach_news_sentiment_features  # [개선안 15번] 뉴스 감성 피처(옵션) attach
+    from src.stages.data.news_sentiment_features import (
+        attach_news_sentiment_features,  # [개선안 15번] 뉴스 감성 피처(옵션) attach
+    )
 
     l4 = _resolve_section(cfg, "l4")
     panel = artifacts["panel_merged_daily"]
@@ -348,7 +382,7 @@ def run_L4_split(cfg, artifacts, *, force=False):
         price_col=l4.get("price_col", None),
         drop_non_universe_before_save=drop_non_universe_before_save,
     )
-    
+
     # [개선안 18번] 뉴스 감성 피처 attach (config.news.enabled=True일 때만)
     try:
         news_cfg_raw = (cfg.get("news", {}) if isinstance(cfg, dict) else {}) or {}
@@ -364,14 +398,14 @@ def run_L4_split(cfg, artifacts, *, force=False):
     embargo_days = int(l4.get("embargo_days", 20))
     horizon_short = int(l4.get("horizon_short", 20))
     horizon_long = int(l4.get("horizon_long", 120))
-    
+
     # dates 추출 (df에서)
     dates = pd.DatetimeIndex(pd.unique(df["date"].dropna())).sort_values()
-    
+
     # 각 fold에 대해 내부 CV folds 생성
     inner_folds_short_rows = []
     inner_folds_long_rows = []
-    
+
     for _, fold_row in cv_s.iterrows():
         inner_folds = build_inner_cv_folds(
             train_start=fold_row["train_start"],
@@ -385,7 +419,7 @@ def run_L4_split(cfg, artifacts, *, force=False):
             inner_folds["fold_id"] = fold_row["fold_id"]
             inner_folds["horizon"] = horizon_short
             inner_folds_short_rows.append(inner_folds)
-    
+
     for _, fold_row in cv_l.iterrows():
         inner_folds = build_inner_cv_folds(
             train_start=fold_row["train_start"],
@@ -399,11 +433,11 @@ def run_L4_split(cfg, artifacts, *, force=False):
             inner_folds["fold_id"] = fold_row["fold_id"]
             inner_folds["horizon"] = horizon_long
             inner_folds_long_rows.append(inner_folds)
-    
+
     # 내부 CV folds 병합
     cv_inner_short = pd.concat(inner_folds_short_rows, ignore_index=True) if inner_folds_short_rows else pd.DataFrame()
     cv_inner_long = pd.concat(inner_folds_long_rows, ignore_index=True) if inner_folds_long_rows else pd.DataFrame()
-    
+
     # [Stage 3] 내부 CV folds 저장 (interim_dir에)
     interim_dir = artifacts.get("_interim_dir")
     if interim_dir is not None:
@@ -415,7 +449,7 @@ def run_L4_split(cfg, artifacts, *, force=False):
             inner_long_path = interim_dir / "cv_inner_folds_long.parquet"
             cv_inner_long.to_parquet(inner_long_path, index=False)
             warns.append(f"[L4 Stage3] 내부 CV folds (long) 저장: {inner_long_path} ({len(cv_inner_long)} folds)")
-    
+
     return {
         "dataset_daily": df,
         "cv_folds_short": cv_s,
@@ -508,13 +542,13 @@ def run_L6_scoring(cfg, artifacts, *, force=False):
 def run_L7_backtest(cfg, artifacts, *, force=False):
     l7 = _resolve_section(cfg, "l7")
     ret_col = str(l7.get("ret_col", l7.get("return_col", "true_short")))
-    
+
     # [Stage 4] 업종 분산 제약 설정
     diversify = l7.get("diversify", {}) or {}
     diversify_enabled = bool(diversify.get("enabled", False))
     group_col = str(diversify.get("group_col", "sector_name"))
     max_names_per_group = int(diversify.get("max_names_per_group", 4))
-    
+
     # [Stage5] 시장 국면(regime) 설정
     regime_cfg = l7.get("regime", {}) or {}
     regime_enabled = bool(regime_cfg.get("enabled", False))
@@ -662,7 +696,7 @@ def run_L7C_benchmark(cfg, artifacts, *, force=False):
         "bt_benchmark_compare": ["phase", "tracking_error_ann", "information_ratio"],
         "bt_benchmark_returns": ["date", "phase", "bench_return"],
     }
-    
+
     for k, cols in std_cols.items():
         if k not in outputs:
             outputs[k] = pd.DataFrame(columns=cols)
@@ -803,7 +837,7 @@ REQUIRED_COLS_BY_OUTPUT = {
     ],
     "bt_rolling_sharpe": ["date", "phase", "net_rolling_sharpe"],
     "bt_drawdown_events": ["phase", "peak_date", "trough_date", "drawdown", "length_days"],
-    
+
     "selection_diagnostics": ["date", "phase", "top_k", "eligible_count", "selected_count"],  # [Stage13] K_eff 복원
     "bt_returns_diagnostics": ["date", "phase"],  # [Stage13] regime/exposure 진단 컬럼 (결측 허용)
 }
@@ -817,10 +851,10 @@ def _preload_required_inputs(stage_name: str, interim_dir: Path, artifacts: dict
     [TASK B-stable] input_tag가 있으면 입력 산출물을 input_tag에서 먼저 찾고, 없으면 baseline_tag에서 찾음
     """
     required = REQUIRED_INPUTS.get(stage_name, [])
-    
+
     # [TASK A-1] 타이밍 로그 (profile 모드)
     t_preload_start = time.time() if hasattr(_preload_required_inputs, '_profile_mode') else None
-    
+
     # [Stage11] L11의 경우 ranking_daily는 baseline_tag에서 로드
     if stage_name == "L11":
         if "ranking_daily" not in artifacts:
@@ -877,7 +911,7 @@ def _preload_required_inputs(stage_name: str, interim_dir: Path, artifacts: dict
             else:
                 raise KeyError(f"{stage_name} requires 'ohlcv_daily' but base_interim_dir is None")
         return
-    
+
     # [Stage7] L8의 경우 dataset_daily 또는 panel_merged_daily 둘 중 하나만 있으면 됨
     if stage_name == "L8" and "dataset_daily" in required:
         # dataset_daily 또는 panel_merged_daily 중 하나라도 있으면 통과
@@ -891,7 +925,7 @@ def _preload_required_inputs(stage_name: str, interim_dir: Path, artifacts: dict
                     logger.info(f"[PRELOAD] {stage_name} <- loaded {name} from interim: {name}")
                     found = True
                     break
-            
+
             if not found:
                 # base_interim_dir에서도 찾기 시도 (기존 run_tag에서)
                 if base_interim_dir is not None:
@@ -902,18 +936,18 @@ def _preload_required_inputs(stage_name: str, interim_dir: Path, artifacts: dict
                             logger.info(f"[PRELOAD] {stage_name} <- loaded {name} from base_interim_dir: {base}")
                             found = True
                             break
-                
+
                 if not found:
                     raise KeyError(
                         f"{stage_name} requires 'dataset_daily' or 'panel_merged_daily' but not found in: "
                         f"{interim_dir} or {base_interim_dir}"
                     )
         return
-    
+
     for name in required:
         if name in artifacts:
             continue
-        
+
         # L2 입력(fundamentals_annual)은 base_interim_dir에서 로드
         if name == "fundamentals_annual" and base_interim_dir is not None:
             base = base_interim_dir / name
@@ -923,7 +957,7 @@ def _preload_required_inputs(stage_name: str, interim_dir: Path, artifacts: dict
                 continue
             else:
                 raise KeyError(f"{stage_name} requires '{name}' but not found: {base}")
-        
+
         # [TASK B-stable] L7 등 pipeline track의 경우 input_tag에서 먼저 찾고, 없으면 baseline_tag에서 찾기
         # input_tag/baseline_tag의 직접 경로 조회는 --no-scan일 때도 허용 (스캔은 하지 않음)
         if stage_name in ["L7", "L7B", "L7C", "L7D"] and base_interim_dir is not None:
@@ -936,7 +970,7 @@ def _preload_required_inputs(stage_name: str, interim_dir: Path, artifacts: dict
                     continue
                 else:
                     logger.debug(f"[PRELOAD] {stage_name} <- {name} not found in input_tag: {input_path}")
-            
+
             # 2순위: baseline_tag에서 찾기
             if baseline_tag:
                 baseline_path = base_interim_dir / baseline_tag / name
@@ -946,7 +980,7 @@ def _preload_required_inputs(stage_name: str, interim_dir: Path, artifacts: dict
                     continue
                 else:
                     logger.debug(f"[PRELOAD] {stage_name} <- {name} not found in baseline_tag: {baseline_path}")
-            
+
             # [TASK B-stable] --no-scan이면 스캔 금지, 명확한 에러 메시지
             if no_scan:
                 searched_locations = []
@@ -955,7 +989,7 @@ def _preload_required_inputs(stage_name: str, interim_dir: Path, artifacts: dict
                 if baseline_tag:
                     searched_locations.append(f"baseline_tag({baseline_tag})")
                 locations_str = ", ".join(searched_locations) if searched_locations else "지정된 태그 없음"
-                
+
                 raise KeyError(
                     f"{stage_name} requires '{name}' but --no-scan이 활성화되어 있고 "
                     f"{locations_str}에 파일이 없습니다.\n"
@@ -963,7 +997,7 @@ def _preload_required_inputs(stage_name: str, interim_dir: Path, artifacts: dict
                     f"  - baseline_tag 경로: {base_interim_dir / baseline_tag / name if baseline_tag else 'N/A'}\n"
                     f"해결 방법: --input-tag를 지정하거나 --no-scan을 해제하세요."
                 )
-            
+
             # 3순위: 스캔 허용 시 pipeline track의 최신 Stage에서 찾기
             candidates = list(base_interim_dir.glob(f"*/{name}.parquet"))
             if candidates:
@@ -973,7 +1007,7 @@ def _preload_required_inputs(stage_name: str, interim_dir: Path, artifacts: dict
                 artifacts[name] = load_artifact(latest_path)
                 logger.info(f"[PRELOAD] {stage_name} <- loaded {name} from latest (scan): {latest_path}")
                 continue
-        
+
         base = interim_dir / name
         if artifact_exists(base):
             artifacts[name] = load_artifact(base)
@@ -1011,16 +1045,16 @@ def _generate_runtime_report(
 ) -> None:
     """
     [Runtime 공통 규칙] Runtime 리포트 생성
-    
+
     생성 파일:
     - reports/analysis/runtime__{run_tag}.md (사람이 읽는 요약)
     - reports/analysis/runtime__{run_tag}.csv (머신리더블)
     """
     from datetime import datetime
-    
+
     analysis_dir = base_dir / "reports" / "analysis"
     analysis_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # MD 리포트 생성
     md_path = analysis_dir / f"runtime__{run_tag}.md"
     md_content = _generate_runtime_report_md(
@@ -1035,7 +1069,7 @@ def _generate_runtime_report(
     )
     md_path.write_text(md_content, encoding="utf-8")
     logger.info(f"[Runtime] 리포트 MD 저장: {md_path}")
-    
+
     # CSV 리포트 생성
     csv_path = analysis_dir / f"runtime__{run_tag}.csv"
     csv_df = _generate_runtime_report_csv(
@@ -1063,28 +1097,28 @@ def _generate_runtime_report_md(
 ) -> str:
     """[Runtime 공통 규칙] Runtime 리포트 MD 생성"""
     from datetime import datetime
-    
+
     lines = []
     lines.append(f"# Pipeline Runtime 리포트: {run_tag}\n")
     lines.append(f"생성 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-    
+
     # 전체 실행 시간
     lines.append("\n## 전체 실행 시간\n")
     if pipeline_total_time is not None:
         lines.append(f"- 총 실행 시간: {pipeline_total_time:.1f}초 ({pipeline_total_time/60:.1f}분)")
     else:
         lines.append("- 총 실행 시간: 기록되지 않음")
-    
+
     # Stage별 실행 시간
     lines.append("\n## Stage별 실행 시간\n")
     lines.append("| Stage | 실행 시간 (초) | 비율 (%) |")
     lines.append("|-------|---------------|----------|")
-    
+
     total_stage_time = sum(
-        rt["runtime_sec"] for rt in stage_runtimes.values() 
+        rt["runtime_sec"] for rt in stage_runtimes.values()
         if rt["runtime_sec"] is not None
     )
-    
+
     for stage_name in target_stages:
         if stage_name in stage_runtimes:
             rt = stage_runtimes[stage_name]
@@ -1094,19 +1128,19 @@ def _generate_runtime_report_md(
                 lines.append(f"| {stage_name} | {runtime_sec:.1f} | {pct:.1f} |")
             else:
                 lines.append(f"| {stage_name} | 기록되지 않음 | - |")
-    
+
     # Export 시간
     lines.append("\n## 리포트 생성 시간\n")
     if kpi_export_time is not None:
         lines.append(f"- KPI Export: {kpi_export_time:.1f}초")
     if delta_export_time is not None:
         lines.append(f"- Delta Export: {delta_export_time:.1f}초")
-    
+
     # 입력 데이터 요약
     lines.append("\n## 입력 데이터 요약\n")
     lines.append("| Stage | 입력명 | 행 수 | 크기 (bytes) | 비고 |")
     lines.append("|-------|--------|-------|---------------|------|")
-    
+
     for stage_name in target_stages:
         if stage_name in stage_input_summaries:
             input_summary = stage_input_summaries[stage_name]
@@ -1121,7 +1155,7 @@ def _generate_runtime_report_md(
                     lines.append(f"| {stage_name} | {input_name} | {rows:,} | {bytes_size:,} | {note} |")
             else:
                 lines.append(f"| {stage_name} | (입력 없음) | - | - | - |")
-    
+
     # [Stage14] L2 재사용 정보 상세 섹션
     if l2_reuse_info and l2_reuse_info.get("source") == "root_reuse":
         lines.append("\n## L2 재사용 정보 (루트 파일)\n")
@@ -1131,7 +1165,7 @@ def _generate_runtime_report_md(
         lines.append(f"- 수정 시간: {l2_reuse_info.get('mtime', 'N/A')}")
         lines.append(f"- 행 수: {l2_reuse_info.get('rows', 0):,}")
         lines.append(f"- 재사용 방식: 루트 파일 직접 로드 (DART API 호출 금지)")
-    
+
     return "\n".join(lines)
 
 def _generate_runtime_report_csv(
@@ -1146,7 +1180,7 @@ def _generate_runtime_report_csv(
 ) -> pd.DataFrame:
     """[Runtime 공통 규칙] Runtime 리포트 CSV 생성"""
     rows = []
-    
+
     # 전체 실행 시간
     rows.append({
         "category": "pipeline",
@@ -1154,7 +1188,7 @@ def _generate_runtime_report_csv(
         "metric": "total_wall_time_sec",
         "value": pipeline_total_time,
     })
-    
+
     # Stage별 실행 시간
     for stage_name in target_stages:
         if stage_name in stage_runtimes:
@@ -1166,7 +1200,7 @@ def _generate_runtime_report_csv(
                 "metric": "runtime_sec",
                 "value": runtime_sec,
             })
-    
+
     # Export 시간
     if kpi_export_time is not None:
         rows.append({
@@ -1182,7 +1216,7 @@ def _generate_runtime_report_csv(
             "metric": "export_time_sec",
             "value": delta_export_time,
         })
-    
+
     # 입력 데이터 요약
     for stage_name in target_stages:
         if stage_name in stage_input_summaries:
@@ -1226,7 +1260,7 @@ def _generate_runtime_report_csv(
                         "metric": f"{input_name}_mtime",
                         "value": summary.get("mtime", "N/A"),
                     })
-    
+
     # [Stage14] L2 재사용 정보 전체 기록
     if l2_reuse_info and l2_reuse_info.get("source") == "root_reuse":
         rows.append({
@@ -1259,7 +1293,7 @@ def _generate_runtime_report_csv(
             "metric": "rows",
             "value": l2_reuse_info.get("rows", 0),
         })
-    
+
     return pd.DataFrame(rows)
 
 def _generate_runtime_profile_md(runtime_profile: pd.DataFrame, run_tag: str, total_time: Optional[float] = None) -> str:
@@ -1267,25 +1301,25 @@ def _generate_runtime_profile_md(runtime_profile: pd.DataFrame, run_tag: str, to
     lines = []
     lines.append(f"# L7 Runtime Profile: {run_tag}\n")
     lines.append(f"생성 시간: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-    
+
     if total_time is not None:
         lines.append(f"총 실행 시간: {total_time:.1f}초\n")
-    
+
     lines.append("\n## 요약 통계\n")
-    
+
     # 전체 통계
     total_rebalances = len(runtime_profile)
     avg_time = runtime_profile["rebalance_time_sec"].mean()
     median_time = runtime_profile["rebalance_time_sec"].median()
     max_time = runtime_profile["rebalance_time_sec"].max()
     min_time = runtime_profile["rebalance_time_sec"].min()
-    
+
     lines.append(f"- 총 리밸런싱 수: {total_rebalances}")
     lines.append(f"- 평균 처리 시간: {avg_time:.3f}초")
     lines.append(f"- 중앙값 처리 시간: {median_time:.3f}초")
     lines.append(f"- 최대 처리 시간: {max_time:.3f}초")
     lines.append(f"- 최소 처리 시간: {min_time:.3f}초")
-    
+
     # Phase별 통계
     lines.append("\n## Phase별 통계\n")
     phase_stats = runtime_profile.groupby("phase")["rebalance_time_sec"].agg([
@@ -1305,7 +1339,7 @@ def _generate_runtime_profile_md(runtime_profile: pd.DataFrame, run_tag: str, to
             lines.append("_(no rows)_\n")
     except Exception as e:
         lines.append(f"_(표 생성 실패: {e})_\n")
-    
+
     # Top 5 최악 처리 시간
     lines.append("\n## Top 5 최악 처리 시간\n")
     worst = runtime_profile.nlargest(5, "rebalance_time_sec")[
@@ -1321,25 +1355,25 @@ def _generate_runtime_profile_md(runtime_profile: pd.DataFrame, run_tag: str, to
             lines.append("_(no rows)_\n")
     except Exception as e:
         lines.append(f"_(표 생성 실패: {e})_\n")
-    
+
     # 병목 분석 (10줄 내 요약)
     lines.append("\n## 병목 분석\n")
-    
+
     # 구간별 시간 분석
     total_sec = runtime_profile["rebalance_time_sec"].sum()
     avg_per_rebalance = avg_time
-    
+
     # K_eff와 처리 시간의 상관관계
     if "k_eff" in runtime_profile.columns:
         corr = runtime_profile["rebalance_time_sec"].corr(runtime_profile["k_eff"])
         lines.append(f"- K_eff와 처리 시간 상관계수: {corr:.3f}")
-    
+
     # Phase별 평균 시간 비교
     phase_avg = runtime_profile.groupby("phase")["rebalance_time_sec"].mean()
     if len(phase_avg) > 1:
         phase_diff = phase_avg.max() - phase_avg.min()
         lines.append(f"- Phase별 평균 시간 차이: {phase_diff:.3f}초")
-    
+
     # 병목 구간 추정
     if avg_per_rebalance < 0.1:
         bottleneck = "빠름 (0.1초 미만)"
@@ -1349,10 +1383,10 @@ def _generate_runtime_profile_md(runtime_profile: pd.DataFrame, run_tag: str, to
         bottleneck = "보통 (0.5~1.0초)"
     else:
         bottleneck = "느림 (1.0초 이상)"
-    
+
     lines.append(f"- 평균 처리 시간 평가: {bottleneck}")
     lines.append(f"- 예상 병목: 리밸런싱 루프 내부 처리 (selector, weight 계산, DataFrame 생성)")
-    
+
     return "\n".join(lines)
 
 def _generate_stage14_check_report(
@@ -1366,7 +1400,7 @@ def _generate_stage14_check_report(
 ) -> Path:
     """
     [Stage14] Stage14 체크리포트 생성 (6개 항목 자동 점검)
-    
+
     Args:
         run_tag: 실행 태그
         baseline_tag: Baseline 태그
@@ -1375,7 +1409,7 @@ def _generate_stage14_check_report(
         command: 실행 커맨드
         args: argparse.Namespace (실행 인자)
         pipeline_total_time: 전체 파이프라인 실행 시간 (초)
-    
+
     Returns:
         생성된 체크리포트 파일 경로
     """
@@ -1385,7 +1419,7 @@ def _generate_stage14_check_report(
     lines.append(f"**Baseline Tag**: `{baseline_tag}`")
     lines.append(f"**점검 일시**: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     lines.append("\n---\n")
-    
+
     # 체크 결과 저장
     check_results = {
         "env": False,
@@ -1395,16 +1429,16 @@ def _generate_stage14_check_report(
         "reports": False,
     }
     failures = []
-    
+
     # 1) 환경 확인
     lines.append("## 1) 환경 확인\n")
     expected_cwd = Path("C:/Users/seong/OneDrive/Desktop/bootcamp/03_code")
     actual_cwd = Path.cwd()
     actual_base_dir = base_dir
-    
+
     cwd_match = str(actual_cwd).replace("\\", "/") == str(expected_cwd).replace("\\", "/")
     base_dir_match = str(actual_base_dir).replace("\\", "/") == str(expected_cwd).replace("\\", "/")
-    
+
     if cwd_match and base_dir_match:
         lines.append("**결과**: [PASS]")
         lines.append(f"\n- cwd: `{actual_cwd}` ✓")
@@ -1419,20 +1453,21 @@ def _generate_stage14_check_report(
             lines.append(f"- base_dir 불일치: 예상=`{expected_cwd}`, 실제=`{actual_base_dir}`")
             failures.append(f"환경: base_dir 불일치 (예상: {expected_cwd}, 실제: {actual_base_dir})")
     lines.append("\n")
-    
+
     # 2) 코드 확인 (tabulate 의존 제거)
     lines.append("## 2) 코드 확인 (tabulate 의존 제거)\n")
-    
+
     # 실제 파일 읽어서 to_markdown() 호출 확인
     run_all_path = base_dir / "src" / "run_all.py"
     to_markdown_count = 0
     to_string_usage = False
     try_except_usage = False
-    
+
     if run_all_path.exists():
         content = run_all_path.read_text(encoding="utf-8")
         # to_markdown() 호출 개수 (주석 제외)
         import re
+
         # 주석이 아닌 라인에서만 검색
         lines_content = content.split("\n")
         for i, line in enumerate(lines_content):
@@ -1440,11 +1475,11 @@ def _generate_stage14_check_report(
             # 주석이 아닌 경우만 체크
             if not stripped.startswith("#") and ".to_markdown(" in line:
                 to_markdown_count += 1
-        
+
         # to_string() 사용 확인
         if "to_string(index=False)" in content or "to_string()" in content:
             to_string_usage = True
-        
+
         # try/except 사용 확인 (_generate_runtime_profile_md 함수 내)
         func_start = content.find("def _generate_runtime_profile_md")
         if func_start >= 0:
@@ -1456,7 +1491,7 @@ def _generate_stage14_check_report(
                 try_except_usage = True
     else:
         failures.append("코드: src/run_all.py 파일을 찾을 수 없습니다")
-    
+
     if to_markdown_count == 0 and to_string_usage and try_except_usage:
         lines.append("**결과**: [PASS]")
         lines.append(f"\n- to_markdown() 호출 개수: {to_markdown_count}개 ✓")
@@ -1475,7 +1510,7 @@ def _generate_stage14_check_report(
             lines.append("- try/except 예외 처리가 없습니다")
             failures.append("코드: try/except 예외 처리 미확인 (src/run_all.py:_generate_runtime_profile_md 확인 필요)")
     lines.append("\n")
-    
+
     # 3) 실행 로그 요약
     lines.append("## 3) 실행 로그 요약\n")
     lines.append("**결과**: [PASS]")
@@ -1490,7 +1525,7 @@ def _generate_stage14_check_report(
     lines.append("\n- [Pipeline Completed Successfully] 메시지: 확인됨 (로그 기준)")
     check_results["execution"] = True
     lines.append("\n")
-    
+
     # 4) 산출물 존재 확인
     lines.append("## 4) 산출물 존재 확인\n")
     run_tag_dir = base_interim_dir / run_tag
@@ -1500,7 +1535,7 @@ def _generate_stage14_check_report(
         "bt_metrics.parquet",
         "selection_diagnostics.parquet",
     ]
-    
+
     lines.append("| 산출물 | 존재 | 경로 |")
     lines.append("|---|---|---|")
     artifacts_exist = True
@@ -1514,7 +1549,7 @@ def _generate_stage14_check_report(
         if not exists:
             artifacts_exist = False
             missing_artifacts.append(str(output_path))
-    
+
     if artifacts_exist:
         lines.append("\n**결과**: [PASS]")
         check_results["artifacts"] = True
@@ -1522,22 +1557,22 @@ def _generate_stage14_check_report(
         lines.append("\n**결과**: [FAIL]")
         failures.append(f"산출물: 다음 파일이 없습니다 - {', '.join(missing_artifacts)}")
     lines.append("\n")
-    
+
     # 5) 리포트 파일 존재 확인
     lines.append("## 5) 리포트 파일 존재 확인\n")
-    
+
     kpi_csv = base_dir / "reports" / "kpi" / f"kpi_table__{run_tag}.csv"
     kpi_md = base_dir / "reports" / "kpi" / f"kpi_table__{run_tag}.md"
     delta_csv = base_dir / "reports" / "delta" / f"delta_kpi__{baseline_tag}__vs__{run_tag}.csv"
     delta_md = base_dir / "reports" / "delta" / f"delta_report__{baseline_tag}__vs__{run_tag}.md"
-    
+
     reports = [
         ("KPI CSV", kpi_csv),
         ("KPI MD", kpi_md),
         ("Delta CSV", delta_csv),
         ("Delta MD", delta_md),
     ]
-    
+
     lines.append("| 리포트 | 존재 | 경로 |")
     lines.append("|---|---|---|")
     reports_exist = True
@@ -1550,7 +1585,7 @@ def _generate_stage14_check_report(
         if not exists:
             reports_exist = False
             missing_reports.append(str(path))
-    
+
     if reports_exist:
         lines.append("\n**결과**: [PASS]")
         check_results["reports"] = True
@@ -1558,11 +1593,11 @@ def _generate_stage14_check_report(
         lines.append("\n**결과**: [FAIL]")
         failures.append(f"리포트: 다음 파일이 없습니다 - {', '.join(missing_reports)}")
     lines.append("\n")
-    
+
     # 6) 최종 판정
     lines.append("## 6) 최종 판정\n")
     all_pass = all(check_results.values())
-    
+
     if all_pass:
         lines.append("**결과**: [PASS]")
         lines.append("\n**상세**:")
@@ -1577,11 +1612,11 @@ def _generate_stage14_check_report(
         for key, passed in check_results.items():
             status = "✓" if passed else "✗"
             lines.append(f"- {status} {key}")
-        
+
         lines.append("\n**누락 항목/원인**:")
         for failure in failures:
             lines.append(f"- {failure}")
-        
+
         lines.append("\n**수정해야 할 파일 위치**:")
         if not check_results["code"]:
             lines.append("- `src/run_all.py` - _generate_runtime_profile_md() 함수")
@@ -1589,42 +1624,42 @@ def _generate_stage14_check_report(
             lines.append(f"- `data/interim/{run_tag}/` - L7 산출물 생성 확인 필요")
         if not check_results["reports"]:
             lines.append("- `reports/kpi/`, `reports/delta/` - 리포트 생성 스크립트 확인 필요")
-    
+
     # 리포트 저장
     reports_dir = base_dir / "reports" / "stages"
     reports_dir.mkdir(parents=True, exist_ok=True)
     check_report_path = reports_dir / f"check__stage14__{run_tag}.md"
     check_report_path.write_text("\n".join(lines), encoding="utf-8")
-    
+
     return check_report_path
 
 def _cleanup_run_tag_artifacts(run_tag: str, base_interim_dir: Path, base_dir: Path, baseline_tag: str = "baseline_prerefresh_20251219_143636"):
     """
     [공통 프롬프트 v2] Stage 실행 전 run_tag 폴더/리포트 삭제
-    
+
     삭제 대상:
     - data/interim/{run_tag}/ (전체 폴더 삭제)
     - reports/kpi/kpi_table__{run_tag}.* (CSV, MD 파일)
     - reports/delta/delta_*__vs__{run_tag}.* (CSV, MD 파일)
-    
+
     baseline 관련 파일은 삭제 금지 (절대 규칙)
-    
+
     Windows 경로 구분자: Python Path 객체와 shutil을 사용하므로 크로스 플랫폼 호환성 보장
     """
     # [공통 프롬프트 v2] baseline 태그와 run_tag가 같으면 삭제 금지 (안전장치)
     if run_tag == baseline_tag:
         logger.warning(f"[공통 프롬프트 v2] run_tag가 baseline_tag와 동일합니다. 삭제를 건너뜁니다: {run_tag}")
         return
-    
+
     deleted_count = 0
-    
+
     # 1. data/interim/{run_tag} 폴더 삭제
     run_tag_dir = base_interim_dir / run_tag
     if run_tag_dir.exists() and run_tag_dir.is_dir():
         logger.info(f"[공통 프롬프트 v2] 기존 run_tag 폴더 삭제: {run_tag_dir}")
         shutil.rmtree(run_tag_dir, ignore_errors=True)
         deleted_count += 1
-    
+
     # 2. reports/kpi/kpi_table__{run_tag}.* 삭제
     reports_kpi_dir = base_dir / "reports" / "kpi"
     if reports_kpi_dir.exists():
@@ -1634,7 +1669,7 @@ def _cleanup_run_tag_artifacts(run_tag: str, base_interim_dir: Path, base_dir: P
                 logger.info(f"[공통 프롬프트 v2] 기존 KPI 리포트 삭제: {file_path}")
                 file_path.unlink(missing_ok=True)
                 deleted_count += 1
-    
+
     # 3. reports/delta/delta_*__vs__{run_tag}.* 삭제 (baseline 관련 제외)
     reports_delta_dir = base_dir / "reports" / "delta"
     if reports_delta_dir.exists():
@@ -1646,11 +1681,11 @@ def _cleanup_run_tag_artifacts(run_tag: str, base_interim_dir: Path, base_dir: P
                 deleted_count += 1
             else:
                 logger.debug(f"[공통 프롬프트 v2] baseline 관련 파일 보호: {file_path}")
-        
+
         # 추가 안전장치: baseline 태그가 포함된 파일은 절대 삭제하지 않음
         for file_path in reports_delta_dir.glob(f"delta_*__{baseline_tag}__*.*"):
             logger.debug(f"[공통 프롬프트 v2] baseline 파일 보호 (절대 삭제 금지): {file_path}")
-    
+
     if deleted_count > 0:
         logger.info(f"[공통 프롬프트 v2] run_tag 정리 완료: {run_tag} (삭제된 항목: {deleted_count}개)")
     else:
@@ -1659,10 +1694,10 @@ def _cleanup_run_tag_artifacts(run_tag: str, base_interim_dir: Path, base_dir: P
 def _verify_l2_reuse(base_interim_dir: Path, baseline_tag: str = "baseline_prerefresh_20251219_143636") -> Optional[str]:
     """
     [공통 프롬프트 v2] L2 재사용 검증: fundamentals_annual.parquet 해시 확인
-    
+
     Returns:
         해시값 (실행 전), None이면 파일 없음
-    
+
     검증 규칙:
     - 실행 전 해시를 기록하고, 실행 후 해시와 비교하여 변경 여부 확인
     - 변경되면 즉시 중단 (규칙 위반)
@@ -1674,13 +1709,13 @@ def _verify_l2_reuse(base_interim_dir: Path, baseline_tag: str = "baseline_prere
         logger.error("[L2 재사용 검증] L2 재무데이터는 무조건 기존 파일을 재사용해야 합니다.")
         logger.error("[L2 재사용 검증] 파일이 없다면 이전 실행에서 생성된 파일을 확인하거나, 수동으로 준비해야 합니다.")
         return None
-    
+
     # 파일 크기와 수정 시간도 함께 기록 (추가 검증 정보)
     file_size = l2_file.stat().st_size
     mtime = os.path.getmtime(l2_file)
     from datetime import datetime
     mtime_str = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
-    
+
     hash_before = _get_file_hash(l2_file)
     logger.info(f"[공통 프롬프트 v2] L2 재사용 검증 시작")
     logger.info(f"[공통 프롬프트 v2] L2 파일 경로: {l2_file}")
@@ -1700,16 +1735,16 @@ def _maybe_skip_stage(stage_name: str, interim_dir: Path, artifacts: dict, *, fo
     if stage_name == "L2":
         logger.info("[공통 프롬프트 v2] L2 재사용 고정: L2는 항상 기존 파일을 재사용합니다.")
         return True
-    
+
     # [공통 프롬프트 v2] force-rebuild가 True면 skip_if_exists 무시하고 항상 재생성
     if force_rebuild:
         logger.debug(f"[공통 프롬프트 v2] force-rebuild=True: {stage_name} 스킵하지 않음 (재생성)")
         return False
-    
+
     # force 또는 skip_if_exists=False면 재생성
     if force or (not skip_if_exists):
         return False
-    
+
     # skip_if_exists=True이고 force-rebuild=False일 때만 기존 파일 재사용 (L2 제외)
     outs = STAGE_OUTPUTS.get(stage_name, [])
     if not outs:
@@ -1756,7 +1791,7 @@ def main():
     parser.add_argument("--profile", action="store_true", default=False,
                        help="[TASK A-1] 각 단계의 경과시간을 reports/analysis/runtime_breakdown__{run_tag}.csv로 저장")
     args = parser.parse_args()
-    
+
     # [TASK A-1] baseline_tag가 명시되면 기본적으로 --no-scan 활성화
     if args.no_scan is None:
         # baseline_tag가 기본값이 아니면 (명시적으로 주어진 경우) no-scan 활성화
@@ -1794,7 +1829,7 @@ def main():
     # Run tag 결정 (logger 호출 전에)
     # [Stage0] --run-tag는 필수이므로 항상 사용
     run_tag = args.run_tag
-    
+
     # Interim 디렉토리 결정 (logger 호출 전에)
     base_interim_dir = get_path(cfg, "data_interim")
     base_dir = get_path(cfg, "base_dir")
@@ -1804,10 +1839,10 @@ def main():
         interim_dir = base_interim_dir / run_tag
 
     t_pipeline_start = time.time()  # [Stage13] 전체 파이프라인 시작 시간
-    
+
     # [Stage14] 즉시 출력 보장
     print("[Stage14] 파이프라인 시작...", flush=True)
-    
+
     logger.info("=== RUNNER ===")
     logger.info(f"BASE_DIR={base_dir}")
     logger.info(f"INTERIM_DIR={interim_dir}")
@@ -1816,7 +1851,7 @@ def main():
     logger.info(f"FROM={from_stage}, TO={to_stage}, FORCE={args.force}, FORCE_REBUILD={args.force_rebuild}")
     logger.info(f"Target Stages: {target_stages}")
     logger.info(f"Config: {args.config}")
-    
+
     # [Stage14] 로깅 즉시 출력
     sys.stdout.flush()
 
@@ -1826,10 +1861,10 @@ def main():
 
     # [Stage0] L2 해시 검증 (실행 전)
     l2_hash_before = _verify_l2_reuse(base_interim_dir, args.baseline_tag)
-    
+
     # [Stage0] Stage 실행 전 run_tag 폴더/리포트 삭제 (항상 수행, force-rebuild와 무관)
     _cleanup_run_tag_artifacts(run_tag, base_interim_dir, base_dir, args.baseline_tag)
-    
+
     # [Stage0] skip-l2 플래그 확인 및 로깅
     if args.skip_l2:
         logger.info("[Stage0] --skip-l2=True: L2 Stage는 기존 fundamentals_annual.parquet만 재사용 (DART 호출 금지)")
@@ -1838,7 +1873,7 @@ def main():
         logger.warning("[DEPRECATED] Using legacy root save mode. Artifacts will be saved to data/interim root.")
     else:
         logger.info(f"[TAG-BASED] Artifacts will be saved to: {interim_dir}")
-    
+
     interim_dir.mkdir(parents=True, exist_ok=True)
 
     run_cfg = _resolve_section(cfg, "run")
@@ -1862,15 +1897,15 @@ def main():
     # [Stage13] L7 타이밍 저장용
     l7_start_time = None
     l7_end_time = None
-    
+
     # [Runtime 공통 규칙] Stage별 실행 시간 기록
     stage_runtimes = {}  # {stage_name: (start_time, end_time, runtime_sec)}
     stage_input_summaries = {}  # {stage_name: {input_name: {rows, bytes}}}
     l2_reuse_info = {}  # [Stage14] L2 재사용 정보 (해시, 크기, mtime) - L2 실행 시에만 채워짐
-    
+
     # [TASK A-1] 타이밍 기록용 딕셔너리 (초기화) - Stage 루프 전에 초기화
     runtime_breakdown = {}
-    
+
     # [개선안 13번] 랭킹 기반 전략 모드:
     # - L5/L6(모델 예측 기반 score_ens) 대신 L6R(랭킹 기반 score_ens)을 사용
     l7_cfg = _resolve_section(cfg, "l7")
@@ -1889,7 +1924,7 @@ def main():
             # [Runtime 공통 규칙] Stage 시작 시간 기록
             stage_start_time = time.time()
             stage_runtimes[stage_name] = {"start_time": stage_start_time, "end_time": None, "runtime_sec": None}
-            
+
             # [Runtime 공통 규칙] 입력 데이터 요약 기록
             input_summary = {}
             required_inputs = REQUIRED_INPUTS.get(stage_name, [])
@@ -1902,38 +1937,38 @@ def main():
                             "bytes": df_input.memory_usage(deep=True).sum(),
                         }
             stage_input_summaries[stage_name] = input_summary
-            
+
             # [Stage13] L7 시작 시간 기록 (기존 코드 유지)
             if stage_name == "L7":
                 l7_start_time = time.time()
                 logger.info(f"[Stage13] L7 백테스트 시작: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-            
+
             # [Stage0] L2는 항상 재사용 (force-rebuild여도, DART 호출 금지)
             if stage_name == "L2":
                 if not args.skip_l2:
                     logger.warning("[Stage0] --skip-l2가 False입니다. L2 Stage는 항상 재사용해야 합니다. 강제로 재사용 모드로 전환합니다.")
                 logger.info("[Stage0] L2 재사용 고정: 기존 fundamentals_annual.parquet 로드 (DART 호출 금지)")
                 source_file = base_interim_dir / "fundamentals_annual.parquet"
-                
+
                 if not artifact_exists(source_file):
                     raise RuntimeError(
                         f"[L2 재사용 규칙 위반] 기존 fundamentals_annual.parquet 파일이 없습니다: {source_file}\n"
                         "L2 재무데이터는 무조건 기존 파일을 재사용해야 하며, API 재호출로 재생성할 수 없습니다.\n"
                         "파일이 없다면 이전 실행에서 생성된 파일을 확인하거나, 수동으로 준비해야 합니다."
                     )
-                
+
                 # [공통 프롬프트 v2] L2 해시 검증 (로드 전)
                 if l2_hash_before is None:
                     l2_hash_before = _get_file_hash(source_file)
                     logger.info(f"[L2 재사용 검증] 실행 전 해시 기록: {l2_hash_before[:16]}...")
-                
+
                 df = load_artifact(source_file)
                 artifacts["fundamentals_annual"] = df
                 mtime = os.path.getmtime(source_file)
                 from datetime import datetime
                 mtime_str = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
                 logger.info(f"[L2 재사용] 파일 수정 시간: {mtime_str}, 행 수: {len(df)}")
-                
+
                 # [공통 프롬프트 v2] L2 해시 재검증 (로드 후, 변경 여부 확인)
                 if l2_hash_before is not None:
                     l2_hash_after = _get_file_hash(source_file)
@@ -1941,7 +1976,7 @@ def main():
                     mtime_after = os.path.getmtime(source_file)
                     from datetime import datetime
                     mtime_str_after = datetime.fromtimestamp(mtime_after).strftime("%Y-%m-%d %H:%M:%S")
-                    
+
                     if l2_hash_before != l2_hash_after:
                         logger.error(f"[공통 프롬프트 v2] L2 재사용 규칙 위반 감지!")
                         logger.error(f"[공통 프롬프트 v2] 실행 전 해시: {l2_hash_before[:16]}... (전체: {l2_hash_before})")
@@ -1959,7 +1994,7 @@ def main():
                     logger.info(f"[공통 프롬프트 v2] L2 재사용 검증: 해시 일치 확인 완료 (변경 없음)")
                     logger.info(f"[공통 프롬프트 v2] L2 파일 크기: {file_size_after:,} bytes (변경 없음)")
                     logger.info(f"[공통 프롬프트 v2] L2 파일 수정 시간: {mtime_str_after} (변경 없음)")
-                
+
                 # [Stage14] L2 재사용 정보 저장 (Runtime 리포트용)
                 l2_reuse_info = {
                     "hash": l2_hash_before if l2_hash_before else l2_hash_after,
@@ -1969,7 +2004,7 @@ def main():
                     "source": "root_reuse",  # 루트 재사용 명시
                     "file_path": str(source_file),
                 }
-                
+
                 # [Stage14] L2 입력 요약에 재사용 정보 포함
                 stage_input_summaries["L2"] = {
                     "fundamentals_annual": {
@@ -1981,7 +2016,7 @@ def main():
                         "mtime": l2_reuse_info["mtime"],
                     }
                 }
-                
+
                 # [Runtime 공통 규칙] L2는 재사용이므로 실행 시간은 매우 짧음 (로드 시간만)
                 stage_end_time = time.time()
                 stage_runtime_sec = stage_end_time - stage_start_time
@@ -1991,9 +2026,9 @@ def main():
                     "runtime_sec": stage_runtime_sec,
                 }
                 logger.info(f"[Runtime] L2 완료 (재사용): {stage_runtime_sec:.3f}초")
-                
+
                 continue
-            
+
             # [TASK A-1] Preload 타이밍 기록
             t_preload_start = time.time() if args.profile else None
             _preload_required_inputs(stage_name, interim_dir, artifacts, base_interim_dir=base_interim_dir, baseline_tag=args.baseline_tag, input_tag=args.input_tag, no_scan=args.no_scan)
@@ -2094,7 +2129,7 @@ def main():
                     q = artifacts.get("_l7_quality", {})
                     if isinstance(q, dict) and q:
                         quality.update(q)
-                    
+
                     # cost_bps 불일치 검증
                     if args.strict_params and out_name == "bt_metrics":
                         l7_cfg = _resolve_section(cfg, "l7")
@@ -2129,14 +2164,14 @@ def main():
                     save_meta(out_base, meta, force=True)
 
                 artifacts[out_name] = df
-            
+
             # [Runtime 공통 규칙] Stage 종료 시간 기록
             stage_end_time = time.time()
             stage_runtime_sec = stage_end_time - stage_start_time
             stage_runtimes[stage_name]["end_time"] = stage_end_time
             stage_runtimes[stage_name]["runtime_sec"] = stage_runtime_sec
             logger.info(f"[Runtime] {stage_name} 완료: {stage_runtime_sec:.1f}초")
-            
+
             # [Stage13] L7 종료 시간 기록 (기존 코드 유지)
             if stage_name == "L7":
                 l7_end_time = time.time()
@@ -2144,7 +2179,7 @@ def main():
                 if l7_total_time is not None:
                     logger.info(f"[Stage13] L7 백테스트 완료: {l7_total_time:.1f}초")
                 artifacts["_l7_total_time"] = l7_total_time  # [Stage13] L7 실행 시간 저장
-            
+
             # [Stage7] L8의 경우 ranking_snapshot CSV를 reports/ranking/에 별도 저장
             if stage_name == "L8" and out_name == "ranking_snapshot":
                 reports_ranking_dir = base_dir / "reports" / "ranking"
@@ -2166,7 +2201,7 @@ def main():
             mtime_after = os.path.getmtime(l2_file)
             from datetime import datetime
             mtime_str_after = datetime.fromtimestamp(mtime_after).strftime("%Y-%m-%d %H:%M:%S")
-            
+
             if l2_hash_before != l2_hash_after:
                 logger.error(f"[공통 프롬프트 v2] L2 재사용 규칙 위반 감지!")
                 logger.error(f"[공통 프롬프트 v2] 실행 전 해시: {l2_hash_before[:16]}... (전체: {l2_hash_before})")
@@ -2192,19 +2227,19 @@ def main():
             )
     else:
         logger.warning("[공통 프롬프트 v2] L2 해시 검증: 실행 전 해시가 없어 최종 검증을 건너뜁니다.")
-    
+
     t_pipeline_end = time.time()
     pipeline_total_time = t_pipeline_end - t_pipeline_start if 't_pipeline_start' in locals() else None
-    
+
     logger.info("Pipeline Completed Successfully.")
     if pipeline_total_time is not None:
         logger.info(f"[Pipeline Runtime] 총 실행 시간: {pipeline_total_time:.1f}초")
-    
+
     # Run tag를 artifacts에 저장 (나중에 manifest 생성 시 사용)
     artifacts["_run_tag"] = run_tag
     artifacts["_interim_dir"] = interim_dir
     artifacts["_pipeline_total_time"] = pipeline_total_time  # [Stage13] 전체 실행 시간 저장
-    
+
     # [공통 프롬프트 v2] 공통 실행 산출물 생성 (KPI 리포트, Delta 리포트)
     # [TASK A-1] --no-export 옵션으로 리포트 생성 비활성화 가능
     # force-rebuild와 무관하게 항상 생성 (기존 리포트 덮어쓰기)
@@ -2213,7 +2248,7 @@ def main():
     # - reports/kpi/kpi_table__{run_tag}.csv, .md
     # - reports/delta/delta_kpi__{baseline_tag}__vs__{run_tag}.csv
     # - reports/delta/delta_report__{baseline_tag}__vs__{run_tag}.md
-    
+
     try:
         if args.no_export:
             logger.info("[TASK A-1] --no-export 활성화: 리포트 생성 건너뛰기")
@@ -2223,12 +2258,12 @@ def main():
             logger.info(f"[공통 프롬프트 v2]   - reports/kpi/kpi_table__{run_tag}.csv, .md")
             logger.info(f"[공통 프롬프트 v2]   - reports/delta/delta_kpi__{args.baseline_tag}__vs__{run_tag}.csv")
             logger.info(f"[공통 프롬프트 v2]   - reports/delta/delta_report__{args.baseline_tag}__vs__{run_tag}.md")
-        
+
         import subprocess
-        
+
         # [TASK A-1] 리포트 생성은 --no-export가 없을 때만
         if not args.no_export:
-        
+
             # KPI 리포트 생성 (기존 파일 덮어쓰기)
             kpi_script = base_dir / "src" / "tools" / "analysis" / "export_kpi_table.py"
             if kpi_script.exists():
@@ -2267,7 +2302,7 @@ def main():
                     logger.error(f"[공통 프롬프트 v2] [1/2] KPI 리포트 생성 stdout: {kpi_result.stdout}")
             else:
                 logger.error(f"[공통 프롬프트 v2] [1/2] KPI 리포트 스크립트를 찾을 수 없습니다: {kpi_script}")
-            
+
             # Delta 리포트 생성 (baseline과 비교, 기존 파일 덮어쓰기)
         # [Stage13] L7의 경우 pipeline baseline(stage6)을 사용, 다른 Stage는 args.baseline_tag 사용
         # [TASK A-1] no_scan이면 스캔 건너뛰고 args.baseline_tag만 사용
@@ -2276,7 +2311,7 @@ def main():
             t_baseline_detect_start = time.time() if args.profile else None
             # L7의 경우 stage6를 pipeline baseline으로 사용
             # stage6_로 시작하는 run_tag 찾기
-            stage6_candidates = [d.name for d in base_interim_dir.iterdir() 
+            stage6_candidates = [d.name for d in base_interim_dir.iterdir()
                                 if d.is_dir() and d.name.startswith("stage6_")]
             if stage6_candidates:
                 # 최신 stage6 선택 (이름 기준 정렬 또는 mtime 기준)
@@ -2301,7 +2336,7 @@ def main():
         elif "L7" in target_stages and args.no_scan:
             logger.info(f"[TASK A-1] --no-scan 활성화: Pipeline baseline 탐지 건너뛰고 args.baseline_tag 사용: {args.baseline_tag}")
             runtime_breakdown["baseline_detect_sec"] = 0.0
-        
+
         # [TASK A-1] Delta 리포트 생성은 --no-export가 없을 때만
         if not args.no_export:
             delta_script = base_dir / "src" / "tools" / "analysis" / "export_delta_report.py"
@@ -2342,9 +2377,9 @@ def main():
                     logger.error(f"[공통 프롬프트 v2] [2/2] Delta 리포트 생성 stdout: {delta_result.stdout}")
             else:
                 logger.error(f"[공통 프롬프트 v2] [2/2] Delta 리포트 스크립트를 찾을 수 없습니다: {delta_script}")
-            
+
             logger.info("[공통 프롬프트 v2] 공통 실행 산출물 생성 완료")
-        
+
         # [Stage13] 실행 시간 요약 저장
         timing_summary = {
             "pipeline_total_time": pipeline_total_time,
@@ -2353,13 +2388,13 @@ def main():
             "delta_export_time": runtime_breakdown.get("delta_export_sec"),
         }
         artifacts["_timing_summary"] = timing_summary
-        
+
         # [TASK A-1] runtime_breakdown에 추가 정보 저장
         runtime_breakdown["pipeline_total_sec"] = pipeline_total_time
         runtime_breakdown["l7_total_sec"] = artifacts.get("_l7_total_time")
         if "baseline_detect_sec" not in runtime_breakdown:
             runtime_breakdown["baseline_detect_sec"] = 0.0
-        
+
         # [TASK A-1] --profile 옵션으로 runtime_breakdown CSV 저장
         if args.profile:
             analysis_dir = base_dir / "reports" / "analysis"
@@ -2368,7 +2403,7 @@ def main():
             breakdown_df = pd.DataFrame([runtime_breakdown])
             breakdown_df.to_csv(breakdown_csv, index=False, encoding="utf-8-sig")
             logger.info(f"[TASK A-1] Runtime breakdown CSV 저장: {breakdown_csv}")
-        
+
         # [Runtime 공통 규칙] Runtime 리포트 생성
         _generate_runtime_report(
             run_tag=run_tag,
@@ -2381,7 +2416,7 @@ def main():
             target_stages=target_stages,
             l2_reuse_info=l2_reuse_info if 'l2_reuse_info' in locals() else {},
         )
-        
+
         # [Stage13] 런타임 프로파일 저장 (L7 실행 시)
         if "L7" in target_stages and "_l7_runtime_profile" in artifacts:
             t_export_start = time.time()
@@ -2389,12 +2424,12 @@ def main():
             if isinstance(runtime_profile, pd.DataFrame) and len(runtime_profile) > 0:
                 analysis_dir = base_dir / "reports" / "analysis"
                 analysis_dir.mkdir(parents=True, exist_ok=True)
-                
+
                 # CSV 저장
                 profile_csv = analysis_dir / f"l7_runtime_profile__{run_tag}.csv"
                 runtime_profile.to_csv(profile_csv, index=False, encoding="utf-8-sig")
                 logger.info(f"[Stage13] 런타임 프로파일 CSV 저장: {profile_csv}")
-                
+
                 # 분석 및 MD 생성
                 profile_md = analysis_dir / f"l7_runtime_profile__{run_tag}.md"
                 # l7_total_time은 run_L7_backtest 함수 내부에서만 존재하므로, runtime_profile에서 계산
@@ -2402,12 +2437,12 @@ def main():
                 md_content = _generate_runtime_profile_md(runtime_profile, run_tag, total_time_from_profile)
                 profile_md.write_text(md_content, encoding="utf-8")
                 logger.info(f"[Stage13] 런타임 프로파일 MD 저장: {profile_md}")
-                
+
                 t_export_end = time.time()
                 logger.info(f"[L7 Runtime] 리포트 생성 완료: {t_export_end - t_export_start:.1f}초")
             else:
                 logger.warning("[Stage13] 런타임 프로파일이 비어있거나 DataFrame이 아닙니다.")
-        
+
         # [Stage14] Stage14 체크리포트 생성
         if run_tag.startswith("stage14_"):
             print("[Stage14] 체크리포트 생성 시작...", flush=True)
@@ -2429,7 +2464,7 @@ def main():
                 if args.max_rebalances:
                     cmd_parts.extend(["--max-rebalances", str(args.max_rebalances)])
                 command = " ".join(cmd_parts)
-                
+
                 check_report_path = _generate_stage14_check_report(
                     run_tag=run_tag,
                     baseline_tag=args.baseline_tag,

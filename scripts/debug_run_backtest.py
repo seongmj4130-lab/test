@@ -2,15 +2,16 @@
 """run_backtest_4models.py 디버깅"""
 import sys
 from pathlib import Path
+
 import pandas as pd
 
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.utils.config import load_config, get_path
-from src.utils.io import load_artifact
 from src.stages.modeling.l6_scoring import build_rebalance_scores
-from src.tracks.track_b.stages.backtest.l7_backtest import run_backtest, BacktestConfig
+from src.tracks.track_b.stages.backtest.l7_backtest import BacktestConfig, run_backtest
+from src.utils.config import get_path, load_config
+from src.utils.io import load_artifact
 
 # 설정 로드
 cfg = load_config("configs/config.yaml")
@@ -62,12 +63,12 @@ if len(result) >= 4:
     bt_metrics = result[3]
     print(f"\nbt_metrics 타입: {type(bt_metrics)}")
     print(f"bt_metrics 길이: {len(bt_metrics) if hasattr(bt_metrics, '__len__') else 'N/A'}")
-    
+
     if isinstance(bt_metrics, pd.DataFrame):
         print(f"\nbt_metrics 컬럼: {bt_metrics.columns.tolist()}")
         print(f"\nbt_metrics 전체:")
         print(bt_metrics.to_string())
-        
+
         holdout = bt_metrics[bt_metrics['phase'] == 'holdout']
         print(f"\nholdout 필터링 후:")
         print(holdout.to_string())
@@ -76,4 +77,3 @@ if len(result) >= 4:
             print(f"holdout 첫 번째 행의 net_cagr: {holdout['net_cagr'].iloc[0]}")
             print(f"holdout 첫 번째 행의 net_mdd: {holdout['net_mdd'].iloc[0]}")
             print(f"holdout 첫 번째 행의 net_calmar_ratio: {holdout['net_calmar_ratio'].iloc[0]}")
-

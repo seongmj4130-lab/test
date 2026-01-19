@@ -14,7 +14,10 @@ def run_l8_ranking():
     """L8 랭킹 엔진 실행"""
 
     try:
-        from src.tracks.track_a.stages.ranking.l8_dual_horizon import run_L8_short_rank_engine, run_L8_long_rank_engine
+        from src.tracks.track_a.stages.ranking.l8_dual_horizon import (
+            run_L8_long_rank_engine,
+            run_L8_short_rank_engine,
+        )
         print('L8 모듈 임포트 성공')
 
         # 설정 로드
@@ -23,7 +26,7 @@ def run_l8_ranking():
         print('설정 로드 완료')
 
         # artifacts 준비
-        from src.utils.io import load_artifact, artifact_exists, save_artifact
+        from src.utils.io import artifact_exists, load_artifact, save_artifact
 
         interim_dir = Path('data/interim')
         artifacts = {}

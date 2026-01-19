@@ -65,5 +65,3 @@ def classify_3level_from_return(
     if x < -b:
         return "bear"
     return "neutral"
-
-

@@ -1,6 +1,6 @@
 # L5/L6/L8 산출물 일치 여부 확인 리포트
 
-**작성일**: 2026-01-07  
+**작성일**: 2026-01-07
 **확인 범위**: L5 모델 예측값, L8 랭킹 데이터, L6 스코어 데이터
 
 ---
@@ -216,7 +216,7 @@ ticker  score_short   y_pred
 
 1. **L5 재실행 시**: L6도 함께 재생성 필요 (L6가 L5 예측값을 사용)
 2. **L8 재실행 시**: L6 Interval20도 함께 재생성 필요 (L6 Interval20이 L8 랭킹을 사용)
-3. **백테스트 실행 시**: 
+3. **백테스트 실행 시**:
    - BT20 전략: `rebalance_scores.parquet` (L5 기반)
    - BT120 전략: `rebalance_scores_from_ranking_interval_20.parquet` (L8 기반)
 
@@ -227,4 +227,3 @@ ticker  score_short   y_pred
 - `scripts/check_l5_l6_l8_consistency.py`: 기본 일치 여부 확인
 - `scripts/check_l5_l6_l8_detailed.py`: 상세 일치 여부 확인
 - `scripts/check_l8_ranking_match.py`: L8 랭킹 일치 여부 확인
-

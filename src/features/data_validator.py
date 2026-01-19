@@ -6,11 +6,13 @@
 데이터 무결성, 품질, 일관성을 검사합니다.
 """
 
+import warnings
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Tuple, Optional, Any
-from pathlib import Path
-import warnings
+
 warnings.filterwarnings('ignore')
 
 
@@ -486,9 +488,10 @@ class DataValidator:
 
 def test_data_validator():
     """데이터 검증 시스템 테스트"""
+    from pathlib import Path
+
     from src.utils.config import load_config
     from src.utils.io import load_artifact
-    from pathlib import Path
 
     # 설정 로드
     cfg = load_config('configs/config.yaml')

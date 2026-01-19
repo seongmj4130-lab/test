@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """백테스트 결과 비교 (03_code vs 06_code22 vs 기대값)"""
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 
 strategies = ['bt20_short', 'bt20_ens', 'bt120_long', 'bt120_ens']
 
@@ -46,15 +47,15 @@ for s in strategies:
     if s in expected:
         exp = expected[s]
         print(f"{s:<15} {'기대값':<12} {exp['net_sharpe']:>11.4f} {exp['net_cagr']:>11.2%} {exp['net_mdd']:>11.2%} {exp['net_calmar_ratio']:>11.4f}")
-    
+
     if s in results_03:
         r03 = results_03[s]
         print(f"{s:<15} {'03_code':<12} {r03['net_sharpe']:>11.4f} {r03['net_cagr']:>11.2%} {r03['net_mdd']:>11.2%} {r03['net_calmar_ratio']:>11.4f}")
-    
+
     if s in results_06:
         r06 = results_06[s]
         print(f"{s:<15} {'06_code22':<12} {r06['net_sharpe']:>11.4f} {r06['net_cagr']:>11.2%} {r06['net_mdd']:>11.2%} {r06['net_calmar_ratio']:>11.4f}")
-    
+
     print()
 
 print("=" * 100)

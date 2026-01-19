@@ -189,7 +189,7 @@ l8_short:
   # 최적 가중치: technical=-0.5, value=0.5, profitability=0.0, news=0.0
 ```
 
-**⚠️ 중요**: 
+**⚠️ 중요**:
 - Baseline 랭킹 기본 설정은 수정하지 않습니다.
 - 최적화된 가중치는 선택적으로 적용 가능합니다.
 
@@ -338,11 +338,11 @@ def convert_predictions_to_ranking(
 ) -> pd.DataFrame:
     """
     L5 모델 예측값(y_pred)을 랭킹으로 변환
-    
+
     Args:
         pred_oos: L5 산출물 (pred_short_oos 또는 pred_long_oos)
         horizon: 20 (단기) 또는 120 (장기)
-    
+
     Returns:
         ranking_ml: ML 랭킹 데이터프레임
           - date, ticker
@@ -351,37 +351,37 @@ def convert_predictions_to_ranking(
     """
     # 1. fold별 예측값 집계 (평균)
     agg = pred_oos.groupby(
-        ["date", "ticker", "phase"], 
+        ["date", "ticker", "phase"],
         as_index=False
     ).agg({
         "y_pred": "mean",
         "y_true": "mean",  # 검증용
     })
-    
+
     # 2. 리밸런싱 날짜 선택 (fold의 test_end)
     # L6의 _pick_rebalance_rows_by_fold_end 로직 활용
     from src.stages.modeling.l6_scoring import _pick_rebalance_rows_by_fold_end
-    
+
     # fold 정보 필요 (cv_folds에서 가져오기)
     # 여기서는 간단히 date별로 집계
     ranking = agg.groupby(
-        ["date", "phase"], 
+        ["date", "phase"],
         as_index=False
     ).apply(lambda g: g.nlargest(1, "date")).reset_index(drop=True)
-    
+
     # 3. 랭킹 계산
     ranking["score_ml"] = ranking["y_pred"]
     ranking["rank_ml"] = ranking.groupby(
         ["date", "phase"]
     )["score_ml"].rank(ascending=False, method="first")
-    
+
     # 4. 컬럼 정리
     ranking_ml = ranking[[
         "date", "ticker", "phase",
         "score_ml", "rank_ml",
         "y_true"  # 검증용
     ]].copy()
-    
+
     return ranking_ml
 ```
 
@@ -425,7 +425,7 @@ def build_ensemble_ranking(
 ) -> pd.DataFrame:
     """
     Baseline 랭킹과 ML 랭킹을 결합하여 앙상블 랭킹 생성
-    
+
     Args:
         ranking_baseline: Baseline 랭킹 (L8 산출물)
             - date, ticker, score_total, rank_total
@@ -434,7 +434,7 @@ def build_ensemble_ranking(
         weight_baseline: Baseline 가중치 (기본 0.7)
         weight_ml: ML 가중치 (기본 0.3)
         horizon: "short" or "long"
-    
+
     Returns:
         ranking_ensemble: 앙상블 랭킹
             - date, ticker, phase
@@ -444,48 +444,48 @@ def build_ensemble_ranking(
     """
     # 1. 병합 (date, ticker, phase 기준)
     key = ["date", "ticker", "phase"]
-    
+
     # Baseline 랭킹 준비
     baseline = ranking_baseline[key + ["score_total"]].copy()
     baseline = baseline.rename(columns={"score_total": "score_baseline"})
-    
+
     # ML 랭킹 준비
     ml = ranking_ml[key + ["score_ml"]].copy()
-    
+
     # 병합
     merged = baseline.merge(
-        ml, 
-        on=key, 
+        ml,
+        on=key,
         how="outer",  # outer join (한쪽에만 있어도 포함)
         validate="one_to_one"
     )
-    
+
     # 2. 가중치 결합
     # NaN 처리: 한쪽에만 있으면 있는 쪽만 사용
     mask_baseline = merged["score_baseline"].notna()
     mask_ml = merged["score_ml"].notna()
-    
+
     # 정규화된 가중치 계산
     den = (weight_baseline * mask_baseline.astype(float)) + \
           (weight_ml * mask_ml.astype(float))
-    
+
     num = (weight_baseline * merged["score_baseline"].fillna(0.0)) + \
           (weight_ml * merged["score_ml"].fillna(0.0))
-    
+
     merged["score_ensemble"] = num / den.replace(0.0, np.nan)
-    
+
     # 3. 랭킹 계산
     merged["rank_ensemble"] = merged.groupby(
         ["date", "phase"]
     )["score_ensemble"].rank(ascending=False, method="first")
-    
+
     # 4. 컬럼 정리
     ranking_ensemble = merged[[
         "date", "ticker", "phase",
         "score_baseline", "score_ml",
         "score_ensemble", "rank_ensemble"
     ]].copy()
-    
+
     return ranking_ensemble
 ```
 
@@ -551,13 +551,13 @@ def convert_ranking_to_rebalance_scores(
 ) -> pd.DataFrame:
     """
     랭킹을 리밸런싱 스코어로 변환
-    
+
     Args:
         ranking_daily: 랭킹 데이터 (Baseline/ML/Ensemble)
         cv_folds: CV 분할 정보
         rebalance_interval: 리밸런싱 주기
         alpha_short: 단기 가중치 (ens 전략용)
-    
+
     Returns:
         rebalance_scores: 리밸런싱 스코어
     """
@@ -566,7 +566,7 @@ def convert_ranking_to_rebalance_scores(
         rebalance_interval=rebalance_interval,
         alpha_short=alpha_short,
     )
-    
+
     # 단기/장기 분리 (ranking_daily가 단일 horizon인 경우)
     # 여기서는 단일 랭킹만 처리하는 것으로 가정
     rebalance_scores = build_rebalance_scores_from_ranking(
@@ -576,7 +576,7 @@ def convert_ranking_to_rebalance_scores(
         cv_folds_long=cv_folds,
         config=config,
     )
-    
+
     return rebalance_scores
 ```
 
@@ -602,16 +602,16 @@ def run_ensemble_backtest_strategies(
 ):
     """
     앙상블 랭킹 전략 백테스트 실행
-    
+
     ⚠️ Track B의 기존 백테스트 로직을 그대로 사용 (설정 수정 금지)
-    
+
     Args:
         config_path: 설정 파일 경로
         ranking_type: 랭킹 타입 ("baseline", "ml", "ensemble")
         force_rebuild: 재계산 여부
     """
     cfg = load_config(config_path)
-    
+
     # ⚠️ Track B 설정 그대로 사용 (수정 금지)
     l7_configs = {
         "bt20_short": cfg.get("l7_bt20_short", {}),
@@ -619,7 +619,7 @@ def run_ensemble_backtest_strategies(
         "bt120_long": cfg.get("l7_bt120_long", {}),
         "bt120_ens": cfg.get("l7_bt120_ens", {}),
     }
-    
+
     # 랭킹 로드
     if ranking_type == "baseline":
         ranking_short = pd.read_parquet("data/interim/ranking_short_daily.parquet")
@@ -644,11 +644,11 @@ def run_ensemble_backtest_strategies(
         ranking_long = build_ensemble_ranking(
             baseline_long, ml_long, weight_baseline=0.7, weight_ml=0.3, horizon="long"
         )
-    
+
     # CV 분할 로드
     cv_folds_short = pd.read_parquet("data/interim/cv_folds_short.parquet")
     cv_folds_long = pd.read_parquet("data/interim/cv_folds_long.parquet")
-    
+
     # 4개 전략 실행
     strategies = [
         "bt20_short",
@@ -656,20 +656,20 @@ def run_ensemble_backtest_strategies(
         "bt120_long",
         "bt120_ens",
     ]
-    
+
     results = {}
     for strategy in strategies:
         l7_cfg = l7_configs[strategy]
-        
+
         # 리밸런싱 스코어 변환 (Track B의 L6R 사용)
         rebalance_interval = l7_cfg.get("rebalance_interval", 1)
         alpha_short = cfg.get("l6r", {}).get("alpha_short", 0.5)
-        
+
         config = RankingRebalanceConfig(
             rebalance_interval=rebalance_interval,
             alpha_short=alpha_short if "ens" in strategy else 1.0,  # ens 전략만 결합
         )
-        
+
         rebalance_scores, _, _, _ = build_rebalance_scores_from_ranking(
             ranking_short_daily=ranking_short if "20" in strategy else ranking_long,
             ranking_long_daily=ranking_long if "ens" in strategy else ranking_short,  # ens만 장기 사용
@@ -677,16 +677,16 @@ def run_ensemble_backtest_strategies(
             cv_folds_long=cv_folds_long,
             config=config,
         )
-        
+
         # ⚠️ Track B의 기존 백테스트 함수 사용 (설정 수정 금지)
         bt_result = run_backtest(
             rebalance_scores=rebalance_scores,
             config=l7_cfg,  # 전략별 설정 사용
             strategy=strategy,
         )
-        
+
         results[strategy] = bt_result
-    
+
     return results
 ```
 
@@ -738,7 +738,7 @@ def run_full_ensemble_pipeline(
 ):
     """
     전체 앙상블 랭킹 파이프라인 실행
-    
+
     Args:
         config_path: 설정 파일 경로
         force_rebuild: 재계산 여부
@@ -750,32 +750,32 @@ def run_full_ensemble_pipeline(
     logger.info("앙상블 랭킹 전략 파이프라인 시작")
     logger.info(f"ML 모델: {ml_model_type} (XGBoost 우선, LightGBM 대체)")
     logger.info("=" * 80)
-    
+
     cfg = load_config(config_path)
     interim_dir = Path(get_path(cfg, "data_interim"))
-    
+
     # Step 1: Baseline 랭킹 생성 (설정 수정 금지)
     logger.info("[Step 1] Baseline 랭킹 생성 (L8, 설정 수정 금지)")
     run_track_a_pipeline(config_path=config_path, force_rebuild=force_rebuild)
-    
+
     baseline_short = pd.read_parquet(interim_dir / "ranking_short_daily.parquet")
     baseline_long = pd.read_parquet(interim_dir / "ranking_long_daily.parquet")
     logger.info(f"  ✓ Baseline 단기: {len(baseline_short):,}행")
     logger.info(f"  ✓ Baseline 장기: {len(baseline_long):,}행")
-    
+
     # Step 2: ML 랭킹 생성 (L5 ML 모델 완전 교체)
     logger.info(f"[Step 2] ML 랭킹 생성 (L5 {ml_model_type} 모델 → 랭킹 변환)")
-    
+
     # L5 ML 모델 학습 및 예측 (기존 L5 교체)
     # ⚠️ 기존 l5 설정은 보존, l5_ml 설정 사용
     l5_ml_cfg = cfg.get("l5_ml", {})
     l5_ml_cfg["model_type"] = ml_model_type  # XGBoost 우선
-    
+
     # 데이터 로드
     dataset_daily = pd.read_parquet(interim_dir / "dataset_daily.parquet")
     cv_folds_short = pd.read_parquet(interim_dir / "cv_folds_short.parquet")
     cv_folds_long = pd.read_parquet(interim_dir / "cv_folds_long.parquet")
-    
+
     # 단기 모델 학습 (20일)
     logger.info(f"  [2-1] 단기 모델 학습 ({ml_model_type}, horizon=20)")
     pred_short, metrics_short, report_short, warns_short = train_oos_predictions(
@@ -788,7 +788,7 @@ def run_full_ensemble_pipeline(
     )
     pred_short.to_parquet(interim_dir / "pred_short_oos_ml.parquet", index=False)
     logger.info(f"    ✓ 단기 예측: {len(pred_short):,}행, IC={report_short.get('dev_ic_rank_mean', 'N/A'):.4f}")
-    
+
     # 장기 모델 학습 (120일)
     logger.info(f"  [2-2] 장기 모델 학습 ({ml_model_type}, horizon=120)")
     pred_long, metrics_long, report_long, warns_long = train_oos_predictions(
@@ -801,7 +801,7 @@ def run_full_ensemble_pipeline(
     )
     pred_long.to_parquet(interim_dir / "pred_long_oos_ml.parquet", index=False)
     logger.info(f"    ✓ 장기 예측: {len(pred_long):,}행, IC={report_long.get('dev_ic_rank_mean', 'N/A'):.4f}")
-    
+
     # 예측값을 랭킹으로 변환
     ml_short = convert_predictions_to_ranking(pred_short, horizon=20)
     ml_long = convert_predictions_to_ranking(pred_long, horizon=120)
@@ -809,7 +809,7 @@ def run_full_ensemble_pipeline(
     ml_long.to_parquet(interim_dir / "ranking_ml_long_daily.parquet", index=False)
     logger.info(f"  ✓ ML 단기 랭킹: {len(ml_short):,}행")
     logger.info(f"  ✓ ML 장기 랭킹: {len(ml_long):,}행")
-    
+
     # Step 3: 앙상블 랭킹 생성
     logger.info("[Step 3] 앙상블 랭킹 생성")
     ensemble_short = build_ensemble_ranking(
@@ -828,10 +828,10 @@ def run_full_ensemble_pipeline(
     )
     logger.info(f"  ✓ 앙상블 단기: {len(ensemble_short):,}행")
     logger.info(f"  ✓ 앙상블 장기: {len(ensemble_long):,}행")
-    
+
     # Step 4: 백테스트 실행 (Track B 동일 로직 사용, 설정 수정 금지)
     logger.info("[Step 4] 백테스트 실행 (Track B 동일 로직, 설정 수정 금지)")
-    
+
     # Baseline 랭킹 백테스트
     logger.info("  [4-1] Baseline 랭킹 백테스트 (Track B 동일 로직)")
     baseline_results = run_ensemble_backtest_strategies(
@@ -839,7 +839,7 @@ def run_full_ensemble_pipeline(
         ranking_type="baseline",
         force_rebuild=force_rebuild,
     )
-    
+
     # ML 랭킹 백테스트
     logger.info("  [4-2] ML 랭킹 백테스트 (Track B 동일 로직)")
     ml_results = run_ensemble_backtest_strategies(
@@ -847,7 +847,7 @@ def run_full_ensemble_pipeline(
         ranking_type="ml",
         force_rebuild=force_rebuild,
     )
-    
+
     # 앙상블 랭킹 백테스트
     logger.info("  [4-3] 앙상블 랭킹 백테스트 (Track B 동일 로직)")
     ensemble_results = run_ensemble_backtest_strategies(
@@ -855,12 +855,12 @@ def run_full_ensemble_pipeline(
         ranking_type="ensemble",
         force_rebuild=force_rebuild,
     )
-    
+
     # 결과 요약
     logger.info("=" * 80)
     logger.info("백테스트 결과 요약")
     logger.info("=" * 80)
-    
+
     for ranking_type, results in [
         ("Baseline", baseline_results),
         ("ML", ml_results),
@@ -872,7 +872,7 @@ def run_full_ensemble_pipeline(
             sharpe = metrics.get("sharpe_ratio", "N/A")
             mdd = metrics.get("mdd", "N/A")
             logger.info(f"  {strategy}: Sharpe={sharpe:.2f}, MDD={mdd:.2%}")
-    
+
     return {
         "baseline": baseline_results,
         "ml": ml_results,
@@ -922,7 +922,7 @@ if __name__ == "__main__":
 l5_ml:
   # 모델 타입: XGBoost 우선, LightGBM 대체
   model_type: xgboost  # 또는 lightgbm
-  
+
   # XGBoost 설정
   xgb_n_estimators: 600
   xgb_max_depth: 4
@@ -931,7 +931,7 @@ l5_ml:
   xgb_colsample_bytree: 0.8
   xgb_reg_lambda: 1.0
   xgb_min_child_weight: 1.0
-  
+
   # LightGBM 설정
   lgb_n_estimators: 600
   lgb_max_depth: 4
@@ -940,7 +940,7 @@ l5_ml:
   lgb_colsample_bytree: 0.8
   lgb_reg_lambda: 1.0
   lgb_min_child_weight: 1.0
-  
+
   # 공통 설정
   target_transform: cs_rank
   cs_rank_center: true
@@ -953,7 +953,7 @@ ensemble_ranking:
   weight_baseline: 0.7
   # ML 가중치
   weight_ml: 0.3
-  
+
   # ML 모델 우선순위
   ml_model_priority: xgboost  # xgboost 우선, lightgbm 대체
 ```
@@ -1018,13 +1018,13 @@ data/processed/
 
 ## 9. 기존 투트랙 모델 백테스트 결과 (Baseline 기준)
 
-**실행 환경**: 06_code22 워크스페이스  
-**실행 일시**: 2026-01-07  
+**실행 환경**: 06_code22 워크스페이스
+**실행 일시**: 2026-01-07
 **백테스트 방식**: Track B 파이프라인 (L6R → L7)
 
 ### 📊 실제 백테스트 결과 (Dev 구간)
 
-**테스트 기간**: 2016-01-04 ~ 2022-12-29 (Dev 구간)  
+**테스트 기간**: 2016-01-04 ~ 2022-12-29 (Dev 구간)
 **리밸런싱 횟수**: 87회
 
 | 전략 | Net Sharpe | Net CAGR | Net MDD | Net Hit Ratio | Rank IC | ICIR | Avg Turnover | Profit Factor | Calmar Ratio |
@@ -1036,7 +1036,7 @@ data/processed/
 
 ### 📊 실제 백테스트 결과 (Holdout 구간)
 
-**테스트 기간**: 2023-01-31 ~ 2024-11-18 (Holdout 구간)  
+**테스트 기간**: 2023-01-31 ~ 2024-11-18 (Holdout 구간)
 **리밸런싱 횟수**: 23회
 
 | 전략 | Net Sharpe | Net CAGR | Net MDD | Net Hit Ratio | Rank IC | ICIR | Avg Turnover | Profit Factor | Calmar Ratio |
@@ -1250,8 +1250,8 @@ l7_bt120_ens:
 
 ### 📋 백테스트 재실행 (06_code22)
 
-**실행 환경**: 06_code22 워크스페이스  
-**실행 일시**: 2026-01-07  
+**실행 환경**: 06_code22 워크스페이스
+**실행 일시**: 2026-01-07
 **실행 명령어**:
 
 ```bash
@@ -1295,8 +1295,8 @@ python -m src.pipeline.track_b_pipeline bt120_ens
 
 ---
 
-**작성일**: 2026-01-07  
-**작성자**: Cursor AI  
+**작성일**: 2026-01-07
+**작성자**: Cursor AI
 **버전**: 1.3 (Phase 2 Grid Search 최적화 결과 반영)
 
 **최종 업데이트**: 2026-01-08
@@ -1309,4 +1309,3 @@ python -m src.pipeline.track_b_pipeline bt120_ens
 - 06_code22에서 4개 전략 백테스트 재실행 완료
 - Dev/Holdout 구간별 상세 메트릭 반영
 - 설정값 상세 반영
-

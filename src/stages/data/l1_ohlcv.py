@@ -5,5 +5,3 @@
 from src.tracks.shared.stages.data.l1_ohlcv import download_ohlcv_panel
 
 __all__ = ["download_ohlcv_panel"]
-
-

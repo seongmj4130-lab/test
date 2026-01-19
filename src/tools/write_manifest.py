@@ -14,6 +14,7 @@ from typing import Dict, List, Optional
 
 import yaml
 
+
 def get_git_commit(repo_dir: Path) -> Optional[str]:
     """Git 커밋 해시 반환"""
     try:
@@ -43,7 +44,7 @@ def compute_config_hash(config_path: Path) -> str:
 def scan_artifacts(interim_dir: Path, run_tag: str) -> List[Dict]:
     """Interim 디렉토리에서 생성된 파일 스캔"""
     artifacts = []
-    
+
     # 태그 기반 디렉토리
     tag_dir = interim_dir / run_tag
     if tag_dir.exists():
@@ -51,7 +52,7 @@ def scan_artifacts(interim_dir: Path, run_tag: str) -> List[Dict]:
     else:
         # 레거시 모드: 루트 디렉토리
         scan_dir = interim_dir
-    
+
     # parquet, csv, meta 파일 스캔
     for ext in [".parquet", ".csv", "__meta.json"]:
         for file_path in scan_dir.glob(f"*{ext}"):
@@ -64,7 +65,7 @@ def scan_artifacts(interim_dir: Path, run_tag: str) -> List[Dict]:
                     "mtime": datetime.fromtimestamp(stat.st_mtime).isoformat(),
                     "type": ext.replace(".", "").replace("__meta.json", "meta"),
                 })
-    
+
     # 정렬: 이름 순
     artifacts.sort(key=lambda x: x["name"])
     return artifacts
@@ -77,18 +78,18 @@ def main():
     parser.add_argument("--root", type=str, default=None, help="Project root directory")
     parser.add_argument("--out-dir", type=str, default="reports/manifests", help="Output directory")
     args = parser.parse_args()
-    
+
     # 루트 경로 결정
     if args.root:
         root = Path(args.root)
     else:
         root = Path(__file__).resolve().parents[2]
-    
+
     config_path = root / args.config
     if not config_path.exists():
         print(f"ERROR: Config not found: {config_path}", file=sys.stderr)
         sys.exit(1)
-    
+
     # Interim 디렉토리 결정
     if args.interim_dir:
         interim_dir = Path(args.interim_dir)
@@ -102,19 +103,19 @@ def main():
         except Exception as e:
             print(f"ERROR: Failed to get interim_dir from config: {e}", file=sys.stderr)
             sys.exit(1)
-    
+
     out_dir = root / args.out_dir
     out_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Git 커밋
     git_commit = get_git_commit(root)
-    
+
     # Config 해시
     config_hash = compute_config_hash(config_path)
-    
+
     # 생성 파일 스캔
     artifacts = scan_artifacts(interim_dir, args.run_tag)
-    
+
     # Manifest 생성
     # interim_dir 경로 처리 (절대 경로일 수 있음)
     try:
@@ -122,7 +123,7 @@ def main():
     except ValueError:
         # 절대 경로인 경우 그대로 사용
         interim_dir_rel = str(interim_dir)
-    
+
     manifest = {
         "run_tag": args.run_tag,
         "created_at": datetime.now().isoformat(),
@@ -133,18 +134,18 @@ def main():
         "artifacts_count": len(artifacts),
         "artifacts": artifacts,
     }
-    
+
     # JSON 저장
     json_path = out_dir / f"manifest__{args.run_tag}.json"
     with open(json_path, 'w', encoding='utf-8') as f:
         json.dump(manifest, f, indent=2, ensure_ascii=False)
-    
+
     print(f"[Manifest] Saved: {json_path}")
     print(f"[Manifest] Run Tag: {args.run_tag}")
     print(f"[Manifest] Git Commit: {git_commit or 'N/A'}")
     print(f"[Manifest] Config Hash: {config_hash}")
     print(f"[Manifest] Artifacts: {len(artifacts)} files")
-    
+
     return json_path
 
 if __name__ == "__main__":

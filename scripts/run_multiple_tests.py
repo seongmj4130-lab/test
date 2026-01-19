@@ -5,9 +5,12 @@ Track A/B 다중 실행 테스트 스크립트
 각 전략을 3번씩 실행해서 결과를 비교
 """
 
-from src.tracks.track_b.backtest_service import run_backtest_strategy
-import pandas as pd
 import time
+
+import pandas as pd
+
+from src.tracks.track_b.backtest_service import run_backtest_strategy
+
 
 def run_strategy_multiple_times(strategy_name, times=3):
     """전략을 여러 번 실행하고 결과를 수집"""

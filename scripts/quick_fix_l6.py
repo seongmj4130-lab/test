@@ -1,6 +1,7 @@
-import pandas as pd
 import shutil
 from pathlib import Path
+
+import pandas as pd
 
 # 데이터 로드
 df = pd.read_parquet('data/interim/rebalance_scores.parquet')

@@ -4,8 +4,10 @@
 기존 랭킹 데이터 확인
 """
 
-import pandas as pd
 import os
+
+import pandas as pd
+
 
 def check_existing_data():
     """기존 랭킹 데이터 확인"""

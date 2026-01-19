@@ -8,11 +8,12 @@ Grid Search 방식으로 각 모델의 가중치를 최적화합니다.
 from __future__ import annotations
 
 import sys
-from pathlib import Path
+import warnings
 from datetime import datetime
 from itertools import product
-from typing import Dict, List, Tuple, Optional
-import warnings
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
 warnings.filterwarnings('ignore')
 
 import numpy as np
@@ -23,9 +24,10 @@ from tqdm import tqdm
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from src.components.ranking.score_engine import build_score_total
 from src.utils.config import load_config
 from src.utils.io import load_artifact
-from src.components.ranking.score_engine import build_score_total
+
 
 # 평가 지표 계산 함수들
 def calculate_hit_ratio(scores: pd.Series, returns: pd.Series, top_k: int = 20) -> float:

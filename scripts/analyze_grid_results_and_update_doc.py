@@ -6,34 +6,36 @@ Grid Search 결과 분석 및 문서 업데이트
 2. 최적 가중치 요약
 3. track_a_optimization_direction_validation.md 업데이트
 """
+from datetime import datetime
+from pathlib import Path
+
 import pandas as pd
 import yaml
-from pathlib import Path
-from datetime import datetime
+
 
 def analyze_grid_results():
     """Grid Search 결과 분석"""
     results_dir = Path("artifacts/reports")
     configs_dir = Path("configs")
-    
+
     # 단기 랭킹 결과
     short_file = results_dir / "track_a_group_weights_grid_search_20260108_135117.csv"
     short_weights_file = configs_dir / "feature_groups_short_optimized_grid_20260108_135117.yaml"
-    
+
     # 장기 랭킹 결과
     long_file = results_dir / "track_a_group_weights_grid_search_20260108_145118.csv"
     long_weights_file = configs_dir / "feature_groups_long_optimized_grid_20260108_145118.yaml"
-    
+
     results = {}
-    
+
     # 단기 랭킹 분석
     if short_file.exists():
         short_df = pd.read_csv(short_file)
         short_best = short_df.loc[short_df['objective_score'].idxmax()]
-        
+
         with open(short_weights_file, 'r', encoding='utf-8') as f:
             short_config = yaml.safe_load(f)
-        
+
         results['short'] = {
             'file': str(short_file),
             'weights_file': str(short_weights_file),
@@ -51,15 +53,15 @@ def analyze_grid_results():
             },
             'config': short_config,
         }
-    
+
     # 장기 랭킹 분석
     if long_file.exists():
         long_df = pd.read_csv(long_file)
         long_best = long_df.loc[long_df['objective_score'].idxmax()]
-        
+
         with open(long_weights_file, 'r', encoding='utf-8') as f:
             long_config = yaml.safe_load(f)
-        
+
         results['long'] = {
             'file': str(long_file),
             'weights_file': str(long_weights_file),
@@ -77,12 +79,12 @@ def analyze_grid_results():
             },
             'config': long_config,
         }
-    
+
     return results
 
 def generate_doc_update(results):
     """문서 업데이트 내용 생성"""
-    
+
     doc_content = f"""
 ## 📊 Phase 2 최종 결과 (2026-01-08 업데이트)
 
@@ -172,7 +174,7 @@ def generate_doc_update(results):
 
 **업데이트 일시**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 """
-    
+
     return doc_content
 
 def main():
@@ -180,40 +182,40 @@ def main():
     print("=" * 80)
     print("Grid Search 결과 분석 및 문서 업데이트")
     print("=" * 80)
-    
+
     # 결과 분석
     results = analyze_grid_results()
-    
+
     if not results:
         print("❌ 분석할 결과 파일이 없습니다.")
         return
-    
+
     # 문서 업데이트 내용 생성
     doc_update = generate_doc_update(results)
-    
+
     # 문서 파일 읽기
     doc_file = Path("artifacts/reports/track_a_optimization_direction_validation.md")
     if not doc_file.exists():
         print(f"❌ 문서 파일을 찾을 수 없습니다: {doc_file}")
         return
-    
+
     with open(doc_file, 'r', encoding='utf-8') as f:
         doc_content = f.read()
-    
+
     # Phase 2 섹션 찾기 및 업데이트
     # "#### 2.2 Grid Search 실행 결과 ✅" 섹션 이후에 추가
     marker = "#### 2.2 Grid Search 실행 결과 ✅"
-    
+
     if marker in doc_content:
         # 기존 Phase 2 결과 섹션 찾기
         lines = doc_content.split('\n')
         insert_idx = None
-        
+
         for i, line in enumerate(lines):
             if "#### 2.3 검증" in line:
                 insert_idx = i
                 break
-        
+
         if insert_idx:
             # 기존 Phase 2 결과 섹션 대체
             # "#### 2.2"부터 "#### 2.3" 전까지를 새 내용으로 교체
@@ -222,7 +224,7 @@ def main():
                 if "#### 2.2" in lines[i]:
                     start_idx = i
                     break
-            
+
             if start_idx is not None:
                 new_lines = lines[:start_idx] + doc_update.strip().split('\n') + [''] + lines[insert_idx:]
                 doc_content = '\n'.join(new_lines)
@@ -236,11 +238,11 @@ def main():
     else:
         # 마커를 찾지 못한 경우, 문서 끝에 추가
         doc_content += '\n\n' + doc_update
-    
+
     # 문서 저장
     with open(doc_file, 'w', encoding='utf-8') as f:
         f.write(doc_content)
-    
+
     print(f"✅ 문서 업데이트 완료: {doc_file}")
     print("\n생성된 업데이트 내용:")
     print(doc_update)

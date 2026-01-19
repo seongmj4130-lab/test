@@ -4,9 +4,10 @@
 """
 
 import sys
-from pathlib import Path
-import pandas as pd
 from datetime import datetime
+from pathlib import Path
+
+import pandas as pd
 
 project_root = Path(__file__).resolve().parent
 

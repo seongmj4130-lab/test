@@ -1,6 +1,6 @@
 # Phase 1 완료 보고서
 
-**작성일**: 2026-01-07  
+**작성일**: 2026-01-07
 **목적**: 트랙 A 최적화 Phase 1 기반 구축 완료
 
 ---
@@ -69,7 +69,7 @@ metrics = calculate_ranking_metrics_with_lagged_returns(
 
 **수정 파일**: `src/components/ranking/score_engine.py`
 **신규 파일**: `scripts/generate_all_features_list.py`
-**생성 파일**: 
+**생성 파일**:
 - `configs/features_all_no_ohlcv.yaml` (30개 피처)
 - `configs/features_all_with_ohlcv.yaml` (35개 피처)
 
@@ -213,6 +213,5 @@ features_with_ohlcv = _pick_feature_cols(df, include_ohlcv=True)
 
 ---
 
-**작성자**: Cursor AI  
+**작성자**: Cursor AI
 **최종 업데이트**: 2026-01-07
-

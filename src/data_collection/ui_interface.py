@@ -8,14 +8,15 @@ UI 인터페이스 모듈
 """
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Dict, Optional, List
-import pandas as pd
 import logging
+from pathlib import Path
+from typing import Dict, List, Optional
 
-from src.utils.config import load_config, get_path
-from src.utils.io import load_artifact, artifact_exists
+import pandas as pd
+
 from src.data_collection.pipeline import DataCollectionPipeline
+from src.utils.config import get_path, load_config
+from src.utils.io import artifact_exists, load_artifact
 
 logger = logging.getLogger(__name__)
 
@@ -26,11 +27,11 @@ def get_universe(
 ) -> pd.DataFrame:
     """
     유니버스 데이터 조회 (UI용)
-    
+
     Args:
         config_path: 설정 파일 경로
         force_rebuild: True면 캐시 무시하고 재생성
-    
+
     Returns:
         DataFrame: date, ym, ticker 컬럼 포함
     """
@@ -44,11 +45,11 @@ def get_ohlcv(
 ) -> pd.DataFrame:
     """
     OHLCV 데이터 조회 (UI용)
-    
+
     Args:
         config_path: 설정 파일 경로
         force_rebuild: True면 캐시 무시하고 재생성
-    
+
     Returns:
         DataFrame: date, ticker, open, high, low, close, volume, value 및 기술적 지표 컬럼 포함
     """
@@ -62,11 +63,11 @@ def get_panel(
 ) -> pd.DataFrame:
     """
     패널 데이터 조회 (UI용)
-    
+
     Args:
         config_path: 설정 파일 경로
         force_rebuild: True면 캐시 무시하고 재생성
-    
+
     Returns:
         DataFrame: 병합된 패널 데이터
     """
@@ -80,11 +81,11 @@ def get_dataset(
 ) -> Dict[str, any]:
     """
     데이터셋 조회 (UI용)
-    
+
     Args:
         config_path: 설정 파일 경로
         force_rebuild: True면 캐시 무시하고 재생성
-    
+
     Returns:
         dict: {
             "dataset_daily": DataFrame,
@@ -101,10 +102,10 @@ def check_data_availability(
 ) -> Dict[str, bool]:
     """
     데이터 가용성 확인 (UI용)
-    
+
     Args:
         config_path: 설정 파일 경로
-    
+
     Returns:
         dict: {
             "universe": bool,
@@ -118,7 +119,7 @@ def check_data_availability(
     """
     cfg = load_config(config_path)
     interim_dir = Path(get_path(cfg, "data_interim"))
-    
+
     return {
         "universe": artifact_exists(interim_dir / "universe_k200_membership_monthly"),
         "ohlcv": artifact_exists(interim_dir / "ohlcv_daily"),
@@ -137,12 +138,12 @@ def collect_data_for_ui(
 ) -> Dict[str, any]:
     """
     UI에서 사용할 데이터 수집 (편의 함수)
-    
+
     Args:
         config_path: 설정 파일 경로
         stages: 실행할 단계 리스트 (None이면 전체 실행)
         force_rebuild: True면 캐시 무시하고 재생성
-    
+
     Returns:
         dict: {
             "universe": DataFrame,
@@ -155,19 +156,19 @@ def collect_data_for_ui(
         }
     """
     from src.data_collection.pipeline import run_data_collection_pipeline
-    
+
     # 데이터 수집
     result = run_data_collection_pipeline(
         config_path=config_path,
         stages=stages,
         force_rebuild=force_rebuild,
     )
-    
+
     artifacts = result["artifacts"]
-    
+
     # 가용성 확인
     available = check_data_availability(config_path=config_path)
-    
+
     return {
         "universe": artifacts.get("universe_k200_membership_monthly"),
         "ohlcv": artifacts.get("ohlcv_daily"),
@@ -179,4 +180,3 @@ def collect_data_for_ui(
         "available": available,
         "artifacts_path": result["artifacts_path"],
     }
-

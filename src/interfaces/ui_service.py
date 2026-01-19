@@ -9,13 +9,14 @@ Flask 등 UI 프레임워크에서 사용할 수 있는 함수들을 제공합�
 
 [리팩토링 2단계] UI에서 import 가능한 형태로 모듈화
 """
-from typing import List, Literal, TypedDict, Optional, Dict, Any
-from pathlib import Path
-import pandas as pd
 import logging
+from pathlib import Path
+from typing import Any, Dict, List, Literal, Optional, TypedDict
 
-from src.utils.config import load_config, get_path
-from src.utils.io import load_artifact, artifact_exists
+import pandas as pd
+
+from src.utils.config import get_path, load_config
+from src.utils.io import artifact_exists, load_artifact
 
 logger = logging.getLogger(__name__)
 
@@ -34,51 +35,51 @@ def _load_ranking_data(
 ) -> pd.DataFrame:
     """
     랭킹 데이터를 로드합니다 (Track A 산출물).
-    
+
     Args:
         horizon: "short" 또는 "long"
         config_path: 설정 파일 경로
-    
+
     Returns:
         DataFrame: 랭킹 데이터
     """
     cfg = load_config(config_path)
     interim_dir = Path(get_path(cfg, "data_interim"))
-    
+
     if horizon == "short":
         ranking_path = interim_dir / "ranking_short_daily"
     else:
         ranking_path = interim_dir / "ranking_long_daily"
-    
+
     if not artifact_exists(ranking_path):
         raise FileNotFoundError(
             f"ranking_{horizon}_daily not found at {ranking_path}. "
             f"Run Track A first: python -m src.pipeline.track_a_pipeline"
         )
-    
+
     return load_artifact(ranking_path)
 
 
 def _load_rebalance_scores(config_path: str = "configs/config.yaml") -> pd.DataFrame:
     """
     rebalance_scores 데이터를 로드합니다 (Track B 산출물).
-    
+
     Args:
         config_path: 설정 파일 경로
-    
+
     Returns:
         DataFrame: rebalance_scores 데이터
     """
     cfg = load_config(config_path)
     interim_dir = Path(get_path(cfg, "data_interim"))
     scores_path = interim_dir / "rebalance_scores_from_ranking"
-    
+
     if not artifact_exists(scores_path):
         raise FileNotFoundError(
             f"rebalance_scores_from_ranking not found at {scores_path}. "
             "Run Track B first: python -m src.pipeline.track_b_pipeline bt20_short"
         )
-    
+
     return load_artifact(scores_path)
 
 
@@ -89,17 +90,17 @@ def get_short_term_ranking(
 ) -> List[RankingItem]:
     """
     UI에서 '단기 랭킹' 요청 시 호출할 함수 (Track A 산출물 사용).
-    
+
     [리팩토링 2단계] Track A의 ranking_short_daily를 직접 사용하도록 개선
-    
+
     Args:
         as_of: 기준일 (YYYY-MM-DD 형식)
         top_k: 상위 K개 종목 반환
         config_path: 설정 파일 경로
-    
+
     Returns:
         List[RankingItem]: 단기 랭킹 리스트
-    
+
     Example:
         >>> rankings = get_short_term_ranking("2024-12-31", top_k=20)
         >>> print(rankings[0])
@@ -107,30 +108,30 @@ def get_short_term_ranking(
     """
     # Track A 산출물 직접 사용
     df = _load_ranking_data("short", config_path)
-    
+
     # 날짜 필터링
     df["date"] = pd.to_datetime(df["date"])
     as_of_dt = pd.to_datetime(as_of)
     df_filtered = df[df["date"] == as_of_dt].copy()
-    
+
     if len(df_filtered) == 0:
         logger.warning(f"기준일 {as_of}에 해당하는 데이터가 없습니다.")
         return []
-    
+
     # 유니버스 필터링
     if "in_universe" in df_filtered.columns:
         df_filtered = df_filtered[df_filtered["in_universe"] == True].copy()
-    
+
     # score_total과 rank_total 사용
     score_col = "score_total"
     rank_col = "rank_total"
-    
+
     if score_col not in df_filtered.columns:
         raise ValueError(f"랭킹 컬럼을 찾을 수 없습니다. 사용 가능한 컬럼: {list(df_filtered.columns)}")
-    
+
     # 랭킹 정렬 (높은 점수 순, 낮은 rank_total 순)
     df_sorted = df_filtered.sort_values([score_col, rank_col], ascending=[False, True]).head(top_k)
-    
+
     # 결과 생성
     result = []
     for _, row in df_sorted.iterrows():
@@ -140,7 +141,7 @@ def get_short_term_ranking(
             "rank": int(row[rank_col]) if pd.notna(row[rank_col]) else 999,
             "horizon": "short",
         })
-    
+
     return result
 
 
@@ -151,17 +152,17 @@ def get_long_term_ranking(
 ) -> List[RankingItem]:
     """
     UI에서 '장기 랭킹' 요청 시 호출할 함수 (Track A 산출물 사용).
-    
+
     [리팩토링 2단계] Track A의 ranking_long_daily를 직접 사용하도록 개선
-    
+
     Args:
         as_of: 기준일 (YYYY-MM-DD 형식)
         top_k: 상위 K개 종목 반환
         config_path: 설정 파일 경로
-    
+
     Returns:
         List[RankingItem]: 장기 랭킹 리스트
-    
+
     Example:
         >>> rankings = get_long_term_ranking("2024-12-31", top_k=20)
         >>> print(rankings[0])
@@ -169,30 +170,30 @@ def get_long_term_ranking(
     """
     # Track A 산출물 직접 사용
     df = _load_ranking_data("long", config_path)
-    
+
     # 날짜 필터링
     df["date"] = pd.to_datetime(df["date"])
     as_of_dt = pd.to_datetime(as_of)
     df_filtered = df[df["date"] == as_of_dt].copy()
-    
+
     if len(df_filtered) == 0:
         logger.warning(f"기준일 {as_of}에 해당하는 데이터가 없습니다.")
         return []
-    
+
     # 유니버스 필터링
     if "in_universe" in df_filtered.columns:
         df_filtered = df_filtered[df_filtered["in_universe"] == True].copy()
-    
+
     # score_total과 rank_total 사용
     score_col = "score_total"
     rank_col = "rank_total"
-    
+
     if score_col not in df_filtered.columns:
         raise ValueError(f"랭킹 컬럼을 찾을 수 없습니다. 사용 가능한 컬럼: {list(df_filtered.columns)}")
-    
+
     # 랭킹 정렬 (높은 점수 순, 낮은 rank_total 순)
     df_sorted = df_filtered.sort_values([score_col, rank_col], ascending=[False, True]).head(top_k)
-    
+
     # 결과 생성
     result = []
     for _, row in df_sorted.iterrows():
@@ -202,7 +203,7 @@ def get_long_term_ranking(
             "rank": int(row[rank_col]) if pd.notna(row[rank_col]) else 999,
             "horizon": "long",
         })
-    
+
     return result
 
 
@@ -213,17 +214,17 @@ def get_combined_ranking(
 ) -> List[RankingItem]:
     """
     UI에서 '통합 랭킹' 요청 시 호출할 함수 (Track B 산출물 사용).
-    
+
     [리팩토링 2단계] Track B의 rebalance_scores_from_ranking에서 score_ens 사용
-    
+
     Args:
         as_of: 기준일 (YYYY-MM-DD 형식)
         top_k: 상위 K개 종목 반환
         config_path: 설정 파일 경로
-    
+
     Returns:
         List[RankingItem]: 통합 랭킹 리스트
-    
+
     Example:
         >>> rankings = get_combined_ranking("2024-12-31", top_k=20)
         >>> print(rankings[0])
@@ -231,20 +232,20 @@ def get_combined_ranking(
     """
     # Track B 산출물 사용 (통합 스코어 포함)
     df = _load_rebalance_scores(config_path)
-    
+
     # 날짜 필터링
     df["date"] = pd.to_datetime(df["date"])
     as_of_dt = pd.to_datetime(as_of)
     df_filtered = df[df["date"] == as_of_dt].copy()
-    
+
     if len(df_filtered) == 0:
         logger.warning(f"기준일 {as_of}에 해당하는 데이터가 없습니다.")
         return []
-    
+
     # 유니버스 필터링
     if "in_universe" in df_filtered.columns:
         df_filtered = df_filtered[df_filtered["in_universe"] == True].copy()
-    
+
     # score_ens 컬럼 확인
     score_col = "score_ens"
     if score_col not in df_filtered.columns:
@@ -255,10 +256,10 @@ def get_combined_ranking(
                 break
         else:
             raise ValueError(f"통합 랭킹 컬럼을 찾을 수 없습니다. 사용 가능한 컬럼: {list(df_filtered.columns)}")
-    
+
     # 랭킹 정렬 (높은 점수 순)
     df_sorted = df_filtered.sort_values(score_col, ascending=False).head(top_k)
-    
+
     # 결과 생성
     result = []
     for i, (_, row) in enumerate(df_sorted.iterrows(), start=1):
@@ -268,7 +269,7 @@ def get_combined_ranking(
             "rank": i,
             "horizon": "combined",
         })
-    
+
     return result
 
 
@@ -279,17 +280,17 @@ def get_backtest_metrics(
 ) -> Dict[str, Any]:
     """
     UI에서 백테스트 성과 지표 조회 시 호출할 함수 (Track B 산출물 사용).
-    
+
     [리팩토링 2단계] Track B의 bt_metrics를 조회하는 함수 추가
-    
+
     Args:
         strategy: 전략 이름 ("bt20_short", "bt20_ens", "bt120_long", "bt120_ens")
         phase: 구간 필터링 ("dev" 또는 "holdout"), None이면 전체 반환
         config_path: 설정 파일 경로
-    
+
     Returns:
         Dict: 백테스트 성과 지표
-    
+
     Example:
         >>> metrics = get_backtest_metrics("bt20_short", phase="holdout")
         >>> print(metrics["net_sharpe"])
@@ -298,26 +299,26 @@ def get_backtest_metrics(
     cfg = load_config(config_path)
     interim_dir = Path(get_path(cfg, "data_interim"))
     metrics_path = interim_dir / f"bt_metrics_{strategy}"
-    
+
     if not artifact_exists(metrics_path):
         raise FileNotFoundError(
             f"bt_metrics_{strategy} not found at {metrics_path}. "
             f"Run Track B first: python -m src.pipeline.track_b_pipeline {strategy}"
         )
-    
+
     df = load_artifact(metrics_path)
-    
+
     # Phase 필터링
     if phase and "phase" in df.columns:
         df = df[df["phase"] == phase].copy()
-    
+
     if len(df) == 0:
         logger.warning(f"전략 {strategy}, 구간 {phase}에 해당하는 데이터가 없습니다.")
         return {}
-    
+
     # 첫 번째 행을 딕셔너리로 변환
     result = df.iloc[0].to_dict()
-    
+
     return result
 
 
@@ -326,15 +327,15 @@ def check_data_availability(
 ) -> Dict[str, bool]:
     """
     공통 데이터 준비 상태를 확인하는 함수.
-    
+
     [리팩토링 2단계] 데이터 준비 상태 확인 함수 추가
-    
+
     Args:
         config_path: 설정 파일 경로
-    
+
     Returns:
         Dict: 각 데이터 파일의 존재 여부
-    
+
     Example:
         >>> status = check_data_availability()
         >>> print(status)
@@ -342,7 +343,7 @@ def check_data_availability(
     """
     cfg = load_config(config_path)
     interim_dir = Path(get_path(cfg, "data_interim"))
-    
+
     status = {
         "universe": artifact_exists(interim_dir / "universe_k200_membership_monthly"),
         "ohlcv": artifact_exists(interim_dir / "ohlcv_daily"),
@@ -355,7 +356,7 @@ def check_data_availability(
         "ranking_long": artifact_exists(interim_dir / "ranking_long_daily"),
         "rebalance_scores": artifact_exists(interim_dir / "rebalance_scores_from_ranking"),
     }
-    
+
     return status
 
 
@@ -404,4 +405,3 @@ def backtest_metrics():
 def data_status():
     return jsonify(check_data_availability())
 """
-

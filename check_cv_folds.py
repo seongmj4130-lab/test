@@ -4,8 +4,10 @@
 cv_folds 데이터 구조 및 dev/holdout 구분 확인
 """
 
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
+
 
 def analyze_cv_folds():
     """cv_folds 데이터 구조 분석"""

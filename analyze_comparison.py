@@ -1,5 +1,5 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 # 데이터 읽기
 df = pd.read_csv('data/ui_strategies_cumulative_comparison.csv')

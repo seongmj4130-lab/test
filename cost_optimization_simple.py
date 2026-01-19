@@ -3,8 +3,10 @@
 Live 환경 비용 최적화 - 간단 버전
 """
 
-import yaml
 from pathlib import Path
+
+import yaml
+
 
 def main():
     print("💰 Live 환경 비용 최적화 (1bps 목표)")

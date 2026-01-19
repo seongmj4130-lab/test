@@ -58,7 +58,7 @@ l8:
 ### 2. 피처 가중치 최적화 (Priority: High)
 **현재 위치**: `src/components/ranking/score_engine.py`의 `build_score_total()`
 
-**현재 설정**: 
+**현재 설정**:
 - `l8.feature_weights_config`: IC 기반 최적 가중치 파일 사용
 - `l5.filter_features_by_ic: true`
 - `l5.min_feature_ic: 0.0`
@@ -106,7 +106,7 @@ l5:
 ```python
 # src/tracks/track_b/stages/modeling/l6r_ranking_scoring.py:389-393
 r["score_ens"] = (
-    r["alpha_short"] * r["score_short_norm"].fillna(0) 
+    r["alpha_short"] * r["score_short_norm"].fillna(0)
     + r["alpha_long"] * r["score_long_norm"].fillna(0)
 )
 ```
@@ -234,13 +234,13 @@ def normalize_feature_robust_zscore(values):
 # src/tracks/track_b/stages/modeling/l6r_ranking_scoring.py:389-393
 # 현재: 선형 결합
 r["score_ens"] = (
-    r["alpha_short"] * r["score_short_norm"].fillna(0) 
+    r["alpha_short"] * r["score_short_norm"].fillna(0)
     + r["alpha_long"] * r["score_long_norm"].fillna(0)
 )
 
 # 개선안: 비선형 결합 (예시)
 r["score_ens"] = (
-    np.sqrt(r["alpha_short"]) * r["score_short_norm"].fillna(0) 
+    np.sqrt(r["alpha_short"]) * r["score_short_norm"].fillna(0)
     + np.sqrt(r["alpha_long"]) * r["score_long_norm"].fillna(0)
 )
 ```
@@ -262,18 +262,18 @@ r["score_ens"] = (
 **구현 코드**:
 ```python
 # scripts/measure_ranking_hit_ratio.py 수정
-def calculate_hit_ratio_improved(scores, return_col="true_short", score_col="score_ens", 
+def calculate_hit_ratio_improved(scores, return_col="true_short", score_col="score_ens",
                                  min_return_threshold=0.001):
     """개선된 Hit Ratio: 작은 수익률은 제외"""
     df = scores.copy()
     df = df.dropna(subset=[return_col, score_col])
-    
+
     # 작은 수익률 필터링 (노이즈 제거)
     df = df[df[return_col].abs() >= min_return_threshold]
-    
+
     # 방향 일치
     df["hit"] = (np.sign(df[score_col]) == np.sign(df[return_col])).astype(int)
-    
+
     return df["hit"].mean()
 ```
 
@@ -363,4 +363,3 @@ python src/tools/run_stage7.py
 - `scripts/measure_ranking_hit_ratio.py`: Hit Ratio 측정
 - `configs/config.yaml`: 모든 설정값
 - `src/tracks/track_a/stages/ranking/l8_dual_horizon.py`: Track A 랭킹 엔진
-

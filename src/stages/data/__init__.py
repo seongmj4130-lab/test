@@ -12,7 +12,7 @@ from .l3n_news_sentiment import (
     build_news_sentiment_daily_features,
     maybe_merge_news_sentiment,
 )
-from .l4_walkforward_split import build_targets_and_folds, build_inner_cv_folds
+from .l4_walkforward_split import build_inner_cv_folds, build_targets_and_folds
 from .news_sentiment_features import attach_news_sentiment_features
 
 __all__ = [

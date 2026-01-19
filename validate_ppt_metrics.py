@@ -1,5 +1,6 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 
 def validate_ppt_metrics():
     print('=== PPT 보고서 성과 지표 재계산 및 비교 ===')

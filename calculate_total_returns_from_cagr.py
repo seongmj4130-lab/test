@@ -1,5 +1,6 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 
 def calculate_total_returns_from_cagr():
     """통일 파라미터 적용된 CAGR 결과를 사용해 총수익률 계산"""

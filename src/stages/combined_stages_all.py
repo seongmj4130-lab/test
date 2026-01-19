@@ -1,6 +1,13 @@
 
 from __future__ import annotations
 
+import json
+import sys
+from pathlib import Path
+
+from src.utils.config import get_path, load_config
+from src.utils.io import artifact_exists, load_artifact
+
 ################################################################################
 # START OF FILE: __init__.py
 ################################################################################
@@ -15,12 +22,7 @@ from __future__ import annotations
 # START OF FILE: audit_l0_l7.py
 ################################################################################
 
-import sys
-import json
-from pathlib import Path
 
-from src.utils.config import load_config, get_path
-from src.utils.io import artifact_exists, load_artifact
 
 
 ARTIFACTS = [
@@ -178,11 +180,11 @@ if __name__ == "__main__":
 import argparse
 import json
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
-from src.utils.config import load_config, get_path
+from src.utils.config import get_path, load_config
 from src.utils.io import save_artifact
 
 
@@ -348,6 +350,7 @@ if __name__ == "__main__":
 
 import pandas as pd
 
+
 def _require_pykrx():
     try:
         from pykrx import stock
@@ -500,15 +503,14 @@ def download_ohlcv_panel(
 
 from __future__ import annotations
 
-import os
-import time
 import io
 import logging
+import os
+import time
 from contextlib import redirect_stdout
 from typing import Any
 
 import pandas as pd
-
 
 logger = logging.getLogger(__name__)
 
@@ -1108,15 +1110,14 @@ def build_targets_and_folds(
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Set
+from typing import Dict, List, Set, Tuple
 
 import numpy as np
 import pandas as pd
-
-from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Ridge
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 
 @dataclass(frozen=True)
@@ -1553,7 +1554,7 @@ def build_rebalance_scores(
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -1830,6 +1831,7 @@ def run_backtest(
 from __future__ import annotations
 
 from typing import List, Tuple
+
 import pandas as pd
 
 from src.stages.backtest.l7_backtest import BacktestConfig, run_backtest
@@ -1890,7 +1892,8 @@ def run_sensitivity(
 # src/stages/l7c_benchmark.py
 from __future__ import annotations
 
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
+
 import numpy as np
 import pandas as pd
 
@@ -2079,7 +2082,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Optional, Tuple, List
+from typing import List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -2299,10 +2302,10 @@ def build_bt_rolling_sharpe(bt_returns, cfg):
         # 교체(경고 제거): division을 std>0인 곳에서만 수행
         mean_np = roll_mean.to_numpy(dtype=float)
         std_np = roll_std.to_numpy(dtype=float)
-        
+
         ratio = np.zeros_like(mean_np, dtype=float)
         np.divide(mean_np, std_np, out=ratio, where=(std_np > 0.0))
-        
+
         roll_sharpe = ratio * ann_factor
 
         out.append(pd.DataFrame({
@@ -2342,7 +2345,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from src.utils.config import load_config, get_path
+from src.utils.config import get_path, load_config
 from src.utils.io import artifact_exists, load_artifact, save_artifact
 from src.utils.meta import build_meta, save_meta
 
@@ -2394,10 +2397,10 @@ def compute_bt_rolling_sharpe(
         roll_vol_ann = roll_std * ann_factor
         mean_np = roll_mean.to_numpy(dtype=float)
         std_np = roll_std.to_numpy(dtype=float)
-        
+
         ratio = np.zeros_like(mean_np, dtype=float)
         np.divide(mean_np, std_np, out=ratio, where=(std_np > 0.0))
-        
+
         roll_sharpe = ratio * ann_factor
 
         out = pd.DataFrame(
@@ -2509,7 +2512,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from src.utils.config import load_config, get_path
+from src.utils.config import get_path, load_config
 from src.utils.io import artifact_exists, load_artifact, save_artifact
 from src.utils.meta import build_meta, save_meta
 
@@ -2680,20 +2683,17 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.utils.config import load_config, get_path
-from src.utils.io import save_artifact, load_artifact, artifact_exists
-from src.utils.meta import build_meta, save_meta
-from src.utils.validate import validate_df, raise_if_invalid
-
 from src.stages.data.l0_universe import build_k200_membership_month_end
 from src.stages.data.l1_ohlcv import download_ohlcv_panel
 from src.stages.data.l2_fundamentals_dart import download_annual_fundamentals
 from src.stages.data.l3_panel_merge import build_panel_merged_daily
-
-from src.utils.quality import fundamental_coverage_report, walkforward_quality_report
 from src.stages.modeling.l5_train_models import train_oos_predictions
 from src.stages.modeling.l6_scoring import build_rebalance_scores
-
+from src.utils.config import get_path, load_config
+from src.utils.io import artifact_exists, load_artifact, save_artifact
+from src.utils.meta import build_meta, save_meta
+from src.utils.quality import fundamental_coverage_report, walkforward_quality_report
+from src.utils.validate import raise_if_invalid, validate_df
 
 logging.basicConfig(
     level=logging.INFO,
@@ -2733,19 +2733,19 @@ def run_L1_base(cfg, artifacts, *, force=False):
 def run_L1B_pykrx_fundamentals(cfg, artifacts, *, force=False):
     """L1B: pykrx 재무데이터 다운로드"""
     from src.stages.data.l1b_pykrx_fundamentals import download_pykrx_fundamentals_daily
-    
+
     l1b = cfg.get("l1b", {}) or {}
     if not l1b.get("enabled", True):
         return {}, ["[L1B] pykrx fundamentals disabled"]
-    
+
     p = cfg.get("params", {})
     ohlcv = artifacts.get("ohlcv_daily")
-    
+
     if ohlcv is None or ohlcv.empty:
         return {}, ["[L1B] ohlcv_daily가 없어 pykrx fundamentals를 건너뜁니다."]
-    
+
     tickers = sorted(ohlcv["ticker"].unique().tolist())
-    
+
     df = download_pykrx_fundamentals_daily(
         tickers=tickers,
         start_date=p.get("start_date", "2016-01-01"),
@@ -2753,7 +2753,7 @@ def run_L1B_pykrx_fundamentals(cfg, artifacts, *, force=False):
         sleep_sec=float(l1b.get("sleep_sec", 0.1)),
         log_every=int(l1b.get("log_every", 50)),
     )
-    
+
     return {"pykrx_fundamentals_daily": df}, []
 
 
@@ -3276,8 +3276,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from src.utils.config import load_config, get_path
-
+from src.utils.config import get_path, load_config
 
 # -----------------------------
 # Config
@@ -3594,8 +3593,8 @@ if __name__ == "__main__":
 # src/stages/validate_l5_outputs.py
 from __future__ import annotations
 
-import sys
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -3612,8 +3611,8 @@ CFG_PATH = ROOT / "configs" / "config.yaml"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from src.utils.config import load_config, get_path
-from src.utils.io import load_artifact, artifact_exists
+from src.utils.config import get_path, load_config
+from src.utils.io import artifact_exists, load_artifact
 
 
 # ----------------------------
@@ -3933,8 +3932,8 @@ from typing import Any, Dict, List, Tuple
 import numpy as np
 import pandas as pd
 
-from src.utils.config import load_config, get_path
-from src.utils.io import load_artifact, artifact_exists
+from src.utils.config import get_path, load_config
+from src.utils.io import artifact_exists, load_artifact
 
 
 def _root_dir() -> Path:
@@ -4239,8 +4238,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from src.utils.config import load_config, get_path
-from src.utils.io import load_artifact, artifact_exists
+from src.utils.config import get_path, load_config
+from src.utils.io import artifact_exists, load_artifact
 
 
 def _load_meta(interim: Path, name: str) -> dict:
@@ -4353,7 +4352,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from src.utils.config import load_config, get_path
+from src.utils.config import get_path, load_config
 from src.utils.io import artifact_exists, load_artifact
 
 
@@ -4544,8 +4543,9 @@ if __name__ == "__main__":
 # START OF FILE: 결과값확인코드.py
 ################################################################################
 
-import pandas as pd
 import os
+
+import pandas as pd
 
 # -----------------------------------------------------------------------------
 # 1. 파일 경로 설정
@@ -4559,7 +4559,7 @@ try:
     # 2. 통합 파일 로드
     df = pd.read_parquet(file_path)
     print(f"✅ 로드 완료! 데이터 크기: {df.shape}")
-    
+
     # 3. 포함된 아티팩트(산출물) 목록 확인
     # '__artifact' 컬럼이 각 행이 어떤 데이터인지 알려주는 '이름표' 역할을 합니다.
     artifacts = df['__artifact'].unique()
@@ -4572,23 +4572,23 @@ try:
     def analyze_artifact(target_name, description):
         # 해당 아티팩트만 필터링
         subset = df[df['__artifact'] == target_name].copy()
-        
+
         if subset.empty:
             return # 해당 아티팩트가 없으면 패스
 
         # 해당 데이터에서 '모두 비어있는(NaN)' 컬럼은 제거 (보기 좋게)
         subset = subset.dropna(axis=1, how='all')
-        
+
         print(f"\n🔎 [{target_name}] - {description}")
-        
+
         # (A) 성과 지표 (metrics)인 경우: 전체 통계 출력
         if 'metrics' in target_name:
             # 주요 지표 컬럼만 골라서 보여주기 (너무 많으므로)
-            key_metrics = ['net_sharpe', 'net_cagr', 'net_mdd', 'avg_turnover_oneway', 
+            key_metrics = ['net_sharpe', 'net_cagr', 'net_mdd', 'avg_turnover_oneway',
                            'rmse', 'mae', 'hit_ratio', 'ic_rank', 'corr_vs_benchmark']
             # 존재하는 컬럼만 선택
             cols_to_show = [c for c in key_metrics if c in subset.columns]
-            
+
             if cols_to_show:
                 print("   [핵심 지표 요약]")
                 # 평균값 또는 첫 번째 행 출력
@@ -4614,22 +4614,22 @@ try:
             score_cols = [c for c in subset.columns if 'score' in c]
             if score_cols:
                 print(subset[score_cols].describe().loc[['mean', 'std', 'min', 'max']])
-        
+
         # (D) 기타: 상위 3줄만 출력
         else:
             print(subset.head(3))
-            
+
         print("-" * 60)
-        
-        
+
+
 
     # -----------------------------------------------------------------------------
     # 5. 순차적 분석 실행 (프로젝트 흐름순)
     # -----------------------------------------------------------------------------
-    
+
     # [L5] 모델 성능 확인: 예측이 얼마나 잘 맞았는가?
     # (로그 컬럼에 'ic_rank', 'rmse'가 있는 것으로 보아 'metrics'나 'model_metrics'에 저장됨)
-    # 정확한 이름은 위 artifacts 목록 출력 결과를 보고 매칭해야 하지만, 
+    # 정확한 이름은 위 artifacts 목록 출력 결과를 보고 매칭해야 하지만,
     # 통상적인 이름인 'model_metrics' 또는 'metrics'를 찾아봅니다.
     for art in artifacts:
         if 'model' in art and 'metrics' in art:
@@ -4657,4 +4657,3 @@ except Exception as e:
 
 
 # END OF FILE: 결과값확인코드.py
-

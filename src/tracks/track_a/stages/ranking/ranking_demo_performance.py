@@ -15,10 +15,11 @@ Top20 equal-weight 포트폴리오 성과 곡선 계산
 """
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-from typing import Optional, Tuple, List, Dict, Any
 
 
 def _require_pykrx():
@@ -130,26 +131,26 @@ def calculate_returns(
 ) -> pd.DataFrame:
     """
     일별 수익률 계산
-    
+
     Args:
         ohlcv_daily: OHLCV 데이터
         date_col: 날짜 컬럼명
         ticker_col: 티커 컬럼명
         price_col: 가격 컬럼명 (기본 "close")
-    
+
     Returns:
         returns DataFrame (date, ticker, return)
     """
     df = ohlcv_daily[[date_col, ticker_col, price_col]].copy()
     df[date_col] = pd.to_datetime(df[date_col])
     df = df.sort_values([ticker_col, date_col])
-    
+
     # 티커별 수익률 계산
     df["return"] = df.groupby(ticker_col)[price_col].pct_change()
-    
+
     # 첫날 수익률 제거 (NaN)
     df = df[df["return"].notna()].copy()
-    
+
     return df[[date_col, ticker_col, "return"]]
 
 def build_top20_equal_weight_returns(
@@ -161,58 +162,58 @@ def build_top20_equal_weight_returns(
 ) -> pd.DataFrame:
     """
     Top20 equal-weight 포트폴리오 일별 수익률 계산
-    
+
     Args:
         ranking_daily: ranking_daily DataFrame
         returns: 수익률 DataFrame (date, ticker, return)
         top_k: 상위 종목 수 (기본 20)
         date_col: 날짜 컬럼명
         ticker_col: 티커 컬럼명
-    
+
     Returns:
         strategy_returns DataFrame (date, strategy_ret)
     """
     # 날짜 정규화
     ranking_daily = ranking_daily.copy()
     ranking_daily[date_col] = pd.to_datetime(ranking_daily[date_col])
-    
+
     returns = returns.copy()
     returns[date_col] = pd.to_datetime(returns[date_col])
-    
+
     # in_universe 필터링 (있으면)
     if "in_universe" in ranking_daily.columns:
         ranking_daily = ranking_daily[ranking_daily["in_universe"]].copy()
-    
+
     # rank_total 기준 정렬
     ranking_daily = ranking_daily[ranking_daily["rank_total"].notna()].copy()
     ranking_daily = ranking_daily.sort_values([date_col, "rank_total"], ascending=[True, True])
-    
+
     # 날짜별 Top K 선택
     strategy_returns = []
-    
+
     for date, group in ranking_daily.groupby(date_col):
         # Top K 티커 선택
         top_tickers = group.head(top_k)[ticker_col].tolist()
-        
+
         # 해당 날짜의 수익률 필터링
         date_returns = returns[returns[date_col] == date]
         top_returns = date_returns[date_returns[ticker_col].isin(top_tickers)]["return"]
-        
+
         if len(top_returns) > 0:
             # Equal-weight 평균 수익률
             strategy_ret = float(top_returns.mean())
         else:
             strategy_ret = 0.0
-        
+
         strategy_returns.append({
             date_col: date,
             "strategy_ret": strategy_ret,
             "n_tickers": len(top_tickers),
         })
-    
+
     df = pd.DataFrame(strategy_returns)
     df = df.sort_values(date_col).reset_index(drop=True)
-    
+
     return df
 
 def build_benchmark_returns(
@@ -226,14 +227,14 @@ def build_benchmark_returns(
 ) -> pd.DataFrame:
     """
     벤치마크 수익률 계산
-    
+
     Args:
         ohlcv_daily: OHLCV 데이터
         benchmark_type: "universe_mean" (유니버스 평균) 또는 "kospi200" (KOSPI200 지수)
         date_col: 날짜 컬럼명
         ticker_col: 티커 컬럼명
         price_col: 가격 컬럼명
-    
+
     Returns:
         benchmark_returns DataFrame (date, bench_ret)
     """
@@ -242,13 +243,13 @@ def build_benchmark_returns(
     if btype == "universe_mean":
         # 유니버스 평균 수익률
         returns = calculate_returns(ohlcv_daily, date_col, ticker_col, price_col)
-        
+
         # 날짜별 평균 수익률
         bench_returns = returns.groupby(date_col)["return"].mean().reset_index()
         bench_returns.columns = [date_col, "bench_ret"]
-        
+
         return bench_returns
-    
+
     elif btype == "kospi200":
         # [개선안 17번] 실제 KOSPI200 지수 수익률 사용
         dates = pd.to_datetime(ohlcv_daily[date_col], errors="coerce")
@@ -265,7 +266,7 @@ def build_benchmark_returns(
             l11 = (cfg.get("l11", {}) if isinstance(cfg, dict) else {}) or {}
             savings_apr = float(l11.get("savings_apr", savings_apr))
         return build_savings_benchmark_returns(dates=dates, savings_apr=savings_apr, date_col=date_col)
-    
+
     else:
         raise ValueError(f"Unknown benchmark_type: {benchmark_type}. expected: universe_mean|kospi200|savings")
 
@@ -318,13 +319,13 @@ def build_equity_curves(
 ) -> pd.DataFrame:
     """
     누적 곡선 계산
-    
+
     Args:
         strategy_returns: 전략 수익률 DataFrame (date, strategy_ret)
         benchmark_returns: 벤치마크 수익률 DataFrame (date, bench_ret)
         date_col: 날짜 컬럼명
         initial_value: 초기값 (기본 100.0)
-    
+
     Returns:
         equity_curves DataFrame (date, strategy_ret, bench_ret, strategy_equity, bench_equity, excess_equity)
     """
@@ -335,14 +336,14 @@ def build_equity_curves(
         on=date_col,
         how="inner",
     )
-    
+
     df = df.sort_values(date_col).reset_index(drop=True)
-    
+
     # 누적 곡선 계산
     df["strategy_equity"] = (1 + df["strategy_ret"]).cumprod() * initial_value
     df["bench_equity"] = (1 + df["bench_ret"]).cumprod() * initial_value
     df["excess_equity"] = df["strategy_equity"] - df["bench_equity"]
-    
+
     return df
 
 def calculate_performance_metrics(
@@ -355,7 +356,7 @@ def calculate_performance_metrics(
 ) -> Dict[str, float]:
     """
     성과 지표 계산
-    
+
     Args:
         equity_curves: 누적 곡선 DataFrame
         date_col: 날짜 컬럼명
@@ -363,7 +364,7 @@ def calculate_performance_metrics(
         bench_equity_col: 벤치마크 누적값 컬럼명
         strategy_ret_col: 전략 수익률 컬럼명
         bench_ret_col: 벤치마크 수익률 컬럼명
-    
+
     Returns:
         metrics 딕셔너리
     """
@@ -375,40 +376,40 @@ def calculate_performance_metrics(
             "sharpe": 0.0,
             "mdd": 0.0,
         }
-    
+
     df = equity_curves.copy()
     df[date_col] = pd.to_datetime(df[date_col])
-    
+
     # 총 수익률
     initial_value = df[strategy_equity_col].iloc[0]
     final_value = df[strategy_equity_col].iloc[-1]
     total_return = (final_value / initial_value - 1.0) * 100.0  # %
-    
+
     # 기간 계산 (연 단위)
     date_start = df[date_col].min()
     date_end = df[date_col].max()
     years = (date_end - date_start).days / 365.25
-    
+
     # CAGR
     if years > 0:
         cagr = ((final_value / initial_value) ** (1.0 / years) - 1.0) * 100.0  # %
     else:
         cagr = 0.0
-    
+
     # 변동성 (연율화)
     vol = df[strategy_ret_col].std() * np.sqrt(252) * 100.0  # %
-    
+
     # Sharpe Ratio (무위험 수익률 = 0 가정)
     if vol > 0:
         sharpe = (cagr / 100.0) / (vol / 100.0)
     else:
         sharpe = 0.0
-    
+
     # MDD (Maximum Drawdown)
     running_max = df[strategy_equity_col].cummax()
     drawdown = (df[strategy_equity_col] - running_max) / running_max * 100.0  # %
     mdd = float(drawdown.min())
-    
+
     return {
         "total_return": total_return,
         "cagr": cagr,
@@ -425,63 +426,63 @@ def run_L11_demo_performance(
 ) -> tuple[dict[str, pd.DataFrame], list[str]]:
     """
     [Stage11] Ranking Demo Performance 실행
-    
+
     Args:
         cfg: 설정 딕셔너리
         artifacts: 이전 스테이지 산출물 딕셔너리
         force: 강제 재생성 플래그
-    
+
     Returns:
         (outputs, warnings) 튜플
         - outputs: {"ui_equity_curves": DataFrame, "ui_metrics": DataFrame}
         - warnings: 경고 메시지 리스트
     """
     warns: list[str] = []
-    
+
     # 입력 데이터 확인
     ranking_daily = artifacts.get("ranking_daily")
     ohlcv_daily = artifacts.get("ohlcv_daily")
-    
+
     if ranking_daily is None:
         raise ValueError("L11 requires 'ranking_daily' in artifacts")
-    
+
     if ohlcv_daily is None:
         raise ValueError("L11 requires 'ohlcv_daily' in artifacts")
-    
+
     # 설정 읽기
     l11 = cfg.get("l11", {}) or {}
     top_k = int(l11.get("top_k", 20))
     benchmark_type = l11.get("benchmark_type", "universe_mean")
-    
+
     # 수익률 계산
     returns = calculate_returns(ohlcv_daily)
-    
+
     # Top20 equal-weight 수익률 계산
     strategy_returns = build_top20_equal_weight_returns(
         ranking_daily,
         returns,
         top_k=top_k,
     )
-    
+
     # 벤치마크 수익률 계산
     benchmark_returns = build_benchmark_returns(
         ohlcv_daily,
         benchmark_type=benchmark_type,
     )
-    
+
     # 누적 곡선 계산
     equity_curves = build_equity_curves(
         strategy_returns,
         benchmark_returns,
     )
-    
+
     # 성과 지표 계산
     metrics = calculate_performance_metrics(equity_curves)
     metrics_df = pd.DataFrame([metrics])
-    
+
     outputs = {
         "ui_equity_curves": equity_curves,
         "ui_metrics": metrics_df,
     }
-    
+
     return outputs, warns

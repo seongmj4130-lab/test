@@ -16,11 +16,10 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, List
-
-import json
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
@@ -347,5 +346,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

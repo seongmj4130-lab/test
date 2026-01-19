@@ -1,5 +1,6 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 
 def explain_cagr_calculation():
     """CAGR 계산 방식 설명"""

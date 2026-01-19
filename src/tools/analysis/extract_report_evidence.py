@@ -516,7 +516,9 @@ def extract_l5_feature_cols_from_code(dataset_df: Any, *, target_col: str) -> Tu
         if src_dir_str not in sys.path:
             sys.path.insert(0, src_dir_str)
 
-        from src.stages.modeling.l5_train_models import _pick_feature_cols  # type: ignore
+        from src.stages.modeling.l5_train_models import (
+            _pick_feature_cols,  # type: ignore
+        )
 
         cols = _pick_feature_cols(dataset_df, target_col=target_col)
         return list(cols), "ok"

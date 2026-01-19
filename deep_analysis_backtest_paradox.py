@@ -1,5 +1,6 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 
 def deep_analysis_backtest_paradox():
     """score_ens가 다른데 백테스트 결과가 같은 이유 심층 분석"""

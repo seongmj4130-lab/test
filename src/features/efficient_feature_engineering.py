@@ -6,11 +6,13 @@
 기존 피쳐를 개선하고 새로운 파생 피쳐를 생성합니다.
 """
 
+import gc
+import warnings
+from typing import Dict, Iterator, List, Optional
+
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Iterator
-import warnings
-import gc
+
 warnings.filterwarnings('ignore')
 
 
@@ -241,9 +243,10 @@ class EfficientFeatureEngineer:
 
 def test_efficient_feature_engineering():
     """메모리 효율적 피쳐 엔지니어링 테스트"""
+    from pathlib import Path
+
     from src.utils.config import load_config
     from src.utils.io import load_artifact
-    from pathlib import Path
 
     # 설정 로드
     cfg = load_config('configs/config.yaml')

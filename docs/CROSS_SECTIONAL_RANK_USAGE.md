@@ -147,7 +147,7 @@ if target_transform == "cs_rank":
 ```python
 # L8: 피처 정규화 (Cross-Sectional)
 normalized_feature = normalize_feature_cross_sectional(
-    df, feature_col="volatility_60d", 
+    df, feature_col="volatility_60d",
     method="zscore"  # 또는 percentile, robust_zscore
 )
 
@@ -185,4 +185,3 @@ y_cs_rank = _cs_rank_by_date(df, target_col="ret_fwd_20d", center=True)
 4. **투트랙 구조**: 사용하지 않음 (L5 모델 학습을 하지 않으므로)
 
 **참고**: L8의 Cross-Sectional 정규화와는 다른 개념입니다.
-

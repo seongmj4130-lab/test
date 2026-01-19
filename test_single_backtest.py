@@ -9,9 +9,10 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent
 sys.path.insert(0, str(project_root))
 
-from src.utils.config import load_config, get_path
+from src.tracks.track_b.stages.backtest.l7_backtest import BacktestConfig, run_backtest
+from src.utils.config import get_path, load_config
 from src.utils.io import load_artifact
-from src.tracks.track_b.stages.backtest.l7_backtest import run_backtest, BacktestConfig
+
 
 def test_single_backtest():
     """bt20_short, 20일 단일 백테스트"""

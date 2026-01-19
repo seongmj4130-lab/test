@@ -4,9 +4,15 @@
 일별 mark-to-market 백테스트 테스트 스크립트
 """
 
-import pandas as pd
 import numpy as np
-from src.tracks.track_b.stages.backtest.l7_backtest import BacktestConfig, _calculate_daily_portfolio_returns, _convert_daily_to_monthly_returns
+import pandas as pd
+
+from src.tracks.track_b.stages.backtest.l7_backtest import (
+    BacktestConfig,
+    _calculate_daily_portfolio_returns,
+    _convert_daily_to_monthly_returns,
+)
+
 
 def test_daily_backtest():
     """일별 백테스트 기본 기능 테스트"""

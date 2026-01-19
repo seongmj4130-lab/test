@@ -63,7 +63,7 @@ L7: 백테스트 실행
 ```python
 # 방법 1: 가중 평균
 score_ens = (
-    w_ranking * score_ranking + 
+    w_ranking * score_ranking +
     w_model * score_model
 )
 
@@ -367,10 +367,10 @@ def build_rebalance_scores_from_ranking_and_model(
 ):
     # 랭킹 점수
     score_ranking = ranking_short_daily["score_total"]
-    
+
     # 모델 예측값
     score_model = pred_short_oos["y_pred"]
-    
+
     # 결합
     w_ranking = 0.6
     w_model = 0.4
@@ -390,10 +390,10 @@ def run_L6M_ensemble_scoring(
 ):
     # 랭킹 스코어
     score_ranking = ...
-    
+
     # 모델 스코어
     score_model = ...
-    
+
     # 앙상블
     score_ens = ensemble(score_ranking, score_model)
 ```
@@ -421,4 +421,3 @@ def run_L6M_ensemble_scoring(
 - 초기에는 투트랙만 사용 (빠르고 간단)
 - 성과 개선이 필요할 때 L5 추가 검토
 - L5 추가 시 Walk-Forward CV로 과적합 방지 필수
-

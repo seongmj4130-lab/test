@@ -27,7 +27,7 @@ def run_command(cmd: list, cwd: Path, description: str) -> int:
     print(f"[{description}]")
     print(f"Command: {' '.join(cmd)}")
     print(f"{'='*60}\n")
-    
+
     result = subprocess.run(cmd, cwd=str(cwd), encoding='utf-8', errors='replace')
     if result.returncode != 0:
         print(f"\n[FAIL] [{description}] Failed with exit code {result.returncode}")
@@ -40,7 +40,7 @@ def get_baseline_tag(config_path: Path, stage: int) -> str:
     import yaml
     with open(config_path, 'r', encoding='utf-8') as f:
         cfg = yaml.safe_load(f) or {}
-    
+
     if stage <= 6:
         return cfg.get("baseline", {}).get("pipeline_baseline_tag", "baseline_prerefresh_20251219_143636")
     else:
@@ -60,22 +60,22 @@ def main():
     parser.add_argument("--modified-files", type=str, default=None, help="Modified files")
     parser.add_argument("--modified-functions", type=str, default=None, help="Modified functions")
     args = parser.parse_args()
-    
+
     config_path = PROJECT_ROOT / args.config
     if not config_path.exists():
         print(f"ERROR: Config not found: {config_path}", file=sys.stderr)
         sys.exit(1)
-    
+
     if args.run_tag:
         run_tag = args.run_tag
     else:
         run_tag = generate_run_tag(f"stage{STAGE_NUM}")
-    
+
     if args.baseline_tag:
         baseline_tag_used = args.baseline_tag
     else:
         baseline_tag_used = get_baseline_tag(config_path, STAGE_NUM)
-    
+
     print("\n" + "="*60)
     print(f"[코드 매니저] Stage {STAGE_NUM} 실행")
     print("="*60)
@@ -83,12 +83,12 @@ def main():
     print(f"Run Tag: {run_tag}")
     print(f"Baseline Tag Used: {baseline_tag_used}")
     print("="*60 + "\n")
-    
+
     l2_file = PROJECT_ROOT / "data" / "interim" / "fundamentals_annual.parquet"
     if not l2_file.exists():
         print("ERROR: L2 파일이 없습니다. fundamentals_annual.parquet를 먼저 준비하세요.", file=sys.stderr)
         sys.exit(1)
-    
+
     stage_cmd = [
         sys.executable,
         str(PROJECT_ROOT / "src" / "run_all.py"),
@@ -99,20 +99,20 @@ def main():
         "--force-rebuild",
         "--skip-l2",
     ]
-    
+
     if run_command(stage_cmd, PROJECT_ROOT, f"Stage {STAGE_NUM} 실행") != 0:
         sys.exit(1)
-    
+
     kpi_cmd = [
         sys.executable,
         str(PROJECT_ROOT / "src" / "tools" / "export_kpi_table.py"),
         "--config", args.config,
         "--tag", run_tag,
     ]
-    
+
     if run_command(kpi_cmd, PROJECT_ROOT, "KPI 생성") != 0:
         sys.exit(1)
-    
+
     if STAGE_NUM != 7 or baseline_tag_used:
         delta_cmd = [
             sys.executable,
@@ -120,10 +120,10 @@ def main():
             "--baseline-tag", baseline_tag_used,
             "--run-tag", run_tag,
         ]
-        
+
         if run_command(delta_cmd, PROJECT_ROOT, "Δ 리포트 생성") != 0:
             print("WARNING: Delta 리포트 생성 실패 (계속 진행)", file=sys.stderr)
-    
+
     check_cmd = [
         sys.executable,
         str(PROJECT_ROOT / "src" / "tools" / "check_stage_completion.py"),
@@ -132,10 +132,10 @@ def main():
         "--run-tag", run_tag,
         "--baseline-tag", baseline_tag_used,
     ]
-    
+
     if run_command(check_cmd, PROJECT_ROOT, "체크리포트 생성") != 0:
         print("WARNING: 체크리포트 생성 실패 (계속 진행)", file=sys.stderr)
-    
+
     history_cmd = [
         sys.executable,
         str(PROJECT_ROOT / "src" / "tools" / "update_history_manifest.py"),
@@ -145,7 +145,7 @@ def main():
         "--run-tag", run_tag,
         "--baseline-tag", baseline_tag_used,
     ]
-    
+
     if args.change_title:
         history_cmd.extend(["--change-title", args.change_title])
     if args.change_summary:
@@ -154,10 +154,10 @@ def main():
         history_cmd.extend(["--modified-files", args.modified_files])
     if args.modified_functions:
         history_cmd.extend(["--modified-functions", args.modified_functions])
-    
+
     if run_command(history_cmd, PROJECT_ROOT, "History Manifest 업데이트") != 0:
         print("WARNING: History Manifest 업데이트 실패 (계속 진행)", file=sys.stderr)
-    
+
     print("\n" + "="*60)
     print(f"[PASS] Stage {STAGE_NUM} 완료")
     print("="*60)

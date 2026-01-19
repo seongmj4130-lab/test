@@ -3,10 +3,12 @@
 HOLDOUT 기간 특성 분석 - 간단 버전
 """
 
-import pandas as pd
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
 import yaml
+
 
 def main():
     print("📈 HOLDOUT 기간 시장 특성 분석 (2023.01-2024.12)")

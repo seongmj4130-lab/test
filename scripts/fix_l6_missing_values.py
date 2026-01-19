@@ -5,11 +5,12 @@ L6 결측치 처리 스크립트
 rebalance_scores.parquet의 결측치를 보간하여 백테스트 정확도 향상
 """
 
-from pathlib import Path
-import pandas as pd
-import numpy as np
-from datetime import datetime
 import sys
+from datetime import datetime
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))

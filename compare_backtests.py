@@ -4,9 +4,11 @@
 기존 백테스트 vs 일별 mark-to-market 백테스트 비교
 """
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 from src.tracks.track_b.stages.backtest.l7_backtest import BacktestConfig, run_backtest
+
 
 def compare_backtests():
     """기존 vs 일별 백테스트 비교"""

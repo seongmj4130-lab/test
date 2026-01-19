@@ -14,4 +14,3 @@ print(h.to_string())
 print(f'\nholdout 행 수: {len(h)}')
 if len(h) > 0:
     print(f'\nholdout 첫 번째 행의 net_sharpe: {h["net_sharpe"].iloc[0]}')
-

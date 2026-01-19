@@ -8,12 +8,14 @@
 - 공통 실행 절차
 """
 import hashlib
-import sys
 import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Tuple, List, Dict
+from typing import Dict, List, Optional, Tuple
+
 import yaml
+
 
 def get_file_hash(filepath: Path) -> str:
     """파일의 SHA256 해시 계산"""
@@ -26,19 +28,19 @@ def get_file_hash(filepath: Path) -> str:
 def verify_l2_reuse(base_dir: Path, log_file: Optional[Path] = None) -> Tuple[bool, str, Optional[str], Optional[str]]:
     """
     L2 파일 재사용 검증 (해시 확인)
-    
+
     Returns:
         (is_valid, message, hash_before, hash_after)
     """
     l2_file = base_dir / "data" / "interim" / "fundamentals_annual.parquet"
-    
+
     if not l2_file.exists():
         return False, "L2 파일이 존재하지 않습니다", None, None
-    
+
     current_hash = get_file_hash(l2_file)
     hash_before = None
     hash_after = current_hash[:16] + "..."  # 짧은 버전
-    
+
     # 로그 파일에서 실행 전 해시 읽기 시도
     if log_file and log_file.exists():
         try:
@@ -49,14 +51,14 @@ def verify_l2_reuse(base_dir: Path, log_file: Optional[Path] = None) -> Tuple[bo
                 hash_before = match.group(1) + "..."
         except Exception:
             pass
-    
+
     file_size = l2_file.stat().st_size
     mtime = datetime.fromtimestamp(l2_file.stat().st_mtime)
-    
+
     hash_info = f"해시: {hash_after}"
     if hash_before:
         hash_info = f"실행 전: {hash_before}, 실행 후: {hash_after}"
-    
+
     return True, f"L2 파일 재사용 확인: 크기={file_size:,} bytes, 수정시간={mtime.strftime('%Y-%m-%d %H:%M:%S')}, {hash_info}", hash_before, hash_after
 
 def get_baseline_tag(config_path: Path, stage: int) -> str:
@@ -68,17 +70,17 @@ def get_baseline_tag(config_path: Path, stage: int) -> str:
     """
     with open(config_path, 'r', encoding='utf-8') as f:
         cfg = yaml.safe_load(f) or {}
-    
+
     baseline_cfg = cfg.get("baseline", {})
-    
+
     # Stage0~6: pipeline_baseline_tag
     if stage <= 6:
         return baseline_cfg.get("pipeline_baseline_tag", "baseline_prerefresh_20251219_143636")
-    
+
     # Stage7: ranking_baseline 생성 단계 (baseline_tag_used는 pipeline_baseline_tag)
     elif stage == 7:
         return baseline_cfg.get("pipeline_baseline_tag", "baseline_prerefresh_20251219_143636")
-    
+
     # Stage8+: ranking_baseline_tag (Stage7이 없으면 에러)
     else:
         ranking_baseline = baseline_cfg.get("ranking_baseline_tag")
@@ -90,20 +92,20 @@ def get_baseline_tag(config_path: Path, stage: int) -> str:
 def verify_base_dir(base_dir: Path) -> Tuple[bool, str]:
     """
     base_dir이 올바른 경로인지 검증 (바탕 화면 경로 방지)
-    
+
     Returns:
         (is_valid, message)
     """
     expected_base = Path(r"C:\Users\seong\OneDrive\Desktop\bootcamp\03_code").resolve()
     actual_base = base_dir.resolve()
-    
+
     # 바탕 화면 경로 체크
     if "바탕 화면" in str(actual_base) or "Desktop" in str(actual_base) and "bootcamp" not in str(actual_base):
         return False, f"저장 경로가 바탕 화면으로 설정되어 있습니다: {actual_base}"
-    
+
     if actual_base != expected_base:
         return False, f"base_dir 불일치: 예상={expected_base}, 실제={actual_base}"
-    
+
     return True, f"base_dir 검증 통과: {actual_base}"
 
 def run_command(cmd: List[str], cwd: Path, description: str, log_file: Optional[Path] = None) -> int:
@@ -112,7 +114,7 @@ def run_command(cmd: List[str], cwd: Path, description: str, log_file: Optional[
     print(f"[{description}]")
     print(f"Command: {' '.join(cmd)}")
     print(f"{'='*60}\n")
-    
+
     if log_file:
         log_file.parent.mkdir(parents=True, exist_ok=True)
         with open(log_file, 'a', encoding='utf-8') as f:
@@ -120,9 +122,9 @@ def run_command(cmd: List[str], cwd: Path, description: str, log_file: Optional[
             f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [{description}]\n")
             f.write(f"Command: {' '.join(cmd)}\n")
             f.write(f"{'='*60}\n\n")
-    
+
     result = subprocess.run(cmd, cwd=str(cwd), encoding='utf-8', errors='replace')
-    
+
     if log_file:
         with open(log_file, 'a', encoding='utf-8') as f:
             f.write(f"Exit Code: {result.returncode}\n")
@@ -130,11 +132,11 @@ def run_command(cmd: List[str], cwd: Path, description: str, log_file: Optional[
                 f.write(f"STDOUT:\n{result.stdout}\n")
             if result.stderr:
                 f.write(f"STDERR:\n{result.stderr}\n")
-    
+
     if result.returncode != 0:
         print(f"\n[FAIL] [{description}] Failed with exit code {result.returncode}")
         return result.returncode
-    
+
     print(f"\n[OK] [{description}] Completed")
     return 0
 

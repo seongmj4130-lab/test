@@ -10,8 +10,9 @@ from typing import Any, Dict, List, Tuple
 import numpy as np
 import pandas as pd
 
-from src.utils.config import load_config, get_path
-from src.utils.io import load_artifact, artifact_exists
+from src.utils.config import get_path, load_config
+from src.utils.io import artifact_exists, load_artifact
+
 
 def _root_dir() -> Path:
     return Path(__file__).resolve().parents[2]

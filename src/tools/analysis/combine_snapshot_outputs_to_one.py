@@ -5,12 +5,13 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
-from src.utils.config import load_config, get_path
+from src.utils.config import get_path, load_config
 from src.utils.io import save_artifact
+
 
 def _project_root() -> Path:
     # .../03_code/src/stages/xxx.py -> parents[2] == 03_code

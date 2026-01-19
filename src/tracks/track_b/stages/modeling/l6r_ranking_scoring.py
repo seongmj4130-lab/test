@@ -11,6 +11,7 @@ import pandas as pd
 
 from src.components.ranking.score_engine import build_ranking_daily
 
+
 @dataclass(frozen=True)
 class RankingRebalanceConfig:
     """
@@ -18,7 +19,7 @@ class RankingRebalanceConfig:
 
     - L7은 rebalance_scores(score_ens)를 입력으로 사용하므로,
       ranking_daily(score_total/rank_total)를 rebalance_scores 형태로 변환한다.
-    
+
     [Dual Horizon 전략] ranking_short_daily와 ranking_long_daily를 α로 결합:
       score_ens = α * rank_short + (1-α) * rank_long
     """
@@ -27,7 +28,7 @@ class RankingRebalanceConfig:
 
     # 반환(백테스트) 컬럼: dataset_daily의 ret_fwd_*d를 사용
     return_col: str = "true_short"
-    
+
     # [Dual Horizon] 단기/장기 랭킹 결합 가중치 (α)
     # None이면 단일 랭킹 모드 (기존 동작)
     alpha_short: Optional[float] = None  # 단기 랭킹 가중치 (0.0~1.0)
@@ -52,29 +53,29 @@ def _segment_to_phase(seg: str) -> str:
 def _map_date_to_phase(date: pd.Timestamp, cv_folds: pd.DataFrame) -> str:
     """
     [rebalance_interval 개선] 날짜를 가장 가까운 cv_folds.test_end의 phase로 매핑
-    
+
     Args:
         date: 매핑할 날짜
         cv_folds: cv_folds_short DataFrame (test_end, segment 컬럼 포함)
-    
+
     Returns:
         phase: "dev" 또는 "holdout"
     """
     if cv_folds.empty or "test_end" not in cv_folds.columns:
         return "dev"  # 기본값
-    
+
     cv_folds = cv_folds.copy()
     cv_folds["test_end"] = pd.to_datetime(cv_folds["test_end"], errors="coerce")
     cv_folds = cv_folds.dropna(subset=["test_end"])
-    
+
     if len(cv_folds) == 0:
         return "dev"
-    
+
     # 가장 가까운 test_end 찾기
     date_ts = pd.to_datetime(date)
     cv_folds["date_diff"] = (cv_folds["test_end"] - date_ts).abs()
     closest = cv_folds.loc[cv_folds["date_diff"].idxmin()]
-    
+
     # segment를 phase로 변환
     return _segment_to_phase(str(closest.get("segment", "dev")))
 
@@ -126,13 +127,13 @@ def build_rebalance_scores_from_ranking(
 
     # [Dual Horizon] 단기/장기 랭킹 결합 모드 확인
     use_dual_horizon = (
-        ranking_short_daily is not None 
-        and not ranking_short_daily.empty 
-        and ranking_long_daily is not None 
+        ranking_short_daily is not None
+        and not ranking_short_daily.empty
+        and ranking_long_daily is not None
         and not ranking_long_daily.empty
         and cfg_rank.alpha_short is not None
     )
-    
+
     # [Dual Horizon] 시장 국면별 α 조정 설정 확인
     regime_alpha_config = None
     market_regime_df_for_alpha = None
@@ -140,12 +141,14 @@ def build_rebalance_scores_from_ranking(
         l6r = (cfg.get("l6r", {}) if isinstance(cfg, dict) else {}) or {}
         regime_alpha_config = l6r.get("regime_alpha", None)
         regime_enabled = cfg.get("l7", {}).get("regime", {}).get("enabled", False)
-        
+
         if regime_alpha_config and regime_enabled:
             # 시장 국면 데이터 생성 (α 조정용) - 외부 API 없이 ohlcv_daily 사용
-            from src.tracks.shared.stages.regime.l1d_market_regime import build_market_regime
+            from src.tracks.shared.stages.regime.l1d_market_regime import (
+                build_market_regime,
+            )
             dates = ds["date"].unique()
-            
+
             if ohlcv_daily is None or ohlcv_daily.empty:
                 warns.append(f"[L6R Dual Horizon] ohlcv_daily가 없어 시장 국면별 α 조정을 건너뜁니다.")
                 market_regime_df_for_alpha = None
@@ -164,7 +167,7 @@ def build_rebalance_scores_from_ranking(
                 except Exception as e:
                     warns.append(f"[L6R Dual Horizon] 시장 국면 데이터 생성 실패: {e}. 기본 α 사용.")
                     market_regime_df_for_alpha = None
-    
+
     if use_dual_horizon:
         warns.append(f"[L6R Dual Horizon] 단기/장기 랭킹 결합 모드: α_short={cfg_rank.alpha_short:.2f}")
         # ranking_short_daily와 ranking_long_daily를 사용 (별도 계산 불필요)
@@ -172,7 +175,7 @@ def build_rebalance_scores_from_ranking(
     else:
         # 기존 단일 랭킹 모드
         warns.append("[L6R] 단일 랭킹 모드 (기존 동작)")
-        
+
         # 1) ranking config (reuse L8 config)
         l8 = (cfg.get("l8", {}) if isinstance(cfg, dict) else {}) or (cfg.get("params", {}).get("l8", {}) if isinstance(cfg, dict) else {}) or {}
         normalization_method = str(l8.get("normalization_method", "percentile"))
@@ -184,7 +187,7 @@ def build_rebalance_scores_from_ranking(
 
         base_dir = Path((cfg.get("paths", {}) or {}).get("base_dir", Path.cwd())) if isinstance(cfg, dict) else Path.cwd()
         feature_groups_path = (base_dir / feature_groups_config) if feature_groups_config else None
-        
+
         # [IC 최적화] 최적 가중치 파일 로드
         optimal_feature_weights = None
         if feature_weights_config:
@@ -200,12 +203,12 @@ def build_rebalance_scores_from_ranking(
                     warns.append(f"[L6R IC 최적화] 최적 가중치 로드 실패: {e}. feature_groups 사용.")
             else:
                 warns.append(f"[L6R IC 최적화] 최적 가중치 파일이 없습니다: {weights_path}. feature_groups 사용.")
-        
+
         # [국면별 전략] 국면별 가중치 로드
         regime_weights_config = None
         market_regime_df = None
         regime_enabled = cfg.get("l7", {}).get("regime", {}).get("enabled", False)
-        
+
         if regime_aware_weights_config and regime_enabled:
             from src.components.ranking.regime_strategy import load_regime_weights
             regime_weights_config = load_regime_weights(
@@ -214,11 +217,13 @@ def build_rebalance_scores_from_ranking(
             )
             if len(regime_weights_config) > 0:
                 warns.append(f"[L6R 국면별 전략] 국면별 가중치 로드 완료: {list(regime_weights_config.keys())}")
-                
+
                 # 시장 국면 데이터 생성 - 외부 API 없이 ohlcv_daily 사용
-                from src.tracks.shared.stages.regime.l1d_market_regime import build_market_regime
+                from src.tracks.shared.stages.regime.l1d_market_regime import (
+                    build_market_regime,
+                )
                 dates = ds["date"].unique()
-                
+
                 if ohlcv_daily is None or ohlcv_daily.empty:
                     warns.append(f"[L6R 국면별 전략] ohlcv_daily가 없어 시장 국면 기능을 건너뜁니다.")
                     regime_weights_config = None
@@ -239,7 +244,7 @@ def build_rebalance_scores_from_ranking(
                         warns.append(f"[L6R 국면별 전략] 시장 국면 데이터 생성 실패: {e}. 국면별 가중치 비활성화.")
                         regime_weights_config = None
                         market_regime_df = None
-        
+
         # 최적 가중치가 있으면 우선 사용, 없으면 feature_groups 사용 (국면별 가중치가 없을 때만)
         use_feature_groups = feature_groups_path if optimal_feature_weights is None and regime_weights_config is None and feature_groups_path and feature_groups_path.exists() else None
 
@@ -267,7 +272,7 @@ def build_rebalance_scores_from_ranking(
         rebalance_interval = 1
     else:
         rebalance_interval = int(rebalance_interval) if rebalance_interval is not None else 1
-    
+
     if rebalance_interval == 1:
         # 기존 로직: cv_folds_short.test_end 사용 (월별)
         req_cols = {"test_end", "segment"}
@@ -300,10 +305,10 @@ def build_rebalance_scores_from_ranking(
             if ranking_daily is None or ranking_daily.empty:
                 raise ValueError("[L6R rebalance_interval] rebalance_interval > 1 requires ranking_daily")
             all_dates = sorted(pd.to_datetime(ranking_daily["date"].unique()))
-        
+
         # rebalance_interval에 맞게 필터링
         rebalance_dates = [all_dates[i] for i in range(0, len(all_dates), rebalance_interval)]
-        
+
         # Phase는 cv_folds_short에서 매핑
         rebal_map = pd.DataFrame({"date": rebalance_dates})
         rebal_map["phase"] = rebal_map["date"].apply(
@@ -320,11 +325,11 @@ def build_rebalance_scores_from_ranking(
         _ensure_datetime(r_long, "date")
         _ensure_ticker(r_short, "ticker")
         _ensure_ticker(r_long, "ticker")
-        
+
         # 리밸런싱 날짜로 필터링 + phase 부착
         r_short = r_short.merge(rebal_map, on="date", how="inner", validate="many_to_one")
         r_long = r_long.merge(rebal_map, on="date", how="inner", validate="many_to_one")
-        
+
         # 단기/장기 랭킹 병합
         key = ["date", "ticker", "phase"]
         r = r_short[["date", "ticker", "phase", "score_total", "rank_total"]].merge(
@@ -334,7 +339,7 @@ def build_rebalance_scores_from_ranking(
             suffixes=("_short", "_long"),
             validate="one_to_one"
         )
-        
+
         # [Dual Horizon] 시장 국면별 α 조정
         score_source = str(cfg_rank.score_source).strip().lower()
         if score_source == "rank_total":
@@ -345,11 +350,11 @@ def build_rebalance_scores_from_ranking(
             # score_total을 사용: 높은 score가 좋음
             r["score_short_norm"] = pd.to_numeric(r["score_total_short"], errors="coerce")
             r["score_long_norm"] = pd.to_numeric(r["score_total_long"], errors="coerce")
-        
+
         # 기본 α
         base_alpha_short = float(cfg_rank.alpha_short)
         base_alpha_long = float(cfg_rank.alpha_long) if cfg_rank.alpha_long is not None else (1.0 - base_alpha_short)
-        
+
         # 시장 국면별 α 적용
         if regime_alpha_config and market_regime_df_for_alpha is not None:
             # 시장 국면 데이터와 병합
@@ -359,7 +364,7 @@ def build_rebalance_scores_from_ranking(
                 how="left",
                 validate="many_to_one"
             )
-            
+
             # 국면별 α 매핑
             def get_alpha_for_regime(regime) -> float:
                 """
@@ -372,7 +377,7 @@ def build_rebalance_scores_from_ranking(
                     regime_lower = ""
                 else:
                     regime_lower = str(regime).strip().lower()
-                
+
                 if regime_lower in regime_alpha_config:
                     return float(regime_alpha_config.get(regime_lower, base_alpha_short))
                 # 5단계 -> 3단계 매핑
@@ -382,37 +387,37 @@ def build_rebalance_scores_from_ranking(
                     return float(regime_alpha_config.get(r3, base_alpha_short))
                 except Exception:
                     return float(base_alpha_short)
-            
+
             r["alpha_short"] = r["regime"].apply(get_alpha_for_regime)
             r["alpha_long"] = 1.0 - r["alpha_short"]
-            
+
             warns.append(f"[L6R Dual Horizon] 시장 국면별 α 적용: {r['regime'].value_counts().to_dict()}")
         else:
             # 기본 α 사용
             r["alpha_short"] = base_alpha_short
             r["alpha_long"] = base_alpha_long
-        
+
         # 결합: score_ens = α * score_short + (1-α) * score_long
         r["score_ens"] = (
-            r["alpha_short"] * r["score_short_norm"].fillna(0) 
+            r["alpha_short"] * r["score_short_norm"].fillna(0)
             + r["alpha_long"] * r["score_long_norm"].fillna(0)
         )
-        
+
         # score_total, rank_total은 결합된 score_ens 기반으로 재계산
         r["score_total"] = r["score_ens"]
         r["rank_total"] = r.groupby(["date", "phase"], sort=False)["score_ens"].rank(method="first", ascending=False)
-        
+
         # [단기/장기 랭킹 분리 분석] score_total_short와 score_total_long을 최종 출력에 포함
         # score_short_norm과 score_long_norm을 score_total_short, score_total_long으로 변환
         r["score_total_short"] = r["score_short_norm"]
         r["score_total_long"] = r["score_long_norm"]
-        
+
         # 임시 컬럼 제거 (score_short_norm, score_long_norm은 제거하되 score_total_short/long은 유지)
         drop_cols = ["score_short_norm", "score_long_norm", "alpha_short", "alpha_long"]
         if "regime" in r.columns:
             drop_cols.append("regime")
         r = r.drop(columns=[c for c in drop_cols if c in r.columns])
-        
+
         warns.append(f"[L6R Dual Horizon] 단기/장기 랭킹 결합 완료")
     else:
         # 단일 랭킹 모드 (기존 동작)
@@ -443,7 +448,7 @@ def build_rebalance_scores_from_ranking(
     l4 = (cfg.get("l4", {}) if isinstance(cfg, dict) else {}) or (cfg.get("params", {}).get("l4", {}) if isinstance(cfg, dict) else {}) or {}
     horizon_short = int(l4.get("horizon_short", 20))
     horizon_long = int(l4.get("horizon_long", 120))
-    
+
     # true_short 부착 (기본)
     ret_fwd_col_short = f"ret_fwd_{horizon_short}d"
     if ret_fwd_col_short not in ds.columns:
@@ -457,7 +462,7 @@ def build_rebalance_scores_from_ranking(
         r[cfg_rank.return_col] = r[ret_fwd_col_short].astype(float)
     # [동적 Return] true_short는 holding_days에 따라 동적으로 선택하므로 여기서는 생성하지 않음
     # r["true_short"] = r[ret_fwd_col_short].astype(float)  # [North Star] BT20 지원 - 주석처리
-    
+
     # true_long 부착 (North Star: BT120 지원)
     ret_fwd_col_long = f"ret_fwd_{horizon_long}d"
     if ret_fwd_col_long in ds.columns:
@@ -594,9 +599,9 @@ def run_L6R_ranking_scoring(
 
     l7 = (cfg.get("l7", {}) if isinstance(cfg, dict) else {}) or {}
     l6r = (cfg.get("l6r", {}) if isinstance(cfg, dict) else {}) or {}
-    
+
     score_source = str(l7.get("ranking_score_source", "score_total"))
-    
+
     # [앙상블 가중치 적용] Track A 앙상블 가중치 로드
     ensemble_weights = cfg.get("l6r", {}).get("ensemble_weights", {})
 
@@ -612,9 +617,9 @@ def run_L6R_ranking_scoring(
     # [Dual Horizon] α 설정 (기존 로직 유지)
     alpha_short = l6r.get("alpha_short", None)
     alpha_long = l6r.get("alpha_long", None)
-    
+
     cfg_rank = RankingRebalanceConfig(
-        score_source=score_source, 
+        score_source=score_source,
         return_col="true_short",
         alpha_short=alpha_short,
         alpha_long=alpha_long,
@@ -623,10 +628,10 @@ def run_L6R_ranking_scoring(
     # [Dual Horizon] ranking_short_daily와 ranking_long_daily 확인
     ranking_short_daily = artifacts.get("ranking_short_daily")
     ranking_long_daily = artifacts.get("ranking_long_daily")
-    
+
     # 시장 국면 분류용 ohlcv_daily 확인
     ohlcv_daily = artifacts.get("ohlcv_daily")
-    
+
     # [rebalance_interval 개선] rebalance_interval 설정 읽기
     # 우선순위: l7 설정 > l6r 설정 > 기본값(1)
     l7_rebalance_interval = l7.get("rebalance_interval", None)

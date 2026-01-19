@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """config.yaml 설정값 vs BacktestConfig 기본값 비교"""
-import yaml
-from pathlib import Path
 import sys
+from pathlib import Path
+
+import yaml
 
 # BacktestConfig 기본값 가져오기
 sys.path.insert(0, str(Path('C:/Users/seong/OneDrive/Desktop/bootcamp/03_code').resolve()))
@@ -60,19 +61,19 @@ print("=" * 100)
 for strategy_name, config_key in strategies.items():
     print(f"\n[{strategy_name}]")
     print("-" * 100)
-    
+
     l7_cfg = cfg.get(config_key, {})
     l7_regime = (l7_cfg.get("regime", {}) or {}) if isinstance(l7_cfg.get("regime", {}), dict) else {}
     l7_div = (l7_cfg.get("diversify", {}) or {}) if isinstance(l7_cfg.get("diversify", {}), dict) else {}
-    
+
     differences = []
-    
+
     # 기본 설정 비교
     for attr in config_attrs:
         default_val = defaults_dict.get(attr)
         if default_val is None:
             continue
-        
+
         # config.yaml에서 값 가져오기
         config_val = None
         if attr == 'regime_enabled':
@@ -90,7 +91,7 @@ for strategy_name, config_key in strategies.items():
             config_val = l7_cfg.get("softmax_temperature", l7_cfg.get("softmax_temp", None))
         else:
             config_val = l7_cfg.get(attr, None)
-        
+
         # 비교
         if config_val is not None and config_val != default_val:
             differences.append({
@@ -99,7 +100,7 @@ for strategy_name, config_key in strategies.items():
                 'config': config_val,
                 'diff': f"{default_val} → {config_val}",
             })
-    
+
     if differences:
         print(f"  ⚠️  {len(differences)}개 설정값이 BacktestConfig 기본값과 다름:")
         for diff in differences:
@@ -116,12 +117,12 @@ for strategy_name, config_key in strategies.items():
     l7_cfg = cfg.get(config_key, {})
     l7_regime = (l7_cfg.get("regime", {}) or {}) if isinstance(l7_cfg.get("regime", {}), dict) else {}
     l7_div = (l7_cfg.get("diversify", {}) or {}) if isinstance(l7_cfg.get("diversify", {}), dict) else {}
-    
+
     for attr in config_attrs:
         default_val = defaults_dict.get(attr)
         if default_val is None:
             continue
-        
+
         config_val = None
         if attr == 'regime_enabled':
             config_val = l7_regime.get("enabled", None)
@@ -138,7 +139,7 @@ for strategy_name, config_key in strategies.items():
             config_val = l7_cfg.get("softmax_temperature", l7_cfg.get("softmax_temp", None))
         else:
             config_val = l7_cfg.get(attr, None)
-        
+
         if config_val is not None and config_val != default_val:
             if attr not in total_diffs:
                 total_diffs[attr] = {}
@@ -156,4 +157,3 @@ if total_diffs:
             print(f"      {strategy_name}: {diff['config']} (기본값 {diff['default']}에서 변경)")
 else:
     print("\n✅ 모든 전략에서 config.yaml 설정값이 BacktestConfig 기본값과 동일하거나 명시되지 않음")
-

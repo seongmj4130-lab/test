@@ -24,8 +24,8 @@
 - ui/
 - 기타 루트 파일들
 """
-import shutil
 import logging
+import shutil
 from pathlib import Path
 from typing import List, Set
 
@@ -157,12 +157,12 @@ MOVE_SCRIPTS_PATTERNS = [
 def should_keep_interim_file(file_path: Path) -> bool:
     """data/interim 파일이 유지해야 할 파일인지 확인"""
     file_stem = file_path.stem
-    
+
     # 패턴 매칭
     for pattern in KEEP_INTERIM_PATTERNS:
         if pattern in file_stem:
             return True
-    
+
     # 메타데이터 파일도 유지 (__meta.json)
     if file_path.suffix == ".json" and "__meta" in file_stem:
         # 해당하는 parquet 파일이 유지 대상이면 메타데이터도 유지
@@ -170,7 +170,7 @@ def should_keep_interim_file(file_path: Path) -> bool:
         for pattern in KEEP_INTERIM_PATTERNS:
             if pattern in parquet_stem:
                 return True
-    
+
     return False
 
 
@@ -178,14 +178,14 @@ def should_move_script(script_path: Path) -> bool:
     """scripts 파일이 이동해야 할 파일인지 확인"""
     if script_path.name == "run_pipeline_l0_l7.py":
         return False
-    
+
     if script_path.name == "__init__.py":
         return False
-    
+
     for pattern in MOVE_SCRIPTS_PATTERNS:
         if script_path.name.startswith(pattern):
             return True
-    
+
     return False
 
 
@@ -194,21 +194,21 @@ def move_item(src: Path, dst: Path, dry_run: bool = False):
     if not src.exists():
         logger.warning(f"  ⚠ 존재하지 않음: {src}")
         return False
-    
+
     if dry_run:
         logger.info(f"  [DRY RUN] 이동: {src} → {dst}")
         return True
-    
+
     try:
         # 부모 디렉토리 생성
         dst.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # 이동
         if src.is_dir():
             shutil.move(str(src), str(dst))
         else:
             shutil.move(str(src), str(dst))
-        
+
         logger.info(f"  ✓ 이동 완료: {src.name}")
         return True
     except Exception as e:
@@ -222,12 +222,12 @@ def cleanup_interim_dir(dry_run: bool = False):
     if not interim_dir.exists():
         logger.warning(f"data/interim 디렉토리가 없습니다.")
         return
-    
+
     logger.info(f"[data/interim 정리] {interim_dir}")
-    
+
     moved_count = 0
     kept_count = 0
-    
+
     # 모든 파일과 폴더 확인
     for item in interim_dir.iterdir():
         if item.is_file():
@@ -244,7 +244,7 @@ def cleanup_interim_dir(dry_run: bool = False):
             dst = BACKUP_ROOT / "data" / "interim" / item.name
             if move_item(item, dst, dry_run):
                 moved_count += 1
-    
+
     logger.info(f"  유지: {kept_count}개, 이동: {moved_count}개")
 
 
@@ -253,17 +253,17 @@ def cleanup_configs_dir(dry_run: bool = False):
     configs_dir = PROJECT_ROOT / "configs"
     if not configs_dir.exists():
         return
-    
+
     logger.info(f"[configs 정리] {configs_dir}")
-    
+
     moved_count = 0
-    
+
     for config_file in configs_dir.iterdir():
         if config_file.is_file() and config_file.name in MOVE_CONFIGS:
             dst = BACKUP_ROOT / "configs" / config_file.name
             if move_item(config_file, dst, dry_run):
                 moved_count += 1
-    
+
     logger.info(f"  이동: {moved_count}개")
 
 
@@ -272,40 +272,40 @@ def cleanup_scripts_dir(dry_run: bool = False):
     scripts_dir = PROJECT_ROOT / "scripts"
     if not scripts_dir.exists():
         return
-    
+
     logger.info(f"[scripts 정리] {scripts_dir}")
-    
+
     moved_count = 0
-    
+
     for script_file in scripts_dir.iterdir():
         if script_file.is_file() and should_move_script(script_file):
             dst = BACKUP_ROOT / "scripts" / script_file.name
             if move_item(script_file, dst, dry_run):
                 moved_count += 1
-    
+
     logger.info(f"  이동: {moved_count}개")
 
 
 def cleanup_root_files(dry_run: bool = False):
     """루트 디렉토리 파일 정리"""
     logger.info(f"[루트 파일 정리] {PROJECT_ROOT}")
-    
+
     # final_*.md와 README.md 제외한 모든 .md 파일 이동
     moved_count = 0
-    
+
     for root_file in PROJECT_ROOT.iterdir():
         if root_file.is_file():
             # 유지할 파일 체크
-            if root_file.name in ["README.md", "final_report.md", "final_easy_report.md", 
+            if root_file.name in ["README.md", "final_report.md", "final_easy_report.md",
                                  "final_backtest_report.md", "final_ranking_report.md"]:
                 continue
-            
+
             # .md 파일이면 이동
             if root_file.suffix == ".md":
                 dst = BACKUP_ROOT / root_file.name
                 if move_item(root_file, dst, dry_run):
                     moved_count += 1
-    
+
     logger.info(f"  이동: {moved_count}개")
 
 
@@ -317,34 +317,34 @@ def main(dry_run: bool = True):
     logger.info(f"백업 루트: {BACKUP_ROOT}")
     logger.info(f"모드: {'DRY RUN' if dry_run else '실제 실행'}")
     logger.info("=" * 80)
-    
+
     # 백업 루트 생성
     if not dry_run:
         BACKUP_ROOT.mkdir(parents=True, exist_ok=True)
-    
+
     # 1. 루트 폴더 이동
     logger.info("\n[1단계] 루트 폴더 이동")
     for item_name in MOVE_ITEMS:
         src = PROJECT_ROOT / item_name
         dst = BACKUP_ROOT / item_name
         move_item(src, dst, dry_run)
-    
+
     # 2. data/interim 정리
     logger.info("\n[2단계] data/interim 정리")
     cleanup_interim_dir(dry_run)
-    
+
     # 3. configs 정리
     logger.info("\n[3단계] configs 정리")
     cleanup_configs_dir(dry_run)
-    
+
     # 4. scripts 정리
     logger.info("\n[4단계] scripts 정리")
     cleanup_scripts_dir(dry_run)
-    
+
     # 5. 루트 파일 정리
     logger.info("\n[5단계] 루트 파일 정리")
     cleanup_root_files(dry_run)
-    
+
     # 6. docs, artifacts 이동 (전체)
     logger.info("\n[6단계] docs, artifacts 이동")
     for item_name in ["docs", "artifacts"]:
@@ -352,23 +352,22 @@ def main(dry_run: bool = True):
         if src.exists():
             dst = BACKUP_ROOT / item_name
             move_item(src, dst, dry_run)
-    
+
     logger.info("\n" + "=" * 80)
     logger.info("✅ 파일 정리 완료")
     logger.info("=" * 80)
-    
+
     if dry_run:
         logger.info("\n⚠️  DRY RUN 모드입니다. 실제로 실행하려면 dry_run=False로 설정하세요.")
 
 
 if __name__ == "__main__":
     import sys
-    
+
     # 명령줄 인자 확인
     dry_run = "--execute" not in sys.argv
-    
+
     if dry_run:
         logger.warning("⚠️  DRY RUN 모드입니다. 실제로 실행하려면 --execute 플래그를 추가하세요.")
-    
-    main(dry_run=dry_run)
 
+    main(dry_run=dry_run)

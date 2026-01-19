@@ -1,7 +1,7 @@
 # Phase 1.4: XGBoost 모델 완료 보고서
 
-**작성일**: 2026-01-08  
-**Phase**: Phase 1.4 - XGBoost 모델 학습 및 평가  
+**작성일**: 2026-01-08
+**Phase**: Phase 1.4 - XGBoost 모델 학습 및 평가
 **상태**: ✅ **완료**
 
 ---
@@ -184,12 +184,12 @@ XGBoost 모델을 사용하여 단기/장기 랭킹의 개별 피처 가중치�
 | XGBoost (정규화) | Dev | 0.3370 | 0.5202 | - |
 | XGBoost (정규화) | Holdout | -0.0042 | -0.0137 | MID (개선됨) |
 
-**결론**: 
+**결론**:
 - **Dev 성과**: XGBoost (기본) > XGBoost (정규화) > Grid Search ≈ Ridge
 - **Holdout 성과**: Ridge > Grid Search (장기) > XGBoost (정규화) > XGBoost (기본)
 - **일반화 능력**: Ridge가 가장 우수
 
 ---
 
-**작성자**: Cursor AI  
+**작성자**: Cursor AI
 **최종 업데이트**: 2026-01-08 18:36

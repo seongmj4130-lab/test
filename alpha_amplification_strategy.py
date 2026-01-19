@@ -3,10 +3,12 @@
 Alpha 증폭 전략 개발 - 현재 전략의 Alpha를 높이는 신규 전략 구현
 """
 
-import pandas as pd
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
 import yaml
+
 
 class AlphaAmplifier:
     """Alpha 증폭 전략 개발 시스템"""

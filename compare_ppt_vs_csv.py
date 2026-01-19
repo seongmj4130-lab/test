@@ -1,5 +1,6 @@
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 
 print('=== PPT 가이드 vs 실제 CSV 데이터 비교 ===')
 

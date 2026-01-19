@@ -1,6 +1,6 @@
 # 최적 가중치 적용 가이드
 
-**작성일**: 2026-01-08  
+**작성일**: 2026-01-08
 **목적**: Grid Search 및 Ridge 학습 최적 가중치 적용 방법 안내
 
 ---
@@ -52,7 +52,7 @@ l8_long:
    l8_short:
      # Grid Search 결과 (이전)
      # feature_groups_config: configs/feature_groups_short_optimized_grid_20260108_135117.yaml
-     
+
      # Ridge 학습 결과 (신규)
      feature_groups_config: configs/feature_groups_short_optimized_ridge_20260108_HHMMSS.yaml
    ```
@@ -86,5 +86,5 @@ l8_long:
 
 ---
 
-**작성자**: Cursor AI  
+**작성자**: Cursor AI
 **최종 업데이트**: 2026-01-08

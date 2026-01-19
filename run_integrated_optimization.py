@@ -5,9 +5,12 @@
 
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path.cwd()))
-from run_partial_backtest import run_strategy_batch
 import yaml
+
+from run_partial_backtest import run_strategy_batch
+
 
 def run_integrated_optimization():
     with open('configs/config.yaml', 'r', encoding='utf-8') as f:

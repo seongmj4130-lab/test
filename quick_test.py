@@ -5,10 +5,13 @@
 
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path.cwd()))
 
-from run_dynamic_period_backtest import run_single_backtest
 import yaml
+
+from run_dynamic_period_backtest import run_single_backtest
+
 
 def main():
     # 설정 로드

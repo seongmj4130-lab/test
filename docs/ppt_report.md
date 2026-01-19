@@ -4,8 +4,8 @@
 
 # KOSPI200 기반 투트랙(Track A/B) 퀀트 투자 전략 파이프라인
 
-**프로젝트 기간**: 2024년 부트캠프 기간 (약 1-2개월)  
-**최종 성과**: BT20 단기 전략 Sharpe 0.914 달성 ✅  
+**프로젝트 기간**: 2024년 부트캠프 기간 (약 1-2개월)
+**최종 성과**: BT20 단기 전략 Sharpe 0.914 달성 ✅
 **기술 스택**: Python, Pandas, Scikit-learn, XGBoost, FastAPI, Streamlit
 
 ### 🎯 **최종 적용된 핵심 개선사항**
@@ -1130,8 +1130,8 @@ date        return  cumulative_return  drawdown
 
 #### 4가지 전략 + KOSPI200 누적 수익률 데이터 (Holdout 기간)
 
-**파일**: `data/strategies_kospi200_monthly_cumulative_returns.csv`  
-**기간**: 2023-01-31 ~ 2024-10-31 (22개월)  
+**파일**: `data/strategies_kospi200_monthly_cumulative_returns.csv`
+**기간**: 2023-01-31 ~ 2024-10-31 (22개월)
 **전략**: BT20 단기, BT20 앙상블, BT120 장기, BT120 앙상블, KOSPI200
 
 ```
@@ -1162,7 +1162,7 @@ date,KOSPI200,BT120 앙상블 (120일),BT120 장기 (120일),BT20 앙상블 (20�
 
 #### 4가지 전략 + KOSPI200 월별 수익률 데이터 (전월 대비)
 
-**파일**: `data/strategies_kospi200_monthly_returns.csv`  
+**파일**: `data/strategies_kospi200_monthly_returns.csv`
 **포함**: 누적 수익률 + 월별 수익률 컬럼
 
 ```
@@ -1193,7 +1193,7 @@ date,KOSPI200,BT120 앙상블 (120일),BT120 장기 (120일),BT20 앙상블 (20�
 
 #### 전략별 최종 성과 상세 데이터
 
-**파일**: `data/holdout_performance_metrics.csv`  
+**파일**: `data/holdout_performance_metrics.csv`
 **기간**: 2023-01-31 ~ 2024-11-18 (Holdout 기간)
 
 | 전략 | Sharpe Ratio | CAGR | MDD | Calmar Ratio | Total Return | Hit Ratio |

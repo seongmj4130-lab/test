@@ -26,7 +26,7 @@ def build_rebalance_scores_from_ranking(
 ):
     # 기존: cv_folds_short.test_end만 사용
     # 수정: 일별 랭킹 데이터에서 rebalance_interval에 맞게 필터링
-    
+
     if rebalance_interval == 1:
         # 기존 로직: cv_folds_short.test_end 사용
         rebal_map = folds[["test_end", "phase"]].rename(columns={"test_end": "date"}).copy()

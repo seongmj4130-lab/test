@@ -7,29 +7,31 @@ Grid Search는 Dev 구간에서만 평가되었으므로:
 2. Holdout 구간 평가는 별도 실행 필요 (최적 가중치 적용 후)
 3. 과적합 위험 분석
 """
-import pandas as pd
-import numpy as np
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
 
 def analyze_grid_search_results():
     """Grid Search 결과 분석"""
     results_dir = Path("artifacts/reports")
-    
+
     # 단기 랭킹 결과
     short_file = results_dir / "track_a_group_weights_grid_search_20260108_135117.csv"
     # 장기 랭킹 결과
     long_file = results_dir / "track_a_group_weights_grid_search_20260108_145118.csv"
-    
+
     results = {}
-    
+
     for horizon, file_path in [("short", short_file), ("long", long_file)]:
         if not file_path.exists():
             continue
-        
+
         df = pd.read_csv(file_path)
         best = df.loc[df['objective_score'].idxmax()]
-        
+
         # 전체 조합 통계
         results[horizon] = {
             "n_combinations": len(df),
@@ -56,32 +58,32 @@ def analyze_grid_search_results():
                 "icir_mean": float(df['icir'].mean()),
             },
         }
-    
+
     return results
 
 def analyze_overfitting_risk(grid_results: dict) -> dict:
     """과적합 위험 분석 (Grid Search 결과 기반)"""
-    
+
     analysis = {
         "grid_search_analysis": {},
         "overfitting_risk_indicators": {},
         "recommendations": [],
     }
-    
+
     for horizon, result in grid_results.items():
         # Grid Search 결과 분석
         best_score = result["best_objective_score"]
         mean_score = result["all_combinations"]["objective_score_mean"]
         std_score = result["all_combinations"]["objective_score_std"]
-        
+
         # 최적 조합이 평균 대비 얼마나 우수한지
         score_improvement = (best_score - mean_score) / std_score if std_score > 0 else 0
-        
+
         # IC 변동성
         ic_std = result["all_combinations"]["ic_mean_std"]
         ic_mean = result["all_combinations"]["ic_mean_mean"]
         ic_cv = abs(ic_std / ic_mean) if ic_mean != 0 else 0  # 변동계수
-        
+
         analysis["grid_search_analysis"][horizon] = {
             "best_score": best_score,
             "mean_score": mean_score,
@@ -91,10 +93,10 @@ def analyze_overfitting_risk(grid_results: dict) -> dict:
             "ic_std": ic_std,
             "ic_cv": ic_cv,
         }
-        
+
         # 과적합 위험 지표
         risk_indicators = {}
-        
+
         # 1. 최적 조합이 평균 대비 너무 우수한 경우 (3 sigma 이상)
         if score_improvement > 3.0:
             risk_indicators["high_score_improvement"] = {
@@ -114,7 +116,7 @@ def analyze_overfitting_risk(grid_results: dict) -> dict:
                 "value": score_improvement,
                 "description": f"최적 조합이 평균 대비 {score_improvement:.2f}σ 우수 (정상 범위)",
             }
-        
+
         # 2. IC 변동성이 높은 경우
         if ic_cv > 2.0:
             risk_indicators["high_ic_volatility"] = {
@@ -134,7 +136,7 @@ def analyze_overfitting_risk(grid_results: dict) -> dict:
                 "value": ic_cv,
                 "description": f"IC 변동계수 {ic_cv:.2f} (낮은 변동성, 안정적)",
             }
-        
+
         # 3. IC 평균이 낮거나 음수인 경우
         if ic_mean < 0:
             risk_indicators["negative_ic"] = {
@@ -154,13 +156,13 @@ def analyze_overfitting_risk(grid_results: dict) -> dict:
                 "value": ic_mean,
                 "description": f"IC 평균 {ic_mean:.4f} (양수, 예측력 있음)",
             }
-        
+
         analysis["overfitting_risk_indicators"][horizon] = risk_indicators
-        
+
         # 종합 위험 평가
         high_risk_count = sum(1 for v in risk_indicators.values() if v["level"] == "high")
         medium_risk_count = sum(1 for v in risk_indicators.values() if v["level"] == "medium")
-        
+
         if high_risk_count >= 2:
             overall_risk = "high"
             recommendations = [
@@ -185,10 +187,10 @@ def analyze_overfitting_risk(grid_results: dict) -> dict:
                 "  - Holdout 구간 평가로 최종 확인 필요",
                 "  - 현재 모델 설정 유지 가능",
             ]
-        
+
         analysis["overfitting_risk_indicators"][horizon]["overall_risk"] = overall_risk
         analysis["overfitting_risk_indicators"][horizon]["recommendations"] = recommendations
-    
+
     return analysis
 
 def main():
@@ -196,15 +198,15 @@ def main():
     print("=" * 80)
     print("Grid Search 결과 기반 Dev/Holdout 구간 성과 비교 및 과적합 분석")
     print("=" * 80)
-    
+
     # Grid Search 결과 분석
     print("\nGrid Search 결과 분석 중...")
     grid_results = analyze_grid_search_results()
-    
+
     if not grid_results:
         print("❌ 분석할 Grid Search 결과가 없습니다.")
         return
-    
+
     # 결과 출력
     for horizon, result in grid_results.items():
         print(f"\n[{horizon.upper()} 랭킹]")
@@ -227,14 +229,14 @@ def main():
         print(f"  Hit Ratio: {stats['hit_ratio_mean']*100:.2f}%")
         print(f"  IC Mean: {stats['ic_mean_mean']:.4f} ± {stats['ic_mean_std']:.4f}")
         print(f"  ICIR: {stats['icir_mean']:.4f}")
-    
+
     # 과적합 분석
     print("\n" + "=" * 80)
     print("과적합 위험 분석")
     print("=" * 80)
-    
+
     overfitting_analysis = analyze_overfitting_risk(grid_results)
-    
+
     for horizon, analysis in overfitting_analysis["grid_search_analysis"].items():
         print(f"\n[{horizon.upper()} 랭킹]")
         print(f"  최적 Score: {analysis['best_score']:.4f}")
@@ -242,27 +244,27 @@ def main():
         print(f"  개선도: {analysis['score_improvement_sigma']:.2f}σ")
         print(f"  IC 평균: {analysis['ic_mean']:.4f} ± {analysis['ic_std']:.4f}")
         print(f"  IC 변동계수: {analysis['ic_cv']:.2f}")
-        
+
         risk_indicators = overfitting_analysis["overfitting_risk_indicators"][horizon]
         overall_risk = risk_indicators["overall_risk"]
-        
+
         print(f"\n  [과적합 위험 지표]")
         for indicator_name, indicator in risk_indicators.items():
             if indicator_name == "overall_risk" or indicator_name == "recommendations":
                 continue
             print(f"    {indicator_name}: {indicator['level']} - {indicator['description']}")
-        
+
         print(f"\n  [종합 위험도]: {overall_risk.upper()}")
         print(f"  [권장사항]")
         for rec in risk_indicators["recommendations"]:
             print(f"    {rec}")
-    
+
     # 결과 저장
     output_dir = Path("artifacts/reports")
     output_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     report_file = output_dir / f"grid_search_overfitting_analysis_{timestamp}.md"
-    
+
     with open(report_file, 'w', encoding='utf-8') as f:
         f.write("# Grid Search 결과 기반 과적합 분석\n\n")
         f.write(f"**생성일**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
@@ -274,10 +276,10 @@ def main():
         f.write("2. Holdout 구간에서 성과 평가\n")
         f.write("3. Dev/Holdout 구간 성과 비교\n\n")
         f.write("=" * 80 + "\n\n")
-        
+
         for horizon, result in grid_results.items():
             f.write(f"## {horizon.upper()} 랭킹\n\n")
-            
+
             f.write("### 최적 조합 성과 (Dev 구간)\n\n")
             f.write(f"- Objective Score: {result['best_objective_score']:.4f}\n")
             f.write(f"- Hit Ratio: {result['best_hit_ratio']*100:.2f}%\n")
@@ -285,33 +287,33 @@ def main():
             f.write(f"- ICIR: {result['best_icir']:.4f}\n")
             f.write(f"- Rank IC Mean: {result['best_rank_ic_mean']:.4f}\n")
             f.write(f"- Rank ICIR: {result['best_rank_icir']:.4f}\n\n")
-            
+
             f.write("### 최적 가중치\n\n")
             for group, weight in result['weights'].items():
                 f.write(f"- {group}: {weight:.2f}\n")
             f.write("\n")
-            
+
             # 과적합 분석
             analysis = overfitting_analysis["grid_search_analysis"][horizon]
             risk_indicators = overfitting_analysis["overfitting_risk_indicators"][horizon]
-            
+
             f.write("### 과적합 위험 분석\n\n")
             f.write(f"**종합 위험도**: {risk_indicators['overall_risk'].upper()}\n\n")
-            
+
             f.write("#### 위험 지표\n\n")
             for indicator_name, indicator in risk_indicators.items():
                 if indicator_name in ["overall_risk", "recommendations"]:
                     continue
                 f.write(f"- **{indicator_name}**: {indicator['level']} - {indicator['description']}\n")
-            
+
             f.write("\n#### 권장사항\n\n")
             for rec in risk_indicators["recommendations"]:
                 f.write(f"{rec}\n")
-            
+
             f.write("\n" + "-" * 80 + "\n\n")
-    
+
     print(f"\n✅ 결과 저장: {report_file}")
-    
+
     return grid_results, overfitting_analysis
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 # 리팩토링 요약 리포트
 
-**리팩토링 일시**: 2026-01-08  
-**리팩토링 대상**: 03_code  
+**리팩토링 일시**: 2026-01-08
+**리팩토링 대상**: 03_code
 **리팩토링 목적**: config.yaml 우선 적용 구조로 변경 및 기본값 통일
 
 ## 리팩토링 완료 사항
@@ -122,12 +122,11 @@ l7_bt20_short:
 
 ### 7. 결론
 
-✅ **리팩토링 완료**: `track_b_pipeline.py`의 `.get()` 기본값을 `BacktestConfig` 클래스 기본값으로 통일  
-✅ **실행 완료**: 랭킹 산정부터 백테스트까지 모든 전략 재실행 완료  
+✅ **리팩토링 완료**: `track_b_pipeline.py`의 `.get()` 기본값을 `BacktestConfig` 클래스 기본값으로 통일
+✅ **실행 완료**: 랭킹 산정부터 백테스트까지 모든 전략 재실행 완료
 ✅ **결과 확인**: 모든 백테스트가 성공적으로 실행되어 결과 생성
 
 ### 8. 결과 파일 위치
 
 - 백테스트 결과: `artifacts/reports/backtest_results_refactored.csv`
 - Parquet 파일: `data/interim/bt_metrics_{strategy}.parquet`
-

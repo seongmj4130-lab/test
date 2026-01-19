@@ -5,11 +5,12 @@ L0~L4 공통데이터 품질 분석 스크립트
 기존 데이터를 사용하여 각 단계별 산출물의 결측치를 분석하고 문제점을 파악합니다.
 """
 
-from pathlib import Path
-import pandas as pd
-import numpy as np
-from datetime import datetime
 import sys
+from datetime import datetime
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))

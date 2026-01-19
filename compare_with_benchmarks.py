@@ -3,9 +3,11 @@
 퀀트 평균과 KOSPI200 대비 실무 관점 성과 비교 분석
 """
 
-import pandas as pd
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
 
 def load_data():
     """필요한 데이터 로드"""

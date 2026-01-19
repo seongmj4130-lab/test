@@ -2,8 +2,8 @@
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/validation/validate_l5_outputs.py
 from __future__ import annotations
 
-import sys
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -20,8 +20,9 @@ CFG_PATH = ROOT / "configs" / "config.yaml"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from src.utils.config import load_config, get_path
-from src.utils.io import load_artifact, artifact_exists
+from src.utils.config import get_path, load_config
+from src.utils.io import artifact_exists, load_artifact
+
 
 # ----------------------------
 # Helpers

@@ -24,7 +24,6 @@ from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 
-
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -213,5 +212,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
