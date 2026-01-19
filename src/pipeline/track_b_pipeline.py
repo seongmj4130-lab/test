@@ -6,15 +6,16 @@ Track B: 투자 모델 (Investment Model)
 - L6R: 랭킹 스코어 변환
 - L7: 백테스트 실행
 """
-import logging
+
 from pathlib import Path
 
 import pandas as pd
 
 from src.utils.config import get_path, load_config
 from src.utils.io import artifact_exists, load_artifact, save_artifact
+from src.utils.logging import ExecutionSummary, get_logger, setup_logging
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def run_track_b_pipeline(
@@ -44,15 +45,30 @@ def run_track_b_pipeline(
             "artifacts_path": dict,
         }
     """
+    # 로깅 설정 초기화
+    log_file = str(Path(get_path(load_config(config_path), "logs")) / "track_b.log")
+    setup_logging(log_file=log_file)
+
+    # 실행 요약 초기화
+    summary = ExecutionSummary("track_b", config_path)
+    summary.add_parameter("strategy", strategy)
+    summary.add_parameter("force_rebuild", force_rebuild)
+
     logger.info("=" * 80)
     logger.info("Track B: 투자 모델 파이프라인 실행 시작")
+    logger.info(f"설정 파일: {config_path}")
     logger.info(f"전략: {strategy}")
+    logger.info(f"강제 재빌드: {force_rebuild}")
     logger.info("=" * 80)
+
+    summary.start_step("pipeline_init")
 
     # 설정 로드
     cfg = load_config(config_path)
     interim_dir = Path(get_path(cfg, "data_interim"))
     interim_dir.mkdir(parents=True, exist_ok=True)
+
+    summary.end_step("pipeline_init")
 
     # 전략별 설정 매핑
     strategy_config_map = {
@@ -78,6 +94,7 @@ def run_track_b_pipeline(
 
     # 공통 데이터 확인
     logger.info("[공통 데이터 확인]")
+    summary.start_step("data_loading")
 
     # L0: 유니버스
     uni_path = interim_dir / "universe_k200_membership_monthly"
@@ -87,9 +104,10 @@ def run_track_b_pipeline(
     if artifact_exists(uni_path):
         artifacts["universe_k200_membership_monthly"] = load_artifact(uni_path)
         artifacts_path["universe"] = str(uni_path)
-        logger.info(
-            f"  ✓ 유니버스 로드: {len(artifacts['universe_k200_membership_monthly']):,}행"
-        )
+        universe_size = len(artifacts["universe_k200_membership_monthly"])
+        logger.info(f"  ✓ 유니버스 로드: {universe_size:,}행")
+        summary.add_metadata("input_universe_rows", universe_size)
+        summary.add_output("universe", str(uni_path))
     else:
         logger.warning("  ✗ 유니버스 데이터가 없습니다. L0부터 실행이 필요합니다.")
         raise FileNotFoundError("universe_k200_membership_monthly not found")
@@ -103,7 +121,11 @@ def run_track_b_pipeline(
         artifacts["cv_folds_short"] = load_artifact(cv_short_path)
         artifacts_path["dataset"] = str(dataset_path)
         artifacts_path["cv_short"] = str(cv_short_path)
-        logger.info(f"  ✓ 데이터셋 로드: {len(artifacts['dataset_daily']):,}행")
+        dataset_size = len(artifacts["dataset_daily"])
+        logger.info(f"  ✓ 데이터셋 로드: {dataset_size:,}행")
+        summary.add_metadata("input_dataset_rows", dataset_size)
+        summary.add_output("dataset", str(dataset_path))
+        summary.add_output("cv_folds", str(cv_short_path))
     else:
         logger.warning("  ✗ 데이터셋이 없습니다. L4까지 실행이 필요합니다.")
         raise FileNotFoundError("dataset_daily or cv_folds_short not found")
@@ -118,16 +140,26 @@ def run_track_b_pipeline(
         artifacts["ranking_long_daily"] = load_artifact(ranking_long_path)
         artifacts_path["ranking_short"] = str(ranking_short_path)
         artifacts_path["ranking_long"] = str(ranking_long_path)
+        short_ranking_size = len(artifacts["ranking_short_daily"])
+        long_ranking_size = len(artifacts["ranking_long_daily"])
         logger.info(
-            f"  ✓ 랭킹 데이터 로드: 단기 {len(artifacts['ranking_short_daily']):,}행, 장기 {len(artifacts['ranking_long_daily']):,}행"
+            f"  ✓ 랭킹 데이터 로드: 단기 {short_ranking_size:,}행, 장기 {long_ranking_size:,}행"
         )
+        summary.add_metadata("input_ranking_short_rows", short_ranking_size)
+        summary.add_metadata("input_ranking_long_rows", long_ranking_size)
+        summary.add_output("ranking_short_input", str(ranking_short_path))
+        summary.add_output("ranking_long_input", str(ranking_long_path))
     else:
         logger.warning("  ✗ 랭킹 데이터가 없습니다. Track A를 먼저 실행하세요.")
         logger.warning("  python -m src.pipeline.track_a_pipeline 를 먼저 실행하세요.")
         raise FileNotFoundError("ranking_short_daily or ranking_long_daily not found")
 
+    summary.end_step("data_loading")
+
     # L6R: 랭킹 스코어 변환
     logger.info("[L6R] 랭킹 스코어 변환")
+    summary.start_step("ranking_scoring")
+
     from src.tracks.track_b.stages.modeling.l6r_ranking_scoring import (
         run_L6R_ranking_scoring,
     )
@@ -141,9 +173,13 @@ def run_track_b_pipeline(
     if artifact_exists(scores_path) and not force_rebuild:
         artifacts["rebalance_scores"] = load_artifact(scores_path)
         artifacts_path["scores"] = str(scores_path)
+        scores_size = len(artifacts["rebalance_scores"])
         logger.info(
-            f"  ✓ 캐시에서 로드: {len(artifacts['rebalance_scores']):,}행 (rebalance_interval={rebalance_interval})"
+            f"  ✓ 캐시에서 로드: {scores_size:,}행 (rebalance_interval={rebalance_interval})"
         )
+        summary.add_metadata("rebalance_scores_rows", scores_size)
+        summary.add_metadata("rebalance_interval", rebalance_interval)
+        summary.add_output("rebalance_scores", str(scores_path))
     else:
         logger.info(f"  → L6R 재실행 (rebalance_interval={rebalance_interval})")
         # L6R 실행 (필요한 모든 artifacts 전달)
@@ -174,12 +210,19 @@ def run_track_b_pipeline(
         artifacts["rebalance_scores"] = outputs["rebalance_scores"]
         save_artifact(artifacts["rebalance_scores"], scores_path, force=True)
         artifacts_path["scores"] = str(scores_path)
+        scores_size = len(artifacts["rebalance_scores"])
         logger.info(
-            f"  ✓ 생성 완료: {len(artifacts['rebalance_scores']):,}행 (rebalance_interval={rebalance_interval})"
+            f"  ✓ 생성 완료: {scores_size:,}행 (rebalance_interval={rebalance_interval})"
         )
+        summary.add_metadata("rebalance_scores_rows", scores_size)
+        summary.add_metadata("rebalance_interval", rebalance_interval)
+        summary.add_output("rebalance_scores", str(scores_path))
+
+    summary.end_step("ranking_scoring")
 
     # L7: 백테스트 실행
     logger.info("[L7] 백테스트 실행")
+    summary.start_step("backtest")
     from src.tracks.track_b.stages.backtest.l7_backtest import (
         BacktestConfig,
         run_backtest,
@@ -511,6 +554,22 @@ def run_track_b_pipeline(
     artifacts_path["bt_equity_curve"] = str(interim_dir / f"bt_equity_curve{suffix}")
     artifacts_path["bt_metrics"] = str(interim_dir / f"bt_metrics{suffix}")
 
+    # 백테스트 결과 요약 추가
+    summary.add_metadata("bt_positions_rows", len(bt_pos))
+    summary.add_metadata("bt_returns_rows", len(bt_ret))
+    summary.add_metadata("bt_equity_curve_rows", len(bt_eq))
+    summary.add_metadata("strategy_suffix", suffix)
+    summary.add_output("bt_positions", artifacts_path["bt_positions"])
+    summary.add_output("bt_returns", artifacts_path["bt_returns"])
+    summary.add_output("bt_equity_curve", artifacts_path["bt_equity_curve"])
+    summary.add_output("bt_metrics", artifacts_path["bt_metrics"])
+
+    summary.end_step("backtest")
+
+    # 실행 요약 저장
+    summary_path = summary.save_summary(interim_dir)
+    logger.info(f"실행 요약 저장: {summary_path}")
+
     logger.info("=" * 80)
     logger.info("✅ Track B: 투자 모델 파이프라인 실행 완료")
     logger.info("=" * 80)
@@ -523,18 +582,19 @@ def run_track_b_pipeline(
         "bt_metrics": bt_met,
         "config": l7_cfg,
         "artifacts_path": artifacts_path,
+        "run_summary": summary_path,
     }
 
 
 if __name__ == "__main__":
     import sys
 
-    logging.basicConfig(
-        level=logging.INFO,
-        format="[%(asctime)s] [%(levelname)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-
-    strategy = sys.argv[1] if len(sys.argv) > 1 else "bt20_short"
-    result = run_track_b_pipeline(strategy=strategy)
-    print(f"\n✅ 완료: {len(result['bt_metrics'])}개 메트릭 생성")
+    # 로깅은 함수 내부에서 설정됨
+    try:
+        strategy = sys.argv[1] if len(sys.argv) > 1 else "bt20_short"
+        result = run_track_b_pipeline(strategy=strategy)
+        print(f"\n✅ 완료: 전략 {strategy}, {len(result['bt_metrics'])}개 메트릭 생성")
+        print(f"실행 요약: {result.get('run_summary', 'N/A')}")
+    except Exception as e:
+        logger.error(f"Track B 파이프라인 실행 실패: {e}", exc_info=True)
+        raise

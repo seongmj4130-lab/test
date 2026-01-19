@@ -398,6 +398,117 @@ tests\test_pipeline\test_integration_smoke.py ......                     [100%]
 ✅ **배치 검증 CLI**: `scripts/config_validation.py` - 전체 configs/ 검사
 ✅ **설정 레퍼런스 문서**: `docs/설정_레퍼런스.md` - 키/기본값/예시 설명
 
+## P4. 로깅/관측성
+
+### 로깅 설계
+
+프로젝트 전체의 로깅을 표준화하고 관측성을 제공하기 위해 중앙 로깅 설정을 구축했습니다.
+
+#### 로깅 컴포넌트
+- **중앙 로깅 모듈**: `src/utils/logging.py`
+- **로깅 함수**:
+  - `setup_logging()`: 콘솔/파일 핸들러 설정
+  - `get_logger(name)`: 표준화된 로거 반환
+- **실행 요약**: `ExecutionSummary` 클래스 - 실행 메타데이터 추적
+
+#### 로깅 레벨 및 핸들러
+- **레벨**: DEBUG, INFO, WARNING, ERROR, CRITICAL
+- **콘솔 핸들러**: INFO 레벨 이상 출력
+- **파일 핸들러**: DEBUG 레벨 이상 로그 파일 기록 (선택적)
+- **포맷**: `시간/레벨/모듈/메시지` 형식
+- **로테이션**: 10MB, 5개 백업 파일
+
+### 실행 메타데이터 항목 정의
+
+각 파이프라인 실행 시 다음 메타데이터를 추적합니다:
+
+#### 공통 메타데이터
+- 실행 시작/종료 시간
+- 총 실행 시간 (초/분)
+- 설정 파일 경로
+- 실행 파라미터 (force_rebuild, strategy 등)
+
+#### Track A 메타데이터
+- 입력 데이터 크기: 패널 행수, 데이터셋 행수
+- 랭킹 생성 결과: 단기/장기 랭킹 행수
+- 단계별 소요시간: 데이터 로딩, 랭킹 엔진, UI 페이로더
+- 산출물 경로: 랭킹 파일, UI 페이로드
+
+#### Track B 메타데이터
+- 입력 데이터 크기: 유니버스, 데이터셋, 랭킹 행수
+- 리밸런스 설정: 인터벌, 스코어 행수
+- 백테스트 결과: 포지션/수익률/자산곡선 행수
+- 전략 설정: bt20_short, bt20_ens 등
+
+### 로그/요약 예시
+
+#### 실행 로그 예시 (Track A)
+```
+2026-01-19 14:30:15 [INFO    ] src.pipeline.track_a_pipeline: Track A: 랭킹 엔진 파이프라인 실행 시작
+2026-01-19 14:30:15 [INFO    ] src.pipeline.track_a_pipeline: 설정 파일: configs/config.yaml
+2026-01-19 14:30:15 [INFO    ] src.pipeline.track_a_pipeline: 강제 재빌드: False
+2026-01-19 14:30:15 [INFO    ] src.pipeline.track_a_pipeline: [공통 데이터 확인]
+2026-01-19 14:30:15 [INFO    ] src.pipeline.track_a_pipeline:   ✓ 패널 데이터 로드: 45,231행
+2026-01-19 14:30:15 [INFO    ] src.pipeline.track_a_pipeline:   ✓ 데이터셋 로드: 45,231행
+2026-01-19 14:30:16 [INFO    ] src.pipeline.track_a_pipeline: [L8] 랭킹 엔진 실행
+2026-01-19 14:30:16 [INFO    ] src.pipeline.track_a_pipeline:   ✓ 캐시에서 로드: 단기 45,231행, 장기 45,231행
+2026-01-19 14:30:16 [INFO    ] src.pipeline.track_a_pipeline: 실행 요약 저장: data/interim/run_summary_track_a_1737304215.json
+2026-01-19 14:30:16 [INFO    ] src.pipeline.track_a_pipeline: ✅ Track A: 랭킹 엔진 파이프라인 실행 완료
+```
+
+#### 실행 요약 JSON 예시
+```json
+{
+  "track": "track_a",
+  "config_path": "configs/config.yaml",
+  "execution_time": {
+    "start": "2026-01-19 14:30:15",
+    "end": "2026-01-19 14:30:16",
+    "total_seconds": 1.2,
+    "total_minutes": 0.02
+  },
+  "step_times": {
+    "pipeline_init": 0.1,
+    "data_loading": 0.8,
+    "ranking_engine": 0.3
+  },
+  "parameters": {
+    "force_rebuild": false,
+    "run_ui_payload": false
+  },
+  "outputs": {
+    "panel_data": "data/interim/panel_merged_daily",
+    "dataset": "data/interim/dataset_daily",
+    "ranking_short": "data/interim/ranking_short_daily",
+    "ranking_long": "data/interim/ranking_long_daily"
+  },
+  "metadata": {
+    "input_panel_rows": 45231,
+    "input_dataset_rows": 45231,
+    "ranking_short_rows": 45231,
+    "ranking_long_rows": 45231
+  }
+}
+```
+
+### 예외 처리 및 에러 로깅
+
+예외 발생 시 다음 정보를 포함한 에러 로그를 기록합니다:
+
+```python
+except Exception as e:
+    logger.error(f"Track A 파이프라인 실행 실패: {e}", exc_info=True)
+    raise
+```
+
+### P4 종료 기준 충족
+
+✅ **중앙 로깅 설정**: `src/utils/logging.py`에 표준화된 로깅 함수들
+✅ **콘솔/파일 출력 일관성**: setup_logging()으로 통일된 포맷/레벨 적용
+✅ **파이프라인 메타데이터 로깅**: 시작/종료, 단계별 시간, 입력 크기, 산출물 경로
+✅ **예외 컨텍스트 로깅**: 파라미터와 스택 트레이스 포함 에러 로그
+✅ **실행 요약 생성**: run_summary.json에 실행 메트릭 저장
+
 ---
 
 *보고서 생성: 2026-01-19*

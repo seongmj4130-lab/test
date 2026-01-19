@@ -447,11 +447,12 @@ params:
 paths:
   artifacts_models: '{base_dir}/artifacts/models'
   artifacts_reports: '{base_dir}/artifacts/reports'
-  base_dir: C:/Users/seong/OneDrive/Desktop/bootcamp/03_code
+  base_dir: C:/Users/seong/OneDrive/Desktop/bootcamp/000_code
   data_ext: '{base_dir}/data/external'
   data_interim: '{base_dir}/data/interim'
   data_processed: '{base_dir}/data/processed'
   data_raw: '{base_dir}/data/raw'
+  logs: '{base_dir}/logs'
 run:
   fail_on_validation_error: true
   save_formats:
