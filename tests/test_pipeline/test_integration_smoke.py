@@ -1,19 +1,22 @@
 """
 통합 스모크 테스트 - 외부 데이터 없이 합성 입력으로 끝까지 실행 가능한 최소 경로
 """
+
 import pandas as pd
 import pytest
 
 from src.components.portfolio.selector import select_topk_with_fallback
 from src.components.ranking.contribution_engine import infer_feature_group
-from src.utils.io import save_artifact, load_artifact
+from src.utils.io import load_artifact, save_artifact
 from src.utils.validate import validate_df
 
 
 class TestIntegrationSmoke:
     """통합 스모크 테스트"""
 
-    def test_full_pipeline_smoke_test(self, tmp_path, sample_rankings, sample_portfolio_weights):
+    def test_full_pipeline_smoke_test(
+        self, tmp_path, sample_rankings, sample_portfolio_weights
+    ):
         """외부 데이터 없이 완전한 파이프라인 실행 테스트"""
 
         # 1. 입력 데이터 준비
@@ -21,10 +24,7 @@ class TestIntegrationSmoke:
 
         # 2. 포트폴리오 선택 실행
         selected_df, diagnostics = select_topk_with_fallback(
-            rankings_data,
-            top_k=5,
-            score_col="score",
-            required_cols=["score"]
+            rankings_data, top_k=5, score_col="score", required_cols=["score"]
         )
 
         # 선택 결과 검증
@@ -48,9 +48,7 @@ class TestIntegrationSmoke:
 
         # 4. 데이터 검증 실행
         validation_result = validate_df(
-            loaded_df,
-            stage="portfolio_selection",
-            required_cols=["ticker", "score"]
+            loaded_df, stage="portfolio_selection", required_cols=["ticker", "score"]
         )
 
         assert validation_result.ok is True
@@ -60,7 +58,12 @@ class TestIntegrationSmoke:
         test_features = ["roe", "price_momentum", "esg_score", "unknown_feature"]
         feature_groups = [infer_feature_group(feat) for feat in test_features]
 
-        expected_groups = ["profitability", "technical", "other", "other"]  # price_momentum은 momentum으로 technical
+        expected_groups = [
+            "profitability",
+            "technical",
+            "other",
+            "other",
+        ]  # price_momentum은 momentum으로 technical
         assert feature_groups == expected_groups
 
         # 6. 최종 결과 구조 검증
@@ -80,23 +83,19 @@ class TestIntegrationSmoke:
         print("통합 스모크 테스트 성공!")
         print(f"선택된 종목 수: {len(selected_df)}")
         print(f"생성된 출력 파일 수: {len(output_files)}")
-        print(f"피처 그룹 분류 결과: {dict(zip(test_features, feature_groups))}")
+        print(f"피처 그룹 분류 결과: {dict(zip(test_features, feature_groups, strict=True))}")
 
     def test_minimal_data_pipeline(self, tmp_path):
         """최소 데이터로 파이프라인 실행 테스트"""
 
         # 최소한의 랭킹 데이터 생성
-        minimal_rankings = pd.DataFrame({
-            "ticker": ["A", "B", "C"],
-            "score": [0.8, 0.6, 0.4],
-            "rank": [1, 2, 3]
-        })
+        minimal_rankings = pd.DataFrame(
+            {"ticker": ["A", "B", "C"], "score": [0.8, 0.6, 0.4], "rank": [1, 2, 3]}
+        )
 
         # 포트폴리오 선택
         selected_df, diagnostics = select_topk_with_fallback(
-            minimal_rankings,
-            top_k=2,
-            score_col="score"
+            minimal_rankings, top_k=2, score_col="score"
         )
 
         # 결과 검증
@@ -118,9 +117,7 @@ class TestIntegrationSmoke:
         # 빈 데이터로 포트폴리오 선택 시도 (ticker, score 컬럼이 있는 빈 DF)
         empty_rankings = pd.DataFrame(columns=["ticker", "score", "rank"])
         selected_df, diagnostics = select_topk_with_fallback(
-            empty_rankings,
-            top_k=5,
-            score_col="score"
+            empty_rankings, top_k=5, score_col="score"
         )
 
         # 빈 결과가 제대로 처리되는지 확인
@@ -146,9 +143,7 @@ class TestIntegrationSmoke:
 
         # 다양한 top_k 값으로 테스트
         selected_df, diagnostics = select_topk_with_fallback(
-            sample_rankings,
-            top_k=top_k,
-            score_col="score"
+            sample_rankings, top_k=top_k, score_col="score"
         )
 
         # 결과 검증
@@ -163,3 +158,5 @@ class TestIntegrationSmoke:
         assert len(loaded_df) == len(selected_df)
 
         print(f"파라미터화 테스트 성공 (top_k={top_k})!")
+
+pytestmark = pytest.mark.ci
