@@ -1,16 +1,15 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/utils/feature_groups.py
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Optional
 
 import numpy as np
 import pandas as pd
 import yaml
 
 
-def load_feature_groups(config_path: Optional[Path] = None) -> Dict:
+def load_feature_groups(config_path: Optional[Path] = None) -> dict:
     """
     feature_groups.yaml 파일을 로드하여 피처 그룹 설정을 반환
 
@@ -27,14 +26,17 @@ def load_feature_groups(config_path: Optional[Path] = None) -> Dict:
         config_path = project_root / "configs" / "feature_groups.yaml"
 
     if not config_path.exists():
-        raise FileNotFoundError(f"feature_groups.yaml 파일을 찾을 수 없습니다: {config_path}")
+        raise FileNotFoundError(
+            f"feature_groups.yaml 파일을 찾을 수 없습니다: {config_path}"
+        )
 
-    with open(config_path, "r", encoding="utf-8") as f:
+    with open(config_path, encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
     return config or {}
 
-def get_feature_groups(config: Dict) -> Dict[str, List[str]]:
+
+def get_feature_groups(config: dict) -> dict[str, list[str]]:
     """
     피처 그룹 설정에서 그룹명 -> 피처 리스트 매핑 추출
 
@@ -55,7 +57,8 @@ def get_feature_groups(config: Dict) -> Dict[str, List[str]]:
 
     return result
 
-def get_group_target_weights(config: Dict) -> Dict[str, float]:
+
+def get_group_target_weights(config: dict) -> dict[str, float]:
     """
     피처 그룹 설정에서 그룹명 -> 목표 가중치 매핑 추출
 
@@ -75,7 +78,10 @@ def get_group_target_weights(config: Dict) -> Dict[str, float]:
 
     return result
 
-def map_features_to_groups(feature_cols: List[str], config: Dict) -> Dict[str, List[str]]:
+
+def map_features_to_groups(
+    feature_cols: list[str], config: dict
+) -> dict[str, list[str]]:
     """
     실제 사용 가능한 피처 목록을 그룹별로 분류
 
@@ -97,10 +103,11 @@ def map_features_to_groups(feature_cols: List[str], config: Dict) -> Dict[str, L
 
     return result
 
+
 def calculate_feature_group_balance(
-    feature_cols: List[str],
-    feature_importance: Optional[Dict[str, float]] = None,
-    config: Optional[Dict] = None,
+    feature_cols: list[str],
+    feature_importance: Optional[dict[str, float]] = None,
+    config: Optional[dict] = None,
 ) -> pd.DataFrame:
     """
     피처 그룹 밸런싱 정보를 계산하여 DataFrame으로 반환
@@ -130,14 +137,16 @@ def calculate_feature_group_balance(
         target_weight = target_weights.get(group_name, 0.0)
         balance_ratio = actual_weight / target_weight if target_weight > 0 else 0.0
 
-        rows.append({
-            "group_name": group_name,
-            "n_features": n_features,
-            "features_list": ",".join(sorted(group_features)),
-            "target_weight": target_weight,
-            "actual_weight": actual_weight,
-            "balance_ratio": balance_ratio,
-        })
+        rows.append(
+            {
+                "group_name": group_name,
+                "n_features": n_features,
+                "features_list": ",".join(sorted(group_features)),
+                "target_weight": target_weight,
+                "actual_weight": actual_weight,
+                "balance_ratio": balance_ratio,
+            }
+        )
 
     # 그룹에 속하지 않은 피처들
     grouped_features = set()
@@ -147,15 +156,19 @@ def calculate_feature_group_balance(
 
     if ungrouped_features:
         n_ungrouped = len(ungrouped_features)
-        actual_weight_ungrouped = n_ungrouped / total_features if total_features > 0 else 0.0
-        rows.append({
-            "group_name": "ungrouped",
-            "n_features": n_ungrouped,
-            "features_list": ",".join(sorted(ungrouped_features)),
-            "target_weight": 0.0,
-            "actual_weight": actual_weight_ungrouped,
-            "balance_ratio": 0.0,
-        })
+        actual_weight_ungrouped = (
+            n_ungrouped / total_features if total_features > 0 else 0.0
+        )
+        rows.append(
+            {
+                "group_name": "ungrouped",
+                "n_features": n_ungrouped,
+                "features_list": ",".join(sorted(ungrouped_features)),
+                "target_weight": 0.0,
+                "actual_weight": actual_weight_ungrouped,
+                "balance_ratio": 0.0,
+            }
+        )
 
     df = pd.DataFrame(rows)
 
@@ -167,8 +180,12 @@ def calculate_feature_group_balance(
             group_importance[group_name] = np.mean(importances) if importances else 0.0
 
         if ungrouped_features:
-            importances_ungrouped = [feature_importance.get(f, 0.0) for f in ungrouped_features]
-            group_importance["ungrouped"] = np.mean(importances_ungrouped) if importances_ungrouped else 0.0
+            importances_ungrouped = [
+                feature_importance.get(f, 0.0) for f in ungrouped_features
+            ]
+            group_importance["ungrouped"] = (
+                np.mean(importances_ungrouped) if importances_ungrouped else 0.0
+            )
 
         df["avg_importance"] = df["group_name"].map(group_importance).fillna(0.0)
 

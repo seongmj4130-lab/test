@@ -3,7 +3,6 @@
 더미데이터 vs 실제 데이터 비교 분석
 """
 
-import numpy as np
 import pandas as pd
 
 
@@ -12,10 +11,10 @@ def analyze_comparison():
     print("=" * 60)
 
     # 실제 최근 데이터 로드
-    actual_df = pd.read_csv('data/ui_strategies_cumulative_comparison.csv')
+    actual_df = pd.read_csv("data/ui_strategies_cumulative_comparison.csv")
 
     # 더미데이터 로드
-    dummy_df = pd.read_csv('data/strategy_performance_table.csv')
+    dummy_df = pd.read_csv("data/strategy_performance_table.csv")
 
     # 최종 행 데이터로 총 수익률 계산 (2024년 12월 기준)
     final_row = actual_df.iloc[-1]
@@ -25,7 +24,7 @@ def analyze_comparison():
     print(f"KOSPI200: {final_row['kospi200']:.2f}%")
 
     # 각 전략별 최고 성과 계산
-    strategies = ['bt20_short', 'bt120_long', 'bt20_ens']
+    strategies = ["bt20_short", "bt120_long", "bt20_ens"]
     holding_days = [20, 40, 60, 80, 100, 120]
 
     actual_performance = {}
@@ -34,22 +33,22 @@ def analyze_comparison():
         best_holding = 0
 
         for holding in holding_days:
-            col_name = f'{strategy}_{holding}'
+            col_name = f"{strategy}_{holding}"
             if col_name in actual_df.columns:
                 cumulative_return = final_row[col_name]
                 if cumulative_return > max_return:
                     max_return = cumulative_return
                     best_holding = holding
 
-        actual_performance[strategy] = {'return': max_return, 'holding': best_holding}
+        actual_performance[strategy] = {"return": max_return, "holding": best_holding}
         print(f"{strategy}: {max_return:.2f}% ({best_holding}일)")
 
     print("\n🎯 더미데이터 vs 실제 데이터 비교")
     print("-" * 50)
 
     # KOSPI200 비교
-    dummy_kospi = float(dummy_df[dummy_df['전략'] == 'KOSPI200']['총수익률(%)'].iloc[0])
-    actual_kospi = float(final_row['kospi200'])
+    dummy_kospi = float(dummy_df[dummy_df["전략"] == "KOSPI200"]["총수익률(%)"].iloc[0])
+    actual_kospi = float(final_row["kospi200"])
     kospi_gap = actual_kospi - dummy_kospi
 
     print("KOSPI200:")
@@ -59,8 +58,8 @@ def analyze_comparison():
     # 각 전략별 비교
     total_dummy_gap = 0
     for strategy in strategies:
-        dummy_max = float(dummy_df[dummy_df['전략'] == strategy]['총수익률(%)'].max())
-        actual_max = float(actual_performance[strategy]['return'])
+        dummy_max = float(dummy_df[dummy_df["전략"] == strategy]["총수익률(%)"].max())
+        actual_max = float(actual_performance[strategy]["return"])
         gap = actual_max - dummy_max
 
         print(f"\n{strategy}:")
@@ -84,6 +83,7 @@ def analyze_comparison():
 
     return actual_performance, dummy_df, final_row
 
+
 def identify_improvement_areas(actual_perf, dummy_df, final_row):
     print("\n🔧 실무 관점 개선 방안")
     print("-" * 50)
@@ -95,9 +95,9 @@ def identify_improvement_areas(actual_perf, dummy_df, final_row):
     print("   • 방안: Alpha 증폭 전략 적용 (이미 진행 중)")
 
     # 2. 전략별 특성 분석
-    bt20_short_actual = actual_perf['bt20_short']['return']
-    bt120_long_actual = actual_perf['bt120_long']['return']
-    bt20_ens_actual = actual_perf['bt20_ens']['return']
+    bt20_short_actual = actual_perf["bt20_short"]["return"]
+    bt120_long_actual = actual_perf["bt120_long"]["return"]
+    bt20_ens_actual = actual_perf["bt20_ens"]["return"]
 
     if bt120_long_actual > bt20_short_actual and bt120_long_actual > bt20_ens_actual:
         best_strategy = "bt120_long"
@@ -106,23 +106,29 @@ def identify_improvement_areas(actual_perf, dummy_df, final_row):
         print("   • 이유: 안정적인 수익 창출")
         print("   • 권장: 장기 전략 중심으로 조정")
     else:
-        best_strategy = "bt20_short" if bt20_short_actual > bt20_ens_actual else "bt20_ens"
+        best_strategy = (
+            "bt20_short" if bt20_short_actual > bt20_ens_actual else "bt20_ens"
+        )
         print("\n2️⃣ 전략별 성과:")
         print(f"   • 최고 성과: {best_strategy}")
         print("   • 이유: 단기 모멘텀 활용")
 
     # 3. 기간별 특성
     print("\n3️⃣ 보유 기간 최적화:")
-    for strategy in ['bt20_short', 'bt120_long', 'bt20_ens']:
-        best_holding = actual_perf[strategy]['holding']
-        dummy_best_holding = dummy_df[(dummy_df['전략'] == strategy)]['총수익률(%)'].idxmax()
+    for strategy in ["bt20_short", "bt120_long", "bt20_ens"]:
+        best_holding = actual_perf[strategy]["holding"]
+        dummy_best_holding = dummy_df[(dummy_df["전략"] == strategy)][
+            "총수익률(%)"
+        ].idxmax()
         dummy_best_row = dummy_df.iloc[dummy_best_holding]
-        dummy_best_holding_days = int(dummy_best_row['Holding Days'])
+        dummy_best_holding_days = int(dummy_best_row["Holding Days"])
 
         if abs(best_holding - dummy_best_holding_days) <= 20:
             print(f"   • {strategy}: {best_holding}일 (더미와 유사)")
         else:
-            print(f"   • {strategy}: {best_holding}일 (더미 {dummy_best_holding_days}일과 차이)")
+            print(
+                f"   • {strategy}: {best_holding}일 (더미 {dummy_best_holding_days}일과 차이)"
+            )
 
     # 4. 실무적 제언
     print("\n4️⃣ 실무적 개선 방안:")
@@ -132,6 +138,7 @@ def identify_improvement_areas(actual_perf, dummy_df, final_row):
     print("   • 추가 개선: 팩터 확장 및 모멘텀 강화")
 
     return best_strategy
+
 
 if __name__ == "__main__":
     actual_perf, dummy_df, final_row = analyze_comparison()

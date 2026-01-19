@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Track A 산출물을 CSV로 저장 (단기, 장기, 통합)
 - 날짜 범위: 2023-01-01 ~ 2024-12-31
@@ -10,9 +9,7 @@ from __future__ import annotations
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Tuple
 
-import numpy as np
 import pandas as pd
 import yaml
 
@@ -37,19 +34,19 @@ FACTOR_GROUP_NAMES = {
 }
 
 
-def load_feature_weights(weights_config_path: Path) -> Dict[str, float]:
+def load_feature_weights(weights_config_path: Path) -> dict[str, float]:
     """피처 가중치 파일 로드"""
     if not weights_config_path.exists():
         print(f"경고: 가중치 파일을 찾을 수 없습니다: {weights_config_path}")
         return {}
 
-    with open(weights_config_path, 'r', encoding='utf-8') as f:
+    with open(weights_config_path, encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
 
     return data.get("feature_weights", {})
 
 
-def get_feature_groups_info(feature_groups_config: Path) -> Dict[str, List[str]]:
+def get_feature_groups_info(feature_groups_config: Path) -> dict[str, list[str]]:
     """
     팩터 그룹별 피처 목록 반환
 
@@ -65,7 +62,7 @@ def get_feature_groups_info(feature_groups_config: Path) -> Dict[str, List[str]]
     return feature_groups
 
 
-def generate_metadata_header(feature_groups: Dict[str, List[str]]) -> List[str]:
+def generate_metadata_header(feature_groups: dict[str, list[str]]) -> list[str]:
     """
     CSV 상단에 추가할 메타데이터 헤더 생성
 
@@ -95,8 +92,8 @@ def generate_metadata_header(feature_groups: Dict[str, List[str]]) -> List[str]:
 
 def calculate_feature_contributions(
     df: pd.DataFrame,
-    feature_cols: List[str],
-    feature_weights: Dict[str, float],
+    feature_cols: list[str],
+    feature_weights: dict[str, float],
     normalization_method: str = "percentile",
     sector_col: str = None,
     use_sector_relative: bool = True,
@@ -143,7 +140,7 @@ def calculate_feature_contributions(
 
 def get_feature_to_group_mapping(
     feature_groups_config: Path,
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """
     피처명을 그룹명으로 매핑하는 딕셔너리 생성
 
@@ -166,10 +163,10 @@ def get_feature_to_group_mapping(
 
 def get_top3_factor_groups(
     row: pd.Series,
-    feature_cols: List[str],
-    feature_to_group: Dict[str, str],
+    feature_cols: list[str],
+    feature_to_group: dict[str, str],
     prefix: str = "contrib_",
-) -> Tuple[str, str, str]:
+) -> tuple[str, str, str]:
     """
     한 행에서 절댓값 기준 top3 팩터 그룹 추출 (한글명)
 
@@ -208,7 +205,7 @@ def get_top3_factor_groups(
     return tuple(top3[:3])
 
 
-def get_stock_names(tickers: List[str]) -> Dict[str, str]:
+def get_stock_names(tickers: list[str]) -> dict[str, str]:
     """
     티커 리스트로부터 종목명 딕셔너리 생성
 
@@ -229,7 +226,7 @@ def get_stock_names(tickers: List[str]) -> Dict[str, str]:
         try:
             name = stock.get_market_ticker_name(ticker)
             stock_names[ticker] = name if name else ""
-        except Exception as e:
+        except Exception:
             stock_names[ticker] = ""
         if (i + 1) % 50 == 0:
             print(f"    진행: {i+1}/{len(unique_tickers)}")
@@ -241,20 +238,20 @@ def get_stock_names(tickers: List[str]) -> Dict[str, str]:
 def save_csv_with_metadata(
     df: pd.DataFrame,
     output_path: Path,
-    metadata_lines: List[str],
+    metadata_lines: list[str],
 ):
     """
     메타데이터 헤더와 함께 CSV 저장
     """
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(output_path, 'w', encoding='utf-8-sig') as f:
+    with open(output_path, "w", encoding="utf-8-sig") as f:
         # 메타데이터 쓰기
         for line in metadata_lines:
-            f.write(line + '\n')
+            f.write(line + "\n")
 
         # 실제 데이터 쓰기
-        df.to_csv(f, index=False, lineterminator='\n')
+        df.to_csv(f, index=False, lineterminator="\n")
 
 
 def process_ranking_data(
@@ -266,7 +263,7 @@ def process_ranking_data(
     end_date: str,
     normalization_method: str = "percentile",
     horizon_name: str = "",
-) -> Tuple[pd.DataFrame, Dict[str, List[str]]]:
+) -> tuple[pd.DataFrame, dict[str, list[str]]]:
     """
     랭킹 데이터 처리
 
@@ -294,7 +291,9 @@ def process_ranking_data(
         (ranking_df["date"] >= start_dt) & (ranking_df["date"] <= end_dt)
     ].copy()
 
-    print(f"  - 랭킹 데이터: {len(ranking_df):,}행, {ranking_df['date'].nunique()}개 날짜")
+    print(
+        f"  - 랭킹 데이터: {len(ranking_df):,}행, {ranking_df['date'].nunique()}개 날짜"
+    )
 
     # 원본 데이터 로드 (피처 포함)
     dataset_df = pd.read_parquet(dataset_path)
@@ -308,7 +307,7 @@ def process_ranking_data(
     print(f"  - 원본 데이터: {len(dataset_df):,}행")
 
     # 랭킹과 원본 데이터 병합
-    print(f"  - 데이터 병합 중...")
+    print("  - 데이터 병합 중...")
     merged_df = ranking_df.merge(
         dataset_df,
         on=["date", "ticker"],
@@ -317,7 +316,7 @@ def process_ranking_data(
     print(f"  - 병합 결과: {len(merged_df):,}행")
 
     # 피처 컬럼 선택
-    print(f"  - 피처 가중치 로드 및 기여도 계산 중...")
+    print("  - 피처 가중치 로드 및 기여도 계산 중...")
     feature_cols = _pick_feature_cols(merged_df)
     print(f"  - 사용 피처: {len(feature_cols)}개")
 
@@ -326,7 +325,9 @@ def process_ranking_data(
     print(f"  - 가중치 로드: {len(feature_weights)}개")
 
     # 가중치가 없는 피처는 제외
-    feature_cols_with_weights = [f for f in feature_cols if f in feature_weights and feature_weights[f] != 0]
+    feature_cols_with_weights = [
+        f for f in feature_cols if f in feature_weights and feature_weights[f] != 0
+    ]
     print(f"  - 가중치가 있는 피처: {len(feature_cols_with_weights)}개")
 
     if len(feature_cols_with_weights) == 0:
@@ -355,26 +356,40 @@ def process_ranking_data(
         use_sector_relative=True,
     )
 
-    print(f"  - Top3 팩터 그룹 추출 중...")
+    print("  - Top3 팩터 그룹 추출 중...")
     # Top3 팩터 그룹 추출 (한글명)
     top3_groups = merged_with_contrib.apply(
-        lambda row: get_top3_factor_groups(row, feature_cols_with_weights, feature_to_group),
+        lambda row: get_top3_factor_groups(
+            row, feature_cols_with_weights, feature_to_group
+        ),
         axis=1,
     )
 
     # 결과 DataFrame 구성
-    result_df = pd.DataFrame({
-        "날짜": merged_with_contrib["date"].dt.strftime("%Y-%m-%d"),
-        "종목명(티커)": merged_with_contrib["ticker"],  # 나중에 종목명 추가
-        "스코어": merged_with_contrib["score_total"],
-        "Top1_팩터그룹": [f[0] for f in top3_groups],
-        "Top2_팩터그룹": [f[1] for f in top3_groups],
-        "Top3_팩터그룹": [f[2] for f in top3_groups],
-    })
+    result_df = pd.DataFrame(
+        {
+            "날짜": merged_with_contrib["date"].dt.strftime("%Y-%m-%d"),
+            "종목명(티커)": merged_with_contrib["ticker"],  # 나중에 종목명 추가
+            "스코어": merged_with_contrib["score_total"],
+            "Top1_팩터그룹": [f[0] for f in top3_groups],
+            "Top2_팩터그룹": [f[1] for f in top3_groups],
+            "Top3_팩터그룹": [f[2] for f in top3_groups],
+        }
+    )
 
     # Top3 팩터셋을 하나의 컬럼으로 합치기
     result_df["Top3_영향_팩터셋"] = result_df.apply(
-        lambda row: "|".join([f for f in [row["Top1_팩터그룹"], row["Top2_팩터그룹"], row["Top3_팩터그룹"]] if f]),
+        lambda row: "|".join(
+            [
+                f
+                for f in [
+                    row["Top1_팩터그룹"],
+                    row["Top2_팩터그룹"],
+                    row["Top3_팩터그룹"],
+                ]
+                if f
+            ]
+        ),
         axis=1,
     )
 
@@ -431,7 +446,11 @@ def export_track_a_to_csv(
 
     # 종목명 추가
     short_df["종목명(티커)"] = short_df["종목명(티커)"].map(
-        lambda ticker: f"{stock_names.get(ticker, '')}({ticker})" if stock_names.get(ticker) else ticker
+        lambda ticker: (
+            f"{stock_names.get(ticker, '')}({ticker})"
+            if stock_names.get(ticker)
+            else ticker
+        )
     )
 
     # 장기 처리
@@ -448,18 +467,30 @@ def export_track_a_to_csv(
 
     # 종목명 추가
     long_df["종목명(티커)"] = long_df["종목명(티커)"].map(
-        lambda ticker: f"{stock_names.get(ticker, '')}({ticker})" if stock_names.get(ticker) else ticker
+        lambda ticker: (
+            f"{stock_names.get(ticker, '')}({ticker})"
+            if stock_names.get(ticker)
+            else ticker
+        )
     )
 
     # 통합 처리 (단기 0.5, 장기 0.5)
-    print(f"\n[통합] 단기 0.5 + 장기 0.5 비율로 통합 중...")
+    print("\n[통합] 단기 0.5 + 장기 0.5 비율로 통합 중...")
 
     # 날짜, 티커 기준으로 병합
     short_for_merge = short_df.copy()
-    short_for_merge["ticker"] = short_for_merge["종목명(티커)"].str.extract(r'\((\d+)\)').fillna(short_for_merge["종목명(티커)"])
+    short_for_merge["ticker"] = (
+        short_for_merge["종목명(티커)"]
+        .str.extract(r"\((\d+)\)")
+        .fillna(short_for_merge["종목명(티커)"])
+    )
 
     long_for_merge = long_df.copy()
-    long_for_merge["ticker"] = long_for_merge["종목명(티커)"].str.extract(r'\((\d+)\)').fillna(long_for_merge["종목명(티커)"])
+    long_for_merge["ticker"] = (
+        long_for_merge["종목명(티커)"]
+        .str.extract(r"\((\d+)\)")
+        .fillna(long_for_merge["종목명(티커)"])
+    )
 
     merged_combined = short_for_merge[["날짜", "ticker", "스코어"]].merge(
         long_for_merge[["날짜", "ticker", "스코어"]],
@@ -469,7 +500,9 @@ def export_track_a_to_csv(
     )
 
     # 통합 스코어 계산 (단기 0.5, 장기 0.5)
-    merged_combined["스코어"] = 0.5 * merged_combined["스코어_short"] + 0.5 * merged_combined["스코어_long"]
+    merged_combined["스코어"] = (
+        0.5 * merged_combined["스코어_short"] + 0.5 * merged_combined["스코어_long"]
+    )
 
     # Top3 팩터셋도 통합 (단기와 장기 각각의 Top3를 합쳐서 상위 3개 선택)
     # 일단 단기 Top3를 기본으로 사용 (간단한 방법)
@@ -478,16 +511,22 @@ def export_track_a_to_csv(
 
     # 통합 팩터셋: 단기와 장기를 합쳐서 고유값 추출
     combined_df = merged_combined[["날짜", "ticker", "스코어"]].copy()
-    combined_df["종목명(티커)"] = short_for_merge.set_index(["날짜", "ticker"]).loc[
-        list(zip(combined_df["날짜"], combined_df["ticker"]))
-    ]["종목명(티커)"].values
+    combined_df["종목명(티커)"] = (
+        short_for_merge.set_index(["날짜", "ticker"])
+        .loc[list(zip(combined_df["날짜"], combined_df["ticker"]))]["종목명(티커)"]
+        .values
+    )
 
     # 단기 Top3 팩터셋을 기본으로 사용 (통합 팩터셋 계산은 복잡하므로)
-    combined_df["Top3_영향_팩터셋"] = short_for_merge.set_index(["날짜", "ticker"]).loc[
-        list(zip(combined_df["날짜"], combined_df["ticker"]))
-    ]["Top3_영향_팩터셋"].values
+    combined_df["Top3_영향_팩터셋"] = (
+        short_for_merge.set_index(["날짜", "ticker"])
+        .loc[list(zip(combined_df["날짜"], combined_df["ticker"]))]["Top3_영향_팩터셋"]
+        .values
+    )
 
-    combined_df = combined_df[["날짜", "종목명(티커)", "스코어", "Top3_영향_팩터셋"]].copy()
+    combined_df = combined_df[
+        ["날짜", "종목명(티커)", "스코어", "Top3_영향_팩터셋"]
+    ].copy()
     combined_df = combined_df.sort_values(["날짜", "스코어"], ascending=[True, False])
 
     # 통합용 팩터 그룹 (단기 + 장기 통합)
@@ -497,7 +536,7 @@ def export_track_a_to_csv(
         combined_groups[group_name] = sorted(list(set(combined_groups[group_name])))
 
     # CSV 저장
-    print(f"\n[저장] CSV 파일 생성 중...")
+    print("\n[저장] CSV 파일 생성 중...")
 
     # 단기 CSV
     short_metadata = generate_metadata_header(short_groups)
@@ -523,7 +562,7 @@ def export_track_a_to_csv(
     print(f"  ✅ 통합: {combined_output}")
     print(f"     - 행 수: {len(combined_df):,}")
 
-    print(f"\n✅ 모든 파일 생성 완료!")
+    print("\n✅ 모든 파일 생성 완료!")
     print(f"  - 날짜 범위: {start_date} ~ {end_date}")
     print(f"  - 종목 수: {len(unique_tickers)}개")
 
@@ -531,13 +570,18 @@ def export_track_a_to_csv(
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Track A 산출물을 CSV로 저장 (단기, 장기, 통합)")
-    parser.add_argument("--start-date", type=str, default="2023-01-01",
-                       help="시작 날짜 (YYYY-MM-DD)")
-    parser.add_argument("--end-date", type=str, default="2024-12-31",
-                       help="종료 날짜 (YYYY-MM-DD)")
-    parser.add_argument("--output-dir", type=str, default="data/processed",
-                       help="출력 디렉토리")
+    parser = argparse.ArgumentParser(
+        description="Track A 산출물을 CSV로 저장 (단기, 장기, 통합)"
+    )
+    parser.add_argument(
+        "--start-date", type=str, default="2023-01-01", help="시작 날짜 (YYYY-MM-DD)"
+    )
+    parser.add_argument(
+        "--end-date", type=str, default="2024-12-31", help="종료 날짜 (YYYY-MM-DD)"
+    )
+    parser.add_argument(
+        "--output-dir", type=str, default="data/processed", help="출력 디렉토리"
+    )
 
     args = parser.parse_args()
 

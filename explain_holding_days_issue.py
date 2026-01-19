@@ -75,5 +75,6 @@ def explain_holding_days_issue():
     print("실제 백테스트에서는 각 holding_days마다 다른 수익률이")
     print("나와야 하며, 이를 위해서는 시스템 수정이 필요합니다.")
 
+
 if __name__ == "__main__":
     explain_holding_days_issue()

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 L0~L7 전체 파이프라인 실행 스크립트 (2015년 제거용)
 
@@ -11,7 +10,7 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
-sys.stdout.reconfigure(encoding='utf-8')
+sys.stdout.reconfigure(encoding="utf-8")
 
 import logging
 from datetime import datetime
@@ -21,14 +20,13 @@ import pandas as pd
 logging.basicConfig(
     level=logging.INFO,
     format="[%(asctime)s] [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
 
 # 각 스테이지 함수 직접 import
 from src.stages.data.l0_universe import build_k200_membership_month_end
 from src.stages.data.l1_ohlcv import download_ohlcv_panel
-from src.stages.data.l2_fundamentals_dart import download_annual_fundamentals
 from src.stages.modeling.l5_train_models import train_oos_predictions
 from src.stages.modeling.l6_scoring import build_rebalance_scores
 from src.tracks.shared.stages.data.l3_panel_merge import build_panel_merged_daily
@@ -37,10 +35,9 @@ from src.tracks.shared.stages.data.l4_walkforward_split import build_targets_and
 # L7 백테스트
 from src.tracks.track_b.stages.backtest.l7_backtest import BacktestConfig, run_backtest
 from src.utils.config import get_path, load_config
-from src.utils.io import artifact_exists, load_artifact, save_artifact
+from src.utils.io import load_artifact, save_artifact
 from src.utils.meta import build_meta, save_meta
 from src.utils.quality import fundamental_coverage_report, walkforward_quality_report
-from src.utils.validate import raise_if_invalid, validate_df
 
 
 def run_L0_universe(cfg, artifacts=None, *, force=False):
@@ -55,6 +52,7 @@ def run_L0_universe(cfg, artifacts=None, *, force=False):
     )
     logger.info(f"[L0] 완료: {len(df):,}행")
     return {"universe_k200_membership_monthly": df}, []
+
 
 def run_L1_base(cfg, artifacts, *, force=False):
     """L1: OHLCV 다운로드 + 기술적 지표 계산"""
@@ -71,15 +69,28 @@ def run_L1_base(cfg, artifacts, *, force=False):
     )
 
     # 기술적 지표가 포함되었는지 확인
-    technical_cols = [c for c in df.columns if c in [
-        "price_momentum_20d", "price_momentum_60d", "volatility_20d",
-        "volatility_60d", "max_drawdown_60d", "volume_ratio", "momentum_reversal"
-    ]]
+    technical_cols = [
+        c
+        for c in df.columns
+        if c
+        in [
+            "price_momentum_20d",
+            "price_momentum_60d",
+            "volatility_20d",
+            "volatility_60d",
+            "max_drawdown_60d",
+            "volume_ratio",
+            "momentum_reversal",
+        ]
+    ]
     if technical_cols:
-        logger.info(f"[L1] 기술적 지표 포함: {len(technical_cols)}개 ({', '.join(technical_cols[:5])}...)")
+        logger.info(
+            f"[L1] 기술적 지표 포함: {len(technical_cols)}개 ({', '.join(technical_cols[:5])}...)"
+        )
 
     logger.info(f"[L1] 완료: {len(df):,}행, {len(df.columns)}컬럼")
     return {"ohlcv_daily": df}, []
+
 
 def run_L2_merge(cfg, artifacts, *, force=False):
     """L2: 재무 데이터 로드 (기존 데이터 사용, 새로 다운로드 안 함)"""
@@ -95,9 +106,12 @@ def run_L2_merge(cfg, artifacts, *, force=False):
         logger.info(f"[L2] 완료: {len(df):,}행 (기존 데이터 사용)")
         return {"fundamentals_annual": df}, []
     else:
-        logger.warning("[L2] 기존 fundamentals_annual 데이터가 없습니다. L3에서 재무 데이터 없이 진행합니다.")
+        logger.warning(
+            "[L2] 기존 fundamentals_annual 데이터가 없습니다. L3에서 재무 데이터 없이 진행합니다."
+        )
         # 빈 dict 반환 (L3에서 None으로 처리됨)
         return {}, []
+
 
 def run_L3_features(cfg, artifacts, *, force=False):
     """L3: 패널 병합 (기존 데이터 있으면 사용)"""
@@ -112,9 +126,11 @@ def run_L3_features(cfg, artifacts, *, force=False):
         df = load_artifact(existing_file)
 
         # 기술적 지표와 시가총액이 포함되어 있는지 확인
-        technical_cols = [c for c in df.columns if c in [
-            "price_momentum_20d", "volatility_20d", "market_cap"
-        ]]
+        technical_cols = [
+            c
+            for c in df.columns
+            if c in ["price_momentum_20d", "volatility_20d", "market_cap"]
+        ]
         if technical_cols:
             logger.info(f"[L3] 기존 데이터에 추가 피처 포함: {len(technical_cols)}개")
         else:
@@ -122,23 +138,35 @@ def run_L3_features(cfg, artifacts, *, force=False):
             # OHLCV의 기술적 지표를 병합
             ohlcv = artifacts.get("ohlcv_daily")
             if ohlcv is not None:
-                technical_cols_ohlcv = [c for c in ohlcv.columns if c in [
-                    "price_momentum_20d", "price_momentum_60d", "volatility_20d",
-                    "volatility_60d", "max_drawdown_60d", "volume_ratio", "momentum_reversal"
-                ]]
+                technical_cols_ohlcv = [
+                    c
+                    for c in ohlcv.columns
+                    if c
+                    in [
+                        "price_momentum_20d",
+                        "price_momentum_60d",
+                        "volatility_20d",
+                        "volatility_60d",
+                        "max_drawdown_60d",
+                        "volume_ratio",
+                        "momentum_reversal",
+                    ]
+                ]
                 if technical_cols_ohlcv:
                     df = df.merge(
                         ohlcv[["date", "ticker"] + technical_cols_ohlcv],
                         on=["date", "ticker"],
                         how="left",
-                        suffixes=("", "_new")
+                        suffixes=("", "_new"),
                     )
                     # 기존 컬럼이 없으면 새 컬럼 사용
                     for col in technical_cols_ohlcv:
                         if col not in df.columns and f"{col}_new" in df.columns:
                             df[col] = df[f"{col}_new"]
                             df = df.drop(columns=[f"{col}_new"])
-                    logger.info(f"[L3] 기술적 지표 병합 완료: {len(technical_cols_ohlcv)}개")
+                    logger.info(
+                        f"[L3] 기술적 지표 병합 완료: {len(technical_cols_ohlcv)}개"
+                    )
 
         logger.info(f"[L3] 완료: {len(df):,}행 (기존 데이터 사용)")
         return {"panel_merged_daily": df}, []
@@ -151,7 +179,9 @@ def run_L3_features(cfg, artifacts, *, force=False):
     # fundamentals_annual이 없으면 None으로 전달 (L3에서 처리)
     fundamentals_annual = artifacts.get("fundamentals_annual")
     if fundamentals_annual is None:
-        logger.warning("[L3] fundamentals_annual이 없습니다. OHLCV 데이터만 사용합니다.")
+        logger.warning(
+            "[L3] fundamentals_annual이 없습니다. OHLCV 데이터만 사용합니다."
+        )
 
     df, warns = build_panel_merged_daily(
         ohlcv_daily=artifacts["ohlcv_daily"],
@@ -159,10 +189,13 @@ def run_L3_features(cfg, artifacts, *, force=False):
         universe_membership_monthly=artifacts.get("universe_k200_membership_monthly"),
         fundamental_lag_days=lag_days,
         filter_k200_members_only=bool(p.get("filter_k200_members_only", False)),
-        fundamentals_effective_date_col=l3_cfg.get("fundamentals_effective_date_col", "effective_date"),
+        fundamentals_effective_date_col=l3_cfg.get(
+            "fundamentals_effective_date_col", "effective_date"
+        ),
     )
     logger.info(f"[L3] 완료: {len(df):,}행")
     return {"panel_merged_daily": df}, warns
+
 
 def run_L4_split(cfg, artifacts, *, force=False):
     """L4: CV 분할 및 타겟 생성"""
@@ -183,12 +216,15 @@ def run_L4_split(cfg, artifacts, *, force=False):
         price_col=l4.get("price_col", None),
     )
 
-    logger.info(f"[L4] 완료: dataset_daily {len(df):,}행, cv_folds_short {len(cv_s)}개, cv_folds_long {len(cv_l)}개")
+    logger.info(
+        f"[L4] 완료: dataset_daily {len(df):,}행, cv_folds_short {len(cv_s)}개, cv_folds_long {len(cv_l)}개"
+    )
     return {
         "dataset_daily": df,
         "cv_folds_short": cv_s,
         "cv_folds_long": cv_l,
     }, warns
+
 
 def run_L5_modeling(cfg, artifacts, *, force=False):
     """L5: 모델 학습 및 예측"""
@@ -228,12 +264,15 @@ def run_L5_modeling(cfg, artifacts, *, force=False):
     artifacts["_l5_report_short"] = rep_s
     artifacts["_l5_report_long"] = rep_l
 
-    logger.info(f"[L5] 완료: pred_short_oos {len(pred_s):,}행, pred_long_oos {len(pred_l):,}행")
+    logger.info(
+        f"[L5] 완료: pred_short_oos {len(pred_s):,}행, pred_long_oos {len(pred_l):,}행"
+    )
     return {
         "pred_short_oos": pred_s,
         "pred_long_oos": pred_l,
         "model_metrics": metrics,
     }, warns
+
 
 def run_L6_scoring(cfg, artifacts, *, force=False):
     """L6: 스코어 생성"""
@@ -249,18 +288,23 @@ def run_L6_scoring(cfg, artifacts, *, force=False):
     scores, summary, quality, warns = build_rebalance_scores(
         pred_short_oos=artifacts["pred_short_oos"],
         pred_long_oos=artifacts["pred_long_oos"],
-        universe_k200_membership_monthly=artifacts.get("universe_k200_membership_monthly"),
+        universe_k200_membership_monthly=artifacts.get(
+            "universe_k200_membership_monthly"
+        ),
         weight_short=w_s,
         weight_long=w_l,
     )
 
-    artifacts["_l6_quality"] = {"scoring": quality} if isinstance(quality, dict) else {"scoring": quality}
+    artifacts["_l6_quality"] = (
+        {"scoring": quality} if isinstance(quality, dict) else {"scoring": quality}
+    )
 
     logger.info(f"[L6] 완료: rebalance_scores {len(scores):,}행")
     return {
         "rebalance_scores": scores,
         "rebalance_scores_summary": summary,
     }, warns
+
 
 def run_L7_backtest(cfg, artifacts, *, force=False):
     """L7: 백테스트 실행"""
@@ -293,9 +337,30 @@ def run_L7_backtest(cfg, artifacts, *, force=False):
 
     # 반환값 처리 (10개, 9개 또는 6개)
     if len(result) == 10:
-        bt_pos, bt_ret, bt_eq, bt_met, quality, warns, selection_diagnostics, bt_returns_diagnostics, runtime_profile, bt_regime_metrics = result
+        (
+            bt_pos,
+            bt_ret,
+            bt_eq,
+            bt_met,
+            quality,
+            warns,
+            selection_diagnostics,
+            bt_returns_diagnostics,
+            runtime_profile,
+            bt_regime_metrics,
+        ) = result
     elif len(result) == 9:
-        bt_pos, bt_ret, bt_eq, bt_met, quality, warns, selection_diagnostics, bt_returns_diagnostics, runtime_profile = result
+        (
+            bt_pos,
+            bt_ret,
+            bt_eq,
+            bt_met,
+            quality,
+            warns,
+            selection_diagnostics,
+            bt_returns_diagnostics,
+            runtime_profile,
+        ) = result
         bt_regime_metrics = None
     elif len(result) == 6:
         bt_pos, bt_ret, bt_eq, bt_met, quality, warns = result
@@ -306,7 +371,9 @@ def run_L7_backtest(cfg, artifacts, *, force=False):
     else:
         raise ValueError(f"Unexpected return value count: {len(result)}")
 
-    logger.info(f"[L7] 완료: bt_positions {len(bt_pos):,}행, bt_returns {len(bt_ret):,}행")
+    logger.info(
+        f"[L7] 완료: bt_positions {len(bt_pos):,}행, bt_returns {len(bt_ret):,}행"
+    )
 
     outputs = {
         "bt_positions": bt_pos,
@@ -326,6 +393,7 @@ def run_L7_backtest(cfg, artifacts, *, force=False):
 
     return outputs, warns
 
+
 def main():
     print("=" * 80)
     print("L0~L7 전체 파이프라인 실행 (2015년 제거)")
@@ -338,7 +406,9 @@ def main():
     interim_dir.mkdir(parents=True, exist_ok=True)
 
     save_formats = cfg.get("run", {}).get("save_formats", ["parquet", "csv"])
-    fail_on_validation_error = bool(cfg.get("run", {}).get("fail_on_validation_error", True))
+    fail_on_validation_error = bool(
+        cfg.get("run", {}).get("fail_on_validation_error", True)
+    )
     write_meta = bool(cfg.get("run", {}).get("write_meta", True))
     force = True
 
@@ -377,7 +447,9 @@ def main():
 
             # L2에서 fundamentals_annual이 없으면 스킵 (기존 panel_merged_daily에 재무 데이터 포함됨)
             if stage_name == "L2" and not outputs:
-                logger.warning(f"[{stage_name}] 기존 데이터가 없습니다. L3에서 기존 panel_merged_daily를 사용합니다.")
+                logger.warning(
+                    f"[{stage_name}] 기존 데이터가 없습니다. L3에서 기존 panel_merged_daily를 사용합니다."
+                )
                 continue
 
             # 출력 저장
@@ -397,8 +469,12 @@ def main():
                     if stage_name == "L4" and out_name == "dataset_daily":
                         quality["walkforward"] = walkforward_quality_report(
                             dataset_daily=df,
-                            cv_folds_short=outputs.get("cv_folds_short", artifacts.get("cv_folds_short")),
-                            cv_folds_long=outputs.get("cv_folds_long", artifacts.get("cv_folds_long")),
+                            cv_folds_short=outputs.get(
+                                "cv_folds_short", artifacts.get("cv_folds_short")
+                            ),
+                            cv_folds_long=outputs.get(
+                                "cv_folds_long", artifacts.get("cv_folds_long")
+                            ),
                             cfg=cfg,
                         )
 
@@ -414,7 +490,9 @@ def main():
                     )
                     save_meta(out_base, meta, force=force)
 
-                logger.info(f"[{stage_name}] {out_name} 저장 완료: {len(df):,}행, {len(df.columns)}컬럼")
+                logger.info(
+                    f"[{stage_name}] {out_name} 저장 완료: {len(df):,}행, {len(df.columns)}컬럼"
+                )
 
             logger.info(f"[{stage_name}] 완료")
 
@@ -427,6 +505,7 @@ def main():
     logger.info(f"{'='*80}")
     print("\n다음 단계: 2015년 데이터 제거 검증")
     print("  python scripts/remove_2015_data.py")
+
 
 if __name__ == "__main__":
     main()

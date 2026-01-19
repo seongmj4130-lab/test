@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/backtest/l7c_benchmark.py
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -14,9 +13,12 @@ def _require_pykrx():
     """
     try:
         from pykrx import stock
+
         return stock
     except Exception as e:
-        raise ImportError("pykrx가 필요합니다. `pip install pykrx` 후 재실행하세요.") from e
+        raise ImportError(
+            "pykrx가 필요합니다. `pip install pykrx` 후 재실행하세요."
+        ) from e
 
 
 def _to_yyyymmdd(s: pd.Timestamp) -> str:
@@ -34,9 +36,18 @@ def _resolve_section(cfg: dict, name: str) -> dict:
     sec2 = cfg.get(name, None)
     return sec2 if isinstance(sec2, dict) else {}
 
-def _pick_strategy_return_series(bt_returns: pd.DataFrame) -> Tuple[pd.Series, str]:
+
+def _pick_strategy_return_series(bt_returns: pd.DataFrame) -> tuple[pd.Series, str]:
     cols = set(bt_returns.columns)
-    net_candidates = ["net_return", "ret_net", "net_ret", "return_net", "net", "net_r", "portfolio_net_return"]
+    net_candidates = [
+        "net_return",
+        "ret_net",
+        "net_ret",
+        "return_net",
+        "net",
+        "net_r",
+        "portfolio_net_return",
+    ]
     for c in net_candidates:
         if c in cols:
             return bt_returns[c].astype(float), c
@@ -60,7 +71,11 @@ def _pick_strategy_return_series(bt_returns: pd.DataFrame) -> Tuple[pd.Series, s
         tcol = next((c for c in turnover_candidates if c in cols), None)
         cbps = next((c for c in cost_bps_candidates if c in cols), None)
         if tcol is not None and cbps is not None:
-            cost = bt_returns[tcol].astype(float) * bt_returns[cbps].astype(float) / 10000.0
+            cost = (
+                bt_returns[tcol].astype(float)
+                * bt_returns[cbps].astype(float)
+                / 10000.0
+            )
             return (g - cost), f"{gross_col}-({tcol}*{cbps}/10000)"
         return g, gross_col
 
@@ -69,6 +84,7 @@ def _pick_strategy_return_series(bt_returns: pd.DataFrame) -> Tuple[pd.Series, s
         if c in cols:
             return bt_returns[c].astype(float), c
     raise KeyError(f"bt_returns missing return column. cols={sorted(list(cols))}")
+
 
 def build_universe_benchmark_returns(
     rebalance_scores: pd.DataFrame,
@@ -91,7 +107,9 @@ def build_universe_benchmark_returns(
             ret_col = c
             break
     if ret_col is None:
-        raise KeyError(f"no benchmark return col in rebalance_scores. tried={ret_col_candidates}")
+        raise KeyError(
+            f"no benchmark return col in rebalance_scores. tried={ret_col_candidates}"
+        )
 
     df = rebalance_scores[[date_col, phase_col, ticker_col, ret_col]].copy()
     df[date_col] = pd.to_datetime(df[date_col])
@@ -111,7 +129,9 @@ def build_universe_benchmark_returns(
     bench["bench_equity"] = 1.0
     for phase, g in bench.groupby(phase_col, sort=False):
         idx = g.index
-        bench.loc[idx, "bench_equity"] = (1.0 + g["bench_return"].astype(float)).cumprod().values
+        bench.loc[idx, "bench_equity"] = (
+            (1.0 + g["bench_return"].astype(float)).cumprod().values
+        )
 
     return bench
 
@@ -162,7 +182,9 @@ def build_kospi200_benchmark_returns(
     e = _to_yyyymmdd(dates.max())
     idx = stock.get_index_ohlcv_by_date(s, e, str(index_code))
     if idx is None or len(idx) == 0:
-        raise RuntimeError(f"지수 데이터가 비어있습니다 (index_code={index_code}, {s}~{e})")
+        raise RuntimeError(
+            f"지수 데이터가 비어있습니다 (index_code={index_code}, {s}~{e})"
+        )
 
     idx = idx.reset_index()
     rename_map = {"날짜": "date", "종가": "close"}
@@ -175,12 +197,16 @@ def build_kospi200_benchmark_returns(
         close_candidates = ["종가", "close", "Close", "CLOSE"]
         close_col = next((c for c in close_candidates if c in idx.columns), None)
         if close_col is None:
-            raise RuntimeError(f"지수 데이터에 close(종가) 컬럼이 없습니다. cols={list(idx.columns)}")
+            raise RuntimeError(
+                f"지수 데이터에 close(종가) 컬럼이 없습니다. cols={list(idx.columns)}"
+            )
         idx = idx.rename(columns={close_col: "close"})
 
     idx["date"] = pd.to_datetime(idx["date"], errors="coerce")
     idx["close"] = pd.to_numeric(idx["close"], errors="coerce")
-    idx = idx.dropna(subset=["date", "close"]).sort_values("date").reset_index(drop=True)
+    idx = (
+        idx.dropna(subset=["date", "close"]).sort_values("date").reset_index(drop=True)
+    )
 
     # trading-day forward return
     hd = int(holding_days)
@@ -194,13 +220,14 @@ def build_kospi200_benchmark_returns(
     out["bench_type"] = "kospi200"
     return out.sort_values(["phase", "date"]).reset_index(drop=True)
 
+
 def compare_strategy_vs_benchmark(
     bt_returns: pd.DataFrame,
     bench_returns: pd.DataFrame,
     *,
     holding_days: int,
-) -> Tuple[pd.DataFrame, pd.DataFrame, dict, List[str]]:
-    warns: List[str] = []
+) -> tuple[pd.DataFrame, pd.DataFrame, dict, list[str]]:
+    warns: list[str] = []
 
     br = bt_returns.copy()
     br["date"] = pd.to_datetime(br["date"])
@@ -213,36 +240,56 @@ def compare_strategy_vs_benchmark(
     strat_ret, used_col = _pick_strategy_return_series(br)
     br["_strategy_return_"] = strat_ret
 
-    m = br.merge(bench[["phase", "date", "bench_return"]], on=["phase", "date"], how="inner")
+    m = br.merge(
+        bench[["phase", "date", "bench_return"]], on=["phase", "date"], how="inner"
+    )
     if len(m) == 0:
         raise ValueError("no overlapping dates between bt_returns and benchmark")
 
-    m["excess_return"] = m["_strategy_return_"].astype(float) - m["bench_return"].astype(float)
+    m["excess_return"] = m["_strategy_return_"].astype(float) - m[
+        "bench_return"
+    ].astype(float)
     periods_per_year = 252.0 / float(holding_days) if holding_days > 0 else 12.6
 
     rows = []
     for phase, g in m.groupby("phase", sort=False):
         ex = g["excess_return"].astype(float).to_numpy()
-        te = float(np.std(ex, ddof=1) * np.sqrt(periods_per_year)) if len(ex) > 1 else 0.0
-        ir = float((np.mean(ex) / (np.std(ex, ddof=1) + 1e-12)) * np.sqrt(periods_per_year)) if len(ex) > 1 else 0.0
+        te = (
+            float(np.std(ex, ddof=1) * np.sqrt(periods_per_year))
+            if len(ex) > 1
+            else 0.0
+        )
+        ir = (
+            float(
+                (np.mean(ex) / (np.std(ex, ddof=1) + 1e-12)) * np.sqrt(periods_per_year)
+            )
+            if len(ex) > 1
+            else 0.0
+        )
 
         strat = g["_strategy_return_"].astype(float).to_numpy()
         b = g["bench_return"].astype(float).to_numpy()
 
         corr = float(np.corrcoef(strat, b)[0, 1]) if len(ex) > 1 else np.nan
-        beta = float(np.cov(strat, b, ddof=1)[0, 1] / (np.var(b, ddof=1) + 1e-12)) if len(ex) > 1 else np.nan
+        beta = (
+            float(np.cov(strat, b, ddof=1)[0, 1] / (np.var(b, ddof=1) + 1e-12))
+            if len(ex) > 1
+            else np.nan
+        )
 
-        rows.append({
-            "phase": phase,
-            "n_rebalances": int(len(g)),
-            "tracking_error_ann": te,
-            "information_ratio": ir,
-            "corr_vs_benchmark": corr,
-            "beta_vs_benchmark": beta,
-            "date_start": g["date"].min(),
-            "date_end": g["date"].max(),
-            "strategy_return_col_used": used_col,
-        })
+        rows.append(
+            {
+                "phase": phase,
+                "n_rebalances": int(len(g)),
+                "tracking_error_ann": te,
+                "information_ratio": ir,
+                "corr_vs_benchmark": corr,
+                "beta_vs_benchmark": beta,
+                "date_start": g["date"].min(),
+                "date_end": g["date"].max(),
+                "strategy_return_col_used": used_col,
+            }
+        )
 
     compare_metrics = pd.DataFrame(rows)
     quality = {
@@ -252,7 +299,12 @@ def compare_strategy_vs_benchmark(
             "strategy_return_col_used": used_col,
         }
     }
-    return m.sort_values(["phase", "date"]).reset_index(drop=True), compare_metrics, quality, warns
+    return (
+        m.sort_values(["phase", "date"]).reset_index(drop=True),
+        compare_metrics,
+        quality,
+        warns,
+    )
 
 
 def compare_strategy_vs_benchmarks(
@@ -260,15 +312,17 @@ def compare_strategy_vs_benchmarks(
     bench_multi: pd.DataFrame,
     *,
     holding_days: int,
-) -> Tuple[pd.DataFrame, pd.DataFrame, dict, List[str]]:
+) -> tuple[pd.DataFrame, pd.DataFrame, dict, list[str]]:
     """
     [개선안 17번] 멀티 벤치마크 비교(롱 포맷)
     bench_multi schema: phase,date,bench_return,bench_type
     """
-    warns: List[str] = []
+    warns: list[str] = []
     req = {"phase", "date", "bench_return", "bench_type"}
     if not req.issubset(set(bench_multi.columns)):
-        raise KeyError(f"bench_multi missing cols: {sorted(list(req - set(bench_multi.columns)))}")
+        raise KeyError(
+            f"bench_multi missing cols: {sorted(list(req - set(bench_multi.columns)))}"
+        )
 
     rows = []
     metrics_rows = []
@@ -277,7 +331,9 @@ def compare_strategy_vs_benchmarks(
     for btype, bdf in bench_multi.groupby("bench_type", sort=False):
         m, met, q, w = compare_strategy_vs_benchmark(
             bt_returns=bt_returns,
-            bench_returns=bdf.rename(columns={"bench_return": "bench_return"})[["phase", "date", "bench_return"]],
+            bench_returns=bdf.rename(columns={"bench_return": "bench_return"})[
+                ["phase", "date", "bench_return"]
+            ],
             holding_days=holding_days,
         )
         m["bench_type"] = str(btype)
@@ -288,12 +344,15 @@ def compare_strategy_vs_benchmarks(
         quality["benchmark_multi"][str(btype)] = q.get("benchmark", {})
 
     out = pd.concat(rows, ignore_index=True) if rows else pd.DataFrame()
-    metrics = pd.concat(metrics_rows, ignore_index=True) if metrics_rows else pd.DataFrame()
+    metrics = (
+        pd.concat(metrics_rows, ignore_index=True) if metrics_rows else pd.DataFrame()
+    )
     return out, metrics, quality, warns
+
 
 # [핵심 수정] 재귀 호출을 없애고 로직을 직접 실행
 def run_l7c_benchmark(cfg, artifacts, *, force=False):
-    warns: List[str] = []  # [개선안 17번] 멀티 벤치마크 과정 경고 수집
+    warns: list[str] = []  # [개선안 17번] 멀티 벤치마크 과정 경고 수집
     # 1. 설정 로드
     p = cfg.get("params", {}) or {}
     l7 = p.get("l7", None)
@@ -329,15 +388,27 @@ def run_l7c_benchmark(cfg, artifacts, *, force=False):
         bench_multi_parts.append(b[["phase", "date", "bench_return", "bench_type"]])
 
     if "savings" in [str(x).lower() for x in bench_types]:
-        bench_multi_parts.append(build_savings_benchmark_returns(bt_returns, savings_apr=savings_apr, holding_days=holding_days))
+        bench_multi_parts.append(
+            build_savings_benchmark_returns(
+                bt_returns, savings_apr=savings_apr, holding_days=holding_days
+            )
+        )
 
     if "kospi200" in [str(x).lower() for x in bench_types]:
         try:
-            bench_multi_parts.append(build_kospi200_benchmark_returns(bt_returns, holding_days=holding_days, index_code=index_code))
+            bench_multi_parts.append(
+                build_kospi200_benchmark_returns(
+                    bt_returns, holding_days=holding_days, index_code=index_code
+                )
+            )
         except Exception as e:
             warns.append(f"[L7C] kospi200 benchmark skipped: {type(e).__name__}: {e}")
 
-    bench_multi = pd.concat(bench_multi_parts, ignore_index=True) if bench_multi_parts else pd.DataFrame(columns=["phase", "date", "bench_return", "bench_type"])
+    bench_multi = (
+        pd.concat(bench_multi_parts, ignore_index=True)
+        if bench_multi_parts
+        else pd.DataFrame(columns=["phase", "date", "bench_return", "bench_type"])
+    )
 
     # 단일(기존 호환): universe_mean 우선
     if bench_universe is None:
@@ -350,7 +421,12 @@ def run_l7c_benchmark(cfg, artifacts, *, force=False):
     warns.extend(warns2)
 
     # 멀티(신규)
-    bt_vs_bench_multi, metrics_multi, quality_multi, warns3 = compare_strategy_vs_benchmarks(
+    (
+        bt_vs_bench_multi,
+        metrics_multi,
+        quality_multi,
+        warns3,
+    ) = compare_strategy_vs_benchmarks(
         bt_returns=bt_returns,
         bench_multi=bench_multi,
         holding_days=holding_days,

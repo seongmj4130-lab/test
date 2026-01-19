@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 
 
@@ -10,15 +9,15 @@ def analyze_ranking_stocks():
 
     # 데이터 로드 (두 파일 모두 같은 데이터)
     try:
-        df = pd.read_csv('data/daily_holdout_short_ranking_top20.csv')
+        df = pd.read_csv("data/daily_holdout_short_ranking_top20.csv")
         print("✅ 랭킹 데이터 로드됨")
     except:
         print("❌ 랭킹 데이터 파일 없음")
         return
 
     # 특정 날짜(2023-01-02)의 데이터 추출
-    target_date = '2023-01-02'
-    df_date = df[df['date'] == target_date].copy()
+    target_date = "2023-01-02"
+    df_date = df[df["date"] == target_date].copy()
 
     if df_date.empty:
         print(f"❌ {target_date} 데이터 없음")
@@ -29,21 +28,27 @@ def analyze_ranking_stocks():
     print()
 
     # 단기 랭킹 top10 (score_short 기준)
-    short_top10 = df_date.nlargest(10, 'score_short')[['ranking', 'ticker', 'score_short', 'score_long', 'score_ens']]
-    short_tickers = set(short_top10['ticker'].astype(str).values)
+    short_top10 = df_date.nlargest(10, "score_short")[
+        ["ranking", "ticker", "score_short", "score_long", "score_ens"]
+    ]
+    short_tickers = set(short_top10["ticker"].astype(str).values)
 
     # 장기 랭킹 top10 (score_long 기준)
-    long_top10 = df_date.nlargest(10, 'score_long')[['ranking', 'ticker', 'score_short', 'score_long', 'score_ens']]
-    long_tickers = set(long_top10['ticker'].astype(str).values)
+    long_top10 = df_date.nlargest(10, "score_long")[
+        ["ranking", "ticker", "score_short", "score_long", "score_ens"]
+    ]
+    long_tickers = set(long_top10["ticker"].astype(str).values)
 
     # 통합 랭킹 top10 (score_ens 기준)
-    ens_top10 = df_date.nlargest(10, 'score_ens')[['ranking', 'ticker', 'score_short', 'score_long', 'score_ens']]
-    ens_tickers = set(ens_top10['ticker'].astype(str).values)
+    ens_top10 = df_date.nlargest(10, "score_ens")[
+        ["ranking", "ticker", "score_short", "score_long", "score_ens"]
+    ]
+    ens_tickers = set(ens_top10["ticker"].astype(str).values)
 
     print("🏆 단기 랭킹 Top 10")
     print("-" * 70)
     for _, row in short_top10.iterrows():
-        ticker = str(row['ticker'])
+        ticker = str(row["ticker"])
         print("<6")
 
     print()
@@ -51,7 +56,7 @@ def analyze_ranking_stocks():
     print("🏆 장기 랭킹 Top 10")
     print("-" * 70)
     for _, row in long_top10.iterrows():
-        ticker = str(row['ticker'])
+        ticker = str(row["ticker"])
         print("<6")
 
     print()
@@ -59,7 +64,7 @@ def analyze_ranking_stocks():
     print("🏆 통합 랭킹 Top 10 (단기+장기 5:5)")
     print("-" * 70)
     for _, row in ens_top10.iterrows():
-        ticker = str(row['ticker'])
+        ticker = str(row["ticker"])
         print("<6")
 
     print()
@@ -83,9 +88,9 @@ def analyze_ranking_stocks():
     print("📈 점수 상관성 분석")
     print("-" * 30)
 
-    correlation_short_long = df_date['score_short'].corr(df_date['score_long'])
-    correlation_short_ens = df_date['score_short'].corr(df_date['score_ens'])
-    correlation_long_ens = df_date['score_long'].corr(df_date['score_ens'])
+    correlation_short_long = df_date["score_short"].corr(df_date["score_long"])
+    correlation_short_ens = df_date["score_short"].corr(df_date["score_ens"])
+    correlation_long_ens = df_date["score_long"].corr(df_date["score_ens"])
 
     print(".4f")
     print(".4f")
@@ -96,9 +101,9 @@ def analyze_ranking_stocks():
     print("📊 평균 점수 비교")
     print("-" * 25)
 
-    avg_short = df_date['score_short'].mean()
-    avg_long = df_date['score_long'].mean()
-    avg_ens = df_date['score_ens'].mean()
+    avg_short = df_date["score_short"].mean()
+    avg_long = df_date["score_long"].mean()
+    avg_ens = df_date["score_ens"].mean()
 
     print(".6f")
     print(".6f")
@@ -109,9 +114,9 @@ def analyze_ranking_stocks():
     print("📉 점수 변동성 분석")
     print("-" * 25)
 
-    std_short = df_date['score_short'].std()
-    std_long = df_date['score_long'].std()
-    std_ens = df_date['score_ens'].std()
+    std_short = df_date["score_short"].std()
+    std_long = df_date["score_long"].std()
+    std_ens = df_date["score_ens"].std()
 
     print(".6f")
     print(".6f")
@@ -157,6 +162,7 @@ def analyze_ranking_stocks():
     print()
     print("💡 통합 랭킹은 단기+장기 균형을 잘 반영하고 있지만,")
     print("   전략별 차별화를 위해서는 파라미터 다양화 필요!")
+
 
 if __name__ == "__main__":
     analyze_ranking_stocks()

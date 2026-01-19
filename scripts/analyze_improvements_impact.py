@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 targets_and_folds.parquet 생성 및 L6 결측치 처리 효과 분석
 """
@@ -7,16 +6,16 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
+
 def analyze_targets_folds_impact():
     """targets_and_folds.parquet 생성 효과 분석"""
     print("🎯 targets_and_folds.parquet 생성 효과")
-    print("="*60)
+    print("=" * 60)
 
     print("📋 주요 효과:")
     print("✅ L4 CV 분할 완성: 파이프라인 87.5% → 100% 건강도 달성")
@@ -35,14 +34,15 @@ def analyze_targets_folds_impact():
     print("• ML 학습 안정성: 기존과 동일 (이미 작동 중)")
     print("• 재현성: +10-20% 향상 (표준화된 CV 구조)")
 
+
 def analyze_l6_missing_impact():
     """L6 결측치 처리 효과 분석"""
     print("\n🎯 L6 결측치 추가 처리 효과")
-    print("="*60)
+    print("=" * 60)
 
-    interim_dir = PROJECT_ROOT / 'data' / 'interim'
+    interim_dir = PROJECT_ROOT / "data" / "interim"
     try:
-        scores_df = pd.read_parquet(interim_dir / 'rebalance_scores.parquet')
+        scores_df = pd.read_parquet(interim_dir / "rebalance_scores.parquet")
 
         # 결측치 분석
         missing_by_col = scores_df.isnull().sum()
@@ -61,7 +61,9 @@ def analyze_l6_missing_impact():
         print("✅ 리스크 관리: 예상치 못한 포지션 변동 방지")
 
         print("\n🔧 처리 전략:")
-        print("1. 평균값 보간: score_ens = (score_grid + score_ridge + score_xgboost + score_rf) / 4")
+        print(
+            "1. 평균값 보간: score_ens = (score_grid + score_ridge + score_xgboost + score_rf) / 4"
+        )
         print("2. 전일 값 유지: 시간적 연속성 고려")
         print("3. KNN 기반 보간: 유사 패턴 활용")
         print("4. 모델 재예측: 근본적 해결 (재학습 필요)")
@@ -80,10 +82,11 @@ def analyze_l6_missing_impact():
     except Exception as e:
         print(f"❌ L6 데이터 분석 실패: {str(e)}")
 
+
 def analyze_combined_impact():
     """두 가지 개선사항의 통합 효과"""
     print("\n🎯 통합 개선 효과 분석")
-    print("="*80)
+    print("=" * 80)
 
     print("📋 개선 우선순위:")
     print("1️⃣ targets_and_folds.parquet 생성 (필수, 고충격)")
@@ -115,10 +118,11 @@ def analyze_combined_impact():
     print("3. 개선 전후 성과 비교 분석")
     print("4. 향후 유사 결측 방지 메커니즘 구축")
 
+
 def main():
     """메인 함수"""
     print("🎯 targets_and_folds.parquet 생성 및 L6 결측치 처리 효과 분석")
-    print("="*100)
+    print("=" * 100)
     print(f"분석 시작: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     # 개별 효과 분석
@@ -129,6 +133,7 @@ def main():
     analyze_combined_impact()
 
     print(f"\n🏆 분석 완료: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
 
 if __name__ == "__main__":
     main()

@@ -4,7 +4,13 @@ from pathlib import Path
 import pandas as pd
 
 # 데이터 파일 경로
-data_path = Path(__file__).parent / 'baseline_20260112_145649' / 'data' / 'interim' / 'rebalance_scores.parquet'
+data_path = (
+    Path(__file__).parent
+    / "baseline_20260112_145649"
+    / "data"
+    / "interim"
+    / "rebalance_scores.parquet"
+)
 
 # 데이터 로드
 df = pd.read_parquet(data_path)
@@ -18,7 +24,11 @@ print(f"\n📈 총 {len(df.columns)}개 컬럼")
 print(f"📅 데이터 행 수: {len(df)}")
 
 # return 관련 컬럼 찾기
-return_cols = [col for col in df.columns if 'ret' in col.lower() or 'true' in col.lower() or 'fwd' in col.lower()]
+return_cols = [
+    col
+    for col in df.columns
+    if "ret" in col.lower() or "true" in col.lower() or "fwd" in col.lower()
+]
 print(f"\n🎯 Return 관련 컬럼들: {return_cols}")
 
 # 샘플 데이터 확인

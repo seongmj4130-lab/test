@@ -1,6 +1,5 @@
 from datetime import datetime
 
-import numpy as np
 import pandas as pd
 
 
@@ -24,10 +23,30 @@ def analyze_dynamic_return_implementation():
 
     # 실제 백테스트 결과 (현재 상태)
     current_results = [
-        {'strategy': 'bt20_short', 'holding_days': 20, 'ret_col': 'true_short', 'sharpe': 0.9141},
-        {'strategy': 'bt120_long', 'holding_days': 20, 'ret_col': 'true_short', 'sharpe': 0.6946},
-        {'strategy': 'bt20_ens', 'holding_days': 100, 'ret_col': 'true_short', 'sharpe': 0.3357},
-        {'strategy': 'bt120_ens', 'holding_days': 100, 'ret_col': 'true_short', 'sharpe': 0.2658},
+        {
+            "strategy": "bt20_short",
+            "holding_days": 20,
+            "ret_col": "true_short",
+            "sharpe": 0.9141,
+        },
+        {
+            "strategy": "bt120_long",
+            "holding_days": 20,
+            "ret_col": "true_short",
+            "sharpe": 0.6946,
+        },
+        {
+            "strategy": "bt20_ens",
+            "holding_days": 100,
+            "ret_col": "true_short",
+            "sharpe": 0.3357,
+        },
+        {
+            "strategy": "bt120_ens",
+            "holding_days": 100,
+            "ret_col": "true_short",
+            "sharpe": 0.2658,
+        },
     ]
 
     results_df = pd.DataFrame(current_results)
@@ -54,7 +73,8 @@ def analyze_dynamic_return_implementation():
 
     # 실제 동작하는 코드 예시
     print("\n📝 실제 구현 코드:")
-    print("""
+    print(
+        """
 # L7 백테스트에서
 ret_col = _pick_ret_col(rebalance_scores, cfg.ret_col, cfg.holding_days)
 
@@ -69,7 +89,8 @@ def _pick_ret_col(df, preferred, holding_days):
             return 'ret_fwd_120d'
     # fallback
     return preferred
-    """)
+    """
+    )
 
     print("\n🏆 결론:")
     print("- ✅ 동적 return 계산 프레임워크 구현 완료")
@@ -79,9 +100,14 @@ def _pick_ret_col(df, preferred, holding_days):
 
     # 구현 상태 저장
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    results_df.to_csv(f'results/dynamic_return_implementation_{timestamp}.csv', index=False, encoding='utf-8-sig')
+    results_df.to_csv(
+        f"results/dynamic_return_implementation_{timestamp}.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
 
     print(f"\n💾 분석 결과 저장: results/dynamic_return_implementation_{timestamp}.csv")
+
 
 if __name__ == "__main__":
     analyze_dynamic_return_implementation()

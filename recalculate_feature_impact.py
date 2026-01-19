@@ -4,10 +4,9 @@
 단기(short)와 장기(long) 각각 적용
 """
 
-import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 import pandas as pd
 import yaml
@@ -27,11 +26,13 @@ from src.components.ranking.contribution_engine import (
 def load_config() -> dict:
     """설정 파일 로드"""
     config_path = project_root / "configs" / "config.yaml"
-    with open(config_path, 'r', encoding='utf-8') as f:
+    with open(config_path, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
-def load_feature_weights_and_groups(horizon: str, cfg: dict) -> tuple[Dict[str, float], Optional[Dict[str, List[str]]]]:
+def load_feature_weights_and_groups(
+    horizon: str, cfg: dict
+) -> tuple[dict[str, float], Optional[dict[str, list[str]]]]:
     """피처 가중치와 그룹 매핑 로드"""
     base_dir = Path(cfg.get("paths", {}).get("base_dir", "."))
     l8_key = f"l8_{horizon}"
@@ -46,7 +47,7 @@ def load_feature_weights_and_groups(horizon: str, cfg: dict) -> tuple[Dict[str, 
     if not weights_path.exists():
         raise FileNotFoundError(f"feature_weights_config not found: {weights_path}")
 
-    with open(weights_path, "r", encoding="utf-8") as f:
+    with open(weights_path, encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
     feature_weights = data.get("feature_weights", {}) or {}
     feature_weights = {str(k): float(v) for k, v in feature_weights.items()}
@@ -62,25 +63,29 @@ def load_feature_weights_and_groups(horizon: str, cfg: dict) -> tuple[Dict[str, 
     return feature_weights, group_map
 
 
-def recalculate_feature_impact_for_date(date: str, horizon: str, cfg: dict) -> pd.DataFrame:
+def recalculate_feature_impact_for_date(
+    date: str, horizon: str, cfg: dict
+) -> pd.DataFrame:
     """특정 날짜의 피처 영향도 재계산"""
 
     # 데이터 로드
     dataset_path = project_root / "data" / "interim" / "dataset_daily.parquet"
-    ranking_path = project_root / "data" / f"daily_all_business_days_{horizon}_ranking_top20.csv"
+    ranking_path = (
+        project_root / "data" / f"daily_all_business_days_{horizon}_ranking_top20.csv"
+    )
 
     dataset_daily = pd.read_parquet(dataset_path)
     ranking_df = pd.read_csv(ranking_path)
 
     # 날짜 필터링
     date_ts = pd.Timestamp(date)
-    day_df = dataset_daily[dataset_daily['date'] == date_ts].copy()
-    day_ranking = ranking_df[ranking_df['date'] == date].copy()
+    day_df = dataset_daily[dataset_daily["date"] == date_ts].copy()
+    day_ranking = ranking_df[ranking_df["date"] == date].copy()
 
     # 데이터 타입 통일
-    day_ranking['date'] = pd.to_datetime(day_ranking['date'])
-    day_ranking['ticker'] = day_ranking['ticker'].astype(str).str.zfill(6)
-    day_df['ticker'] = day_df['ticker'].astype(str).str.zfill(6)
+    day_ranking["date"] = pd.to_datetime(day_ranking["date"])
+    day_ranking["ticker"] = day_ranking["ticker"].astype(str).str.zfill(6)
+    day_df["ticker"] = day_df["ticker"].astype(str).str.zfill(6)
 
     if len(day_df) == 0:
         raise ValueError(f"dataset_daily에 date={date} 행이 없습니다.")
@@ -137,17 +142,21 @@ def format_top_features(row: pd.Series) -> str:
     return ", ".join(features)
 
 
-def recalculate_all_dates(horizon: str, sample_dates: Optional[List[str]] = None) -> pd.DataFrame:
+def recalculate_all_dates(
+    horizon: str, sample_dates: Optional[list[str]] = None
+) -> pd.DataFrame:
     """모든 날짜 또는 샘플 날짜들의 피처 영향도 재계산"""
 
     print(f"=== {horizon.upper()} 피처 영향도 재계산 시작 ===")
 
     cfg = load_config()
-    ranking_path = project_root / "data" / f"daily_all_business_days_{horizon}_ranking_top20.csv"
+    ranking_path = (
+        project_root / "data" / f"daily_all_business_days_{horizon}_ranking_top20.csv"
+    )
 
     # 모든 날짜 가져오기
     ranking_df = pd.read_csv(ranking_path)
-    all_dates = sorted(ranking_df['date'].unique())
+    all_dates = sorted(ranking_df["date"].unique())
 
     if sample_dates:
         dates_to_process = sample_dates
@@ -162,7 +171,7 @@ def recalculate_all_dates(horizon: str, sample_dates: Optional[List[str]] = None
         try:
             print(f"처리 중: {date}")
             result = recalculate_feature_impact_for_date(date, horizon, cfg)
-            result['top_features_formatted'] = result.apply(format_top_features, axis=1)
+            result["top_features_formatted"] = result.apply(format_top_features, axis=1)
             all_results.append(result)
         except Exception as e:
             print(f"오류 발생 ({date}): {e}")
@@ -181,37 +190,37 @@ def validate_results(results: pd.DataFrame, horizon: str):
     print("=== 유효성 검증 ===")
 
     # 각 날짜별로 다른 top3 그룹을 가지고 있는지 확인
-    date_groups = results.groupby('date')['top_features_formatted'].nunique()
+    date_groups = results.groupby("date")["top_features_formatted"].nunique()
 
-    print(f"날짜별 고유한 피처 그룹 패턴 수:")
+    print("날짜별 고유한 피처 그룹 패턴 수:")
     for date, count in date_groups.items():
         print(f"  {date}: {count}개 패턴")
 
     # 샘플로 몇 개 날짜의 결과를 출력
-    sample_dates = results['date'].unique()[:3]
+    sample_dates = results["date"].unique()[:3]
     for date in sample_dates:
-        day_data = results[results['date'] == date]
+        day_data = results[results["date"] == date]
         print(f"\n{date} 샘플 (상위 5개):")
         for _, row in day_data.head(5).iterrows():
-            ticker = row['ticker']
-            top_features = row['top_features_formatted']
+            ticker = row["ticker"]
+            top_features = row["top_features_formatted"]
             print(f"  {ticker}: {top_features}")
 
 
 if __name__ == "__main__":
     # 샘플 날짜들로 테스트
-    sample_dates = ['2023-01-02', '2023-01-03', '2023-01-04']
+    sample_dates = ["2023-01-02", "2023-01-03", "2023-01-04"]
 
     print("종목별 실제 피처 영향도 재계산 시작")
 
     # 단기(short) 재계산
     try:
-        short_results = recalculate_all_dates('short', sample_dates)
-        validate_results(short_results, 'short')
+        short_results = recalculate_all_dates("short", sample_dates)
+        validate_results(short_results, "short")
 
         # 장기(long) 재계산
-        long_results = recalculate_all_dates('long', sample_dates)
-        validate_results(long_results, 'long')
+        long_results = recalculate_all_dates("long", sample_dates)
+        validate_results(long_results, "long")
 
         print("\n=== 재계산 성공! ===")
         print("단기 결과 샘플:")
@@ -222,4 +231,5 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"오류 발생: {e}")
         import traceback
+
         traceback.print_exc()

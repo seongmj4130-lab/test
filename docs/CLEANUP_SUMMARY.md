@@ -119,4 +119,3 @@ README.md 기준으로 필요한 파일만 유지하고 나머지는 `05_backup`
 - 모든 이동된 파일은 `05_backup` 폴더에 보관되어 있습니다.
 - 필요시 `05_backup`에서 파일을 복원할 수 있습니다.
 - 정리 스크립트는 `05_backup/scripts/cleanup_and_move.py`에 저장되어 있습니다.
-

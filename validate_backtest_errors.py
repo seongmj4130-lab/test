@@ -5,7 +5,6 @@
 
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 
@@ -16,8 +15,8 @@ def validate_backtest_errors():
     print("=" * 60)
 
     # 최신 백테스트 결과 로드
-    results_dir = Path('results')
-    csv_files = list(results_dir.glob('dynamic_period_backtest_clean_*.csv'))
+    results_dir = Path("results")
+    csv_files = list(results_dir.glob("dynamic_period_backtest_clean_*.csv"))
     latest_file = max(csv_files, key=lambda x: x.stat().st_mtime)
 
     df = pd.read_csv(latest_file)
@@ -27,7 +26,7 @@ def validate_backtest_errors():
 
     # 샘플 데이터 10개 출력
     print("📋 샘플 데이터 10개:")
-    print(df.head(10).to_string(index=False, float_format='%.3f'))
+    print(df.head(10).to_string(index=False, float_format="%.3f"))
     print()
 
     # 1. 총수익률 계산 과정 확인
@@ -43,9 +42,9 @@ def validate_backtest_errors():
     print()
 
     # 샘플 계산 검증
-    sample = df[df['strategy'] == 'bt20_short'].iloc[0]
-    total_return = sample['Total Return (%)'] / 100
-    holding_days = sample['holding_days']
+    sample = df[df["strategy"] == "bt20_short"].iloc[0]
+    total_return = sample["Total Return (%)"] / 100
+    holding_days = sample["holding_days"]
 
     # CAGR 역산
     if total_return > -1:  # -100%보다 크면
@@ -65,8 +64,8 @@ def validate_backtest_errors():
     print()
 
     # Sharpe 계산 검증
-    sample_sharpe = df[df['strategy'] == 'bt20_short'].iloc[0]['sharpe']
-    sample_cagr = df[df['strategy'] == 'bt20_short'].iloc[0]['CAGR (%)'] / 100
+    sample_sharpe = df[df["strategy"] == "bt20_short"].iloc[0]["sharpe"]
+    sample_cagr = df[df["strategy"] == "bt20_short"].iloc[0]["CAGR (%)"] / 100
 
     # Sharpe 역산 (연환산 가정)
     expected_vol = abs(sample_cagr) / abs(sample_sharpe) if sample_sharpe != 0 else 0
@@ -85,7 +84,7 @@ def validate_backtest_errors():
     print()
 
     # MDD 분석
-    mdd_values = df['MDD (%)'].abs()
+    mdd_values = df["MDD (%)"].abs()
     max_mdd_idx = mdd_values.idxmax()
     max_mdd_row = df.loc[max_mdd_idx]
 
@@ -104,7 +103,7 @@ def validate_backtest_errors():
     print()
 
     # 비용 영향 분석
-    cost_analysis = df.groupby('strategy')[['avg_turnover', 'profit_factor']].mean()
+    cost_analysis = df.groupby("strategy")[["avg_turnover", "profit_factor"]].mean()
     print("전략별 평균 비용 영향:")
     print(cost_analysis.round(3))
     print()
@@ -159,6 +158,7 @@ def validate_backtest_errors():
     print("- MDD 낮음: HOLDOUT 기간 시장 안정성 반영")
     print("- 비용 영향: turnover 40% 수준에서 수익률 잠식")
     print()
+
 
 if __name__ == "__main__":
     validate_backtest_errors()

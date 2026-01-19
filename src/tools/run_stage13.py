@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/run_stage13.py
 """
 [Stage13] K_eff 복원 실행 스크립트
@@ -13,17 +12,25 @@ from pathlib import Path
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="[Stage13] K_eff 복원 실행 스크립트"
+    parser = argparse.ArgumentParser(description="[Stage13] K_eff 복원 실행 스크립트")
+    parser.add_argument(
+        "--config", type=str, default="configs/config.yaml", help="Config 파일 경로"
     )
-    parser.add_argument("--config", type=str, default="configs/config.yaml",
-                       help="Config 파일 경로")
-    parser.add_argument("--run-tag", type=str, default=None,
-                       help="Run tag (없으면 자동 생성)")
-    parser.add_argument("--baseline-tag", type=str, default=None,
-                       help="Baseline tag (직전 Stage, 없으면 자동 탐지)")
-    parser.add_argument("--global-baseline-tag", type=str, default=None,
-                       help="Global baseline tag (Stage12 최신, 없으면 자동 탐지)")
+    parser.add_argument(
+        "--run-tag", type=str, default=None, help="Run tag (없으면 자동 생성)"
+    )
+    parser.add_argument(
+        "--baseline-tag",
+        type=str,
+        default=None,
+        help="Baseline tag (직전 Stage, 없으면 자동 탐지)",
+    )
+    parser.add_argument(
+        "--global-baseline-tag",
+        type=str,
+        default=None,
+        help="Global baseline tag (Stage12 최신, 없으면 자동 탐지)",
+    )
     args = parser.parse_args()
 
     # Run tag 생성
@@ -41,9 +48,12 @@ def main():
     cmd = [
         sys.executable,
         str(pipeline_script),
-        "--stage", "13",
-        "--run-tag", run_tag,
-        "--config", args.config,
+        "--stage",
+        "13",
+        "--run-tag",
+        run_tag,
+        "--config",
+        args.config,
     ]
 
     if args.baseline_tag:
@@ -55,6 +65,7 @@ def main():
     # 실행
     result = subprocess.run(cmd, cwd=str(project_root))
     sys.exit(result.returncode)
+
 
 if __name__ == "__main__":
     main()

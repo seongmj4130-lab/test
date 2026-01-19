@@ -5,7 +5,6 @@
 
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 
@@ -16,8 +15,8 @@ def debug_total_return():
     print("=" * 50)
 
     # L6 랭킹 데이터 로드
-    baseline_dir = Path('baseline_20260112_145649')
-    l6_path = baseline_dir / 'data' / 'interim' / 'rebalance_scores.parquet'
+    baseline_dir = Path("baseline_20260112_145649")
+    l6_path = baseline_dir / "data" / "interim" / "rebalance_scores.parquet"
 
     if not l6_path.exists():
         print("❌ L6 데이터 파일이 없습니다.")
@@ -27,12 +26,14 @@ def debug_total_return():
     print(f"📊 L6 데이터 로드: {len(df)} 행")
 
     # return 컬럼 확인
-    return_cols = [col for col in df.columns if 'true' in col.lower() or 'ret' in col.lower()]
+    return_cols = [
+        col for col in df.columns if "true" in col.lower() or "ret" in col.lower()
+    ]
     print(f"🎯 Return 관련 컬럼: {return_cols}")
 
     # 데이터 샘플 확인
     print("\n🔍 L6 데이터 샘플:")
-    sample_cols = ['date', 'ticker', 'phase', 'true_short', 'true_long']
+    sample_cols = ["date", "ticker", "phase", "true_short", "true_long"]
     if all(col in df.columns for col in sample_cols):
         print(df[sample_cols].head(10))
 
@@ -51,13 +52,13 @@ def debug_total_return():
 
     # 백테스트 결과와 비교
     print("\n📈 백테스트 결과에서 비정상적 수익률:")
-    results_file = Path('results/dynamic_period_backtest_clean_20260113_212022.csv')
+    results_file = Path("results/dynamic_period_backtest_clean_20260113_212022.csv")
 
     if results_file.exists():
         results_df = pd.read_csv(results_file)
 
         # Total Return이 100% 이상인 경우 필터링
-        high_returns = results_df[results_df['Total Return (%)'] > 100]
+        high_returns = results_df[results_df["Total Return (%)"] > 100]
         if len(high_returns) > 0:
             print("비정상적 총수익률 (>100%):")
             for _, row in high_returns.iterrows():
@@ -71,8 +72,8 @@ def debug_total_return():
     print("\n🔍 잠재적 원인 분석:")
 
     # 1. 데이터 scale 문제
-    if 'true_short' in df.columns:
-        max_short = df['true_short'].max()
+    if "true_short" in df.columns:
+        max_short = df["true_short"].max()
         if max_short > 10:  # 1000% 이상
             print("⚠️  true_short 최대값이 비정상적으로 높음 (scale 문제 가능성)")
         elif max_short > 1:  # 100% 이상
@@ -89,6 +90,7 @@ def debug_total_return():
     print("  1. true_short/true_long 값을 소수점으로 변환 (÷100)")
     print("  2. 백테스트 수익률 계산 로직 검토")
     print("  3. 실제 OHLCV 데이터로 검증")
+
 
 if __name__ == "__main__":
     debug_total_return()

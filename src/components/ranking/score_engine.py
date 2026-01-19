@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/components/ranking/score_engine.py
 """
 [Stage7] Ranking 엔진: score_total 및 rank_total 생성
@@ -11,7 +10,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Literal, Optional
+from typing import Literal, Optional
 
 import numpy as np
 import pandas as pd
@@ -19,23 +18,31 @@ import pandas as pd
 from src.utils.feature_groups import (
     get_feature_groups,  # [개선안 14번] feature_groups.yaml 파싱 버그 수정: 그룹->피처 리스트 추출
 )
-from src.utils.feature_groups import (
-    calculate_feature_group_balance,
-    load_feature_groups,
-)
+from src.utils.feature_groups import load_feature_groups
 
 
-def _pick_feature_cols(df: pd.DataFrame) -> List[str]:
+def _pick_feature_cols(df: pd.DataFrame) -> list[str]:
     """피처 컬럼 선택 (식별자/타겟 제외)"""
     exclude = {
-        "date", "ticker",
-        "ret_fwd_20d", "ret_fwd_120d",
-        "split", "phase", "segment", "fold_id",
-        "in_universe", "ym", "corp_code",
-        "open", "high", "low", "close", "volume",  # OHLCV는 피처로 사용하지 않음
+        "date",
+        "ticker",
+        "ret_fwd_20d",
+        "ret_fwd_120d",
+        "split",
+        "phase",
+        "segment",
+        "fold_id",
+        "in_universe",
+        "ym",
+        "corp_code",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",  # OHLCV는 피처로 사용하지 않음
     }
 
-    cols: List[str] = []
+    cols: list[str] = []
     for c in df.columns:
         if c in exclude:
             continue
@@ -43,9 +50,12 @@ def _pick_feature_cols(df: pd.DataFrame) -> List[str]:
             cols.append(c)
 
     if len(cols) == 0:
-        raise ValueError("No numeric feature columns found after excluding identifiers/targets.")
+        raise ValueError(
+            "No numeric feature columns found after excluding identifiers/targets."
+        )
 
     return sorted(cols)
+
 
 def normalize_feature_cross_sectional(
     df: pd.DataFrame,
@@ -126,17 +136,22 @@ def normalize_feature_cross_sectional(
 
     return result
 
+
 def build_score_total(
     df: pd.DataFrame,
-    feature_cols: Optional[List[str]] = None,
-    feature_weights: Optional[Dict[str, float]] = None,
+    feature_cols: Optional[list[str]] = None,
+    feature_weights: Optional[dict[str, float]] = None,
     feature_groups_config: Optional[Path] = None,
     normalization_method: Literal["percentile", "zscore"] = "percentile",
     date_col: str = "date",
     sector_col: Optional[str] = None,
     use_sector_relative: bool = True,
-    market_regime_df: Optional[pd.DataFrame] = None,  # [국면별 전략] 시장 국면 DataFrame (date, regime)
-    regime_weights_config: Optional[Dict[str, Dict[str, float]]] = None,  # [국면별 전략] 국면별 가중치
+    market_regime_df: Optional[
+        pd.DataFrame
+    ] = None,  # [국면별 전략] 시장 국면 DataFrame (date, regime)
+    regime_weights_config: Optional[
+        dict[str, dict[str, float]]
+    ] = None,  # [국면별 전략] 국면별 가중치
 ) -> pd.DataFrame:
     """
     score_total 생성
@@ -173,7 +188,11 @@ def build_score_total(
         if feat not in out.columns:
             continue
         normalized_features[feat] = normalize_feature_cross_sectional(
-            out, feat, date_col, method=normalization_method, sector_col=actual_sector_col
+            out,
+            feat,
+            date_col,
+            method=normalization_method,
+            sector_col=actual_sector_col,
         )
 
     if len(normalized_features) == 0:
@@ -208,7 +227,9 @@ def build_score_total(
                 if feat in gf:
                     n_features_in_group = len([f for f in feature_cols if f in gf])
                     if n_features_in_group > 0:
-                        feature_weights[feat] = group_weights.get(group_name, 0.0) / n_features_in_group
+                        feature_weights[feat] = (
+                            group_weights.get(group_name, 0.0) / n_features_in_group
+                        )
                     break
             if feat not in feature_weights:
                 # 그룹에 속하지 않은 피처는 균등 가중치
@@ -219,7 +240,9 @@ def build_score_total(
         pass
     else:
         # 균등 가중치
-        feature_weights = {feat: 1.0 / len(normalized_features) for feat in normalized_features.keys()}
+        feature_weights = {
+            feat: 1.0 / len(normalized_features) for feat in normalized_features.keys()
+        }
 
     # [국면별 전략] 국면별 가중치 적용
     use_regime_weights = (
@@ -253,13 +276,22 @@ def build_score_total(
                     date_weights = regime_weights_config["bear"]
                 elif regime == "neutral":
                     # neutral은 bull/bear 평균 또는 기본 가중치
-                    if "bull" in regime_weights_config and "bear" in regime_weights_config:
+                    if (
+                        "bull" in regime_weights_config
+                        and "bear" in regime_weights_config
+                    ):
                         # bull과 bear 가중치의 평균
                         bull_weights = regime_weights_config["bull"]
                         bear_weights = regime_weights_config["bear"]
-                        common_features = set(bull_weights.keys()) & set(bear_weights.keys())
+                        common_features = set(bull_weights.keys()) & set(
+                            bear_weights.keys()
+                        )
                         if len(common_features) > 0:
-                            date_weights = {f: (bull_weights.get(f, 0) + bear_weights.get(f, 0)) / 2.0 for f in common_features}
+                            date_weights = {
+                                f: (bull_weights.get(f, 0) + bear_weights.get(f, 0))
+                                / 2.0
+                                for f in common_features
+                            }
                         else:
                             date_weights = feature_weights
                     else:
@@ -270,22 +302,39 @@ def build_score_total(
                 date_weights = feature_weights  # 국면 정보 없으면 기본 가중치
 
             # 가중치 정규화 (합 = 1)
-            total_weight = sum(date_weights.get(feat, 0.0) for feat in normalized_features.keys())
+            total_weight = sum(
+                date_weights.get(feat, 0.0) for feat in normalized_features.keys()
+            )
             if total_weight > 1e-8:
-                date_weights = {feat: w / total_weight for feat, w in date_weights.items() if feat in normalized_features}
+                date_weights = {
+                    feat: w / total_weight
+                    for feat, w in date_weights.items()
+                    if feat in normalized_features
+                }
             else:
-                date_weights = {feat: 1.0 / len(normalized_features) for feat in normalized_features.keys()}
+                date_weights = {
+                    feat: 1.0 / len(normalized_features)
+                    for feat in normalized_features.keys()
+                }
 
             # 해당 날짜의 score_total 계산
             for feat, normalized_values in normalized_features.items():
                 weight = date_weights.get(feat, 0.0)
-                score_total.loc[group.index] += weight * normalized_values.loc[group.index].fillna(0.0)
+                score_total.loc[group.index] += weight * normalized_values.loc[
+                    group.index
+                ].fillna(0.0)
     else:
         # 기본 가중치 사용 (기존 로직)
         # 가중치 정규화 (합 = 1)
-        total_weight = sum(feature_weights.get(feat, 0.0) for feat in normalized_features.keys())
+        total_weight = sum(
+            feature_weights.get(feat, 0.0) for feat in normalized_features.keys()
+        )
         if total_weight > 1e-8:
-            feature_weights = {feat: w / total_weight for feat, w in feature_weights.items() if feat in normalized_features}
+            feature_weights = {
+                feat: w / total_weight
+                for feat, w in feature_weights.items()
+                if feat in normalized_features
+            }
 
         # score_total 계산
         score_total = pd.Series(0.0, index=out.index)
@@ -300,6 +349,7 @@ def build_score_total(
     # sector_col이 이미 out에 있으면 그대로 유지됨
 
     return out
+
 
 def build_rank_total(
     df: pd.DataFrame,
@@ -350,18 +400,23 @@ def build_rank_total(
 
     return out
 
+
 def build_ranking_daily(
     df: pd.DataFrame,
-    feature_cols: Optional[List[str]] = None,
-    feature_weights: Optional[Dict[str, float]] = None,
+    feature_cols: Optional[list[str]] = None,
+    feature_weights: Optional[dict[str, float]] = None,
     feature_groups_config: Optional[Path] = None,
     normalization_method: Literal["percentile", "zscore"] = "percentile",
     date_col: str = "date",
     universe_col: str = "in_universe",
     sector_col: Optional[str] = None,
     use_sector_relative: bool = True,
-    market_regime_df: Optional[pd.DataFrame] = None,  # [국면별 전략] 시장 국면 DataFrame
-    regime_weights_config: Optional[Dict[str, Dict[str, float]]] = None,  # [국면별 전략] 국면별 가중치
+    market_regime_df: Optional[
+        pd.DataFrame
+    ] = None,  # [국면별 전략] 시장 국면 DataFrame
+    regime_weights_config: Optional[
+        dict[str, dict[str, float]]
+    ] = None,  # [국면별 전략] 국면별 가중치
 ) -> pd.DataFrame:
     """
     ranking_daily 생성 (score_total + rank_total)

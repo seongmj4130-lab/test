@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/export/final_export_pack.py
 """
 [Stage12] Final Export Pack
@@ -22,7 +21,7 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -38,17 +37,38 @@ def get_file_hash(file_path: Path) -> str:
             sha256_hash.update(byte_block)
     return sha256_hash.hexdigest()
 
+
 def build_timeline_ppt(history_manifest: pd.DataFrame) -> pd.DataFrame:
     """
     history_manifest 기반 변천사 타임라인 생성 (PPT용)
     """
     if history_manifest.empty:
-        return pd.DataFrame(columns=["created_at", "stage_no", "track", "run_tag", "change_title",
-                                     "holdout_sharpe", "holdout_mdd", "holdout_cagr", "ppt_one_liner"])
+        return pd.DataFrame(
+            columns=[
+                "created_at",
+                "stage_no",
+                "track",
+                "run_tag",
+                "change_title",
+                "holdout_sharpe",
+                "holdout_mdd",
+                "holdout_cagr",
+                "ppt_one_liner",
+            ]
+        )
 
     # 필요한 컬럼만 선택
-    cols = ["created_at", "stage_no", "track", "run_tag", "change_title",
-            "holdout_sharpe", "holdout_mdd", "holdout_cagr", "ppt_one_liner"]
+    cols = [
+        "created_at",
+        "stage_no",
+        "track",
+        "run_tag",
+        "change_title",
+        "holdout_sharpe",
+        "holdout_mdd",
+        "holdout_cagr",
+        "ppt_one_liner",
+    ]
     available_cols = [c for c in cols if c in history_manifest.columns]
 
     timeline = history_manifest[available_cols].copy()
@@ -63,10 +83,11 @@ def build_timeline_ppt(history_manifest: pd.DataFrame) -> pd.DataFrame:
 
     return timeline
 
+
 def build_kpi_onepager(
     kpi_table: pd.DataFrame,
     baseline_tag: str,
-) -> Tuple[pd.DataFrame, str]:
+) -> tuple[pd.DataFrame, str]:
     """
     최종 run_tag 기준 핵심 지표 1장 KPI 요약 생성
 
@@ -114,7 +135,11 @@ def build_kpi_onepager(
                 if not pd.isna(val):
                     if "sharpe" in col.lower() or "ratio" in col.lower():
                         md_lines.append(f"- **{col}**: {val:.3f}")
-                    elif "mdd" in col.lower() or "return" in col.lower() or "cagr" in col.lower():
+                    elif (
+                        "mdd" in col.lower()
+                        or "return" in col.lower()
+                        or "cagr" in col.lower()
+                    ):
                         md_lines.append(f"- **{col}**: {val:.2f}%")
                     elif "turnover" in col.lower():
                         md_lines.append(f"- **{col}**: {val:.2f}%")
@@ -124,6 +149,7 @@ def build_kpi_onepager(
     md_content = "\n".join(md_lines)
 
     return kpi_df, md_content
+
 
 def build_latest_snapshot(
     ui_snapshot: pd.DataFrame,
@@ -143,15 +169,25 @@ def build_latest_snapshot(
 
     # 필요한 컬럼만 선택
     cols = [
-        "snapshot_date", "snapshot_type", "snapshot_rank", "ticker",
-        "rank_total", "score_total", "regime_label", "regime_score",
-        "top_features", "contrib_core", "contrib_fundamental", "contrib_other"
+        "snapshot_date",
+        "snapshot_type",
+        "snapshot_rank",
+        "ticker",
+        "rank_total",
+        "score_total",
+        "regime_label",
+        "regime_score",
+        "top_features",
+        "contrib_core",
+        "contrib_fundamental",
+        "contrib_other",
     ]
 
     available_cols = [c for c in cols if c in snapshot.columns]
     result = snapshot[available_cols].copy()
 
     return result
+
 
 def build_equity_curves_csv(
     ui_equity_curves: pd.DataFrame,
@@ -163,8 +199,14 @@ def build_equity_curves_csv(
         return pd.DataFrame()
 
     # 필요한 컬럼만 선택
-    cols = ["date", "strategy_equity", "bench_equity", "excess_equity",
-            "strategy_ret", "bench_ret"]
+    cols = [
+        "date",
+        "strategy_equity",
+        "bench_equity",
+        "excess_equity",
+        "strategy_ret",
+        "bench_ret",
+    ]
 
     available_cols = [c for c in cols if c in ui_equity_curves.columns]
     result = ui_equity_curves[available_cols].copy()
@@ -174,6 +216,7 @@ def build_equity_curves_csv(
         result = result.sort_values("date")
 
     return result
+
 
 def find_sector_concentration_file(
     project_root: Path,
@@ -199,10 +242,11 @@ def find_sector_concentration_file(
 
     return None
 
+
 def build_appendix_sources(
     project_root: Path,
     baseline_tag: str,
-    files_used: List[Tuple[str, Path]],
+    files_used: list[tuple[str, Path]],
 ) -> str:
     """
     사용 파일 경로/해시 목록 생성 (appendix_sources.md)
@@ -220,26 +264,33 @@ def build_appendix_sources(
     ]
 
     for name, file_path in files_used:
-        rel_path = file_path.relative_to(project_root) if file_path.is_relative_to(project_root) else str(file_path)
+        rel_path = (
+            file_path.relative_to(project_root)
+            if file_path.is_relative_to(project_root)
+            else str(file_path)
+        )
         file_hash = get_file_hash(file_path)
         hash_short = file_hash[:16] + "..." if len(file_hash) > 16 else file_hash
         lines.append(f"| {name} | `{rel_path}` | `{hash_short}` |")
 
-    lines.extend([
-        "",
-        "## 출력 파일",
-        "",
-        f"| 파일명 | 경로 |",
-        "|--------|------|",
-        f"| timeline_ppt.csv | `artifacts/reports/final_export/{baseline_tag}/timeline_ppt.csv` |",
-        f"| kpi_onepager.csv | `artifacts/reports/final_export/{baseline_tag}/kpi_onepager.csv` |",
-        f"| kpi_onepager.md | `artifacts/reports/final_export/{baseline_tag}/kpi_onepager.md` |",
-        f"| latest_snapshot.csv | `artifacts/reports/final_export/{baseline_tag}/latest_snapshot.csv` |",
-        f"| equity_curves.csv | `artifacts/reports/final_export/{baseline_tag}/equity_curves.csv` |",
-        f"| appendix_sources.md | `artifacts/reports/final_export/{baseline_tag}/appendix_sources.md` |",
-    ])
+    lines.extend(
+        [
+            "",
+            "## 출력 파일",
+            "",
+            "| 파일명 | 경로 |",
+            "|--------|------|",
+            f"| timeline_ppt.csv | `artifacts/reports/final_export/{baseline_tag}/timeline_ppt.csv` |",
+            f"| kpi_onepager.csv | `artifacts/reports/final_export/{baseline_tag}/kpi_onepager.csv` |",
+            f"| kpi_onepager.md | `artifacts/reports/final_export/{baseline_tag}/kpi_onepager.md` |",
+            f"| latest_snapshot.csv | `artifacts/reports/final_export/{baseline_tag}/latest_snapshot.csv` |",
+            f"| equity_curves.csv | `artifacts/reports/final_export/{baseline_tag}/equity_curves.csv` |",
+            f"| appendix_sources.md | `artifacts/reports/final_export/{baseline_tag}/appendix_sources.md` |",
+        ]
+    )
 
     return "\n".join(lines)
+
 
 def run_L12_final_export(
     cfg: dict,
@@ -265,13 +316,17 @@ def run_L12_final_export(
         - warnings: 경고 메시지 리스트
     """
     warns: list[str] = []
-    files_used: List[Tuple[str, Path]] = []
+    files_used: list[tuple[str, Path]] = []
 
     # 1. History Manifest 로드
-    history_manifest_path = project_root / "reports" / "history" / "history_manifest.parquet"
+    history_manifest_path = (
+        project_root / "reports" / "history" / "history_manifest.parquet"
+    )
     if not history_manifest_path.exists():
         # CSV로 시도
-        history_manifest_path = project_root / "reports" / "history" / "history_manifest.csv"
+        history_manifest_path = (
+            project_root / "reports" / "history" / "history_manifest.csv"
+        )
         if not history_manifest_path.exists():
             warns.append(f"History manifest 파일 없음: {history_manifest_path}")
             history_manifest = pd.DataFrame()
@@ -283,7 +338,9 @@ def run_L12_final_export(
         files_used.append(("history_manifest", history_manifest_path))
 
     # 2. UI Equity Curves 로드
-    ui_equity_path = project_root / "data" / "interim" / baseline_tag / "ui_equity_curves.parquet"
+    ui_equity_path = (
+        project_root / "data" / "interim" / baseline_tag / "ui_equity_curves.parquet"
+    )
     if not ui_equity_path.exists():
         warns.append(f"UI equity curves 파일 없음: {ui_equity_path}")
         ui_equity_curves = pd.DataFrame()
@@ -292,7 +349,9 @@ def run_L12_final_export(
         files_used.append(("ui_equity_curves", ui_equity_path))
 
     # 3. UI Snapshot 로드
-    ui_snapshot_path = project_root / "reports" / "ui" / f"ui_snapshot__{baseline_tag}.csv"
+    ui_snapshot_path = (
+        project_root / "reports" / "ui" / f"ui_snapshot__{baseline_tag}.csv"
+    )
     if not ui_snapshot_path.exists():
         warns.append(f"UI snapshot 파일 없음: {ui_snapshot_path}")
         ui_snapshot = pd.DataFrame()
@@ -310,7 +369,9 @@ def run_L12_final_export(
         files_used.append(("kpi_table", kpi_table_path))
 
     # 5. Sector Concentration 파일 찾기 (선택)
-    sector_concentration_path = find_sector_concentration_file(project_root, baseline_tag)
+    sector_concentration_path = find_sector_concentration_file(
+        project_root, baseline_tag
+    )
     if sector_concentration_path:
         files_used.append(("sector_concentration", sector_concentration_path))
 

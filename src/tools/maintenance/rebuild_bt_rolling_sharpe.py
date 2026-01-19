@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/maintenance/rebuild_bt_rolling_sharpe.py
 from pathlib import Path
 
@@ -14,8 +13,10 @@ def _root() -> Path:
     # .../03_code/src/stages/rebuild_bt_rolling_sharpe.py -> parents[2] == 03_code
     return Path(__file__).resolve().parents[2]
 
+
 def _cfg_path(root: Path) -> Path:
     return root / "configs" / "config.yaml"
+
 
 def compute_bt_rolling_sharpe(
     bt_returns: pd.DataFrame,
@@ -34,7 +35,9 @@ def compute_bt_rolling_sharpe(
     if df["date"].isna().any():
         raise SystemExit("[FAIL] bt_returns has invalid 'date' (NaT)")
     df["phase"] = df["phase"].astype(str)
-    df[return_col] = pd.to_numeric(df[return_col], errors="coerce").replace([np.inf, -np.inf], np.nan)
+    df[return_col] = pd.to_numeric(df[return_col], errors="coerce").replace(
+        [np.inf, -np.inf], np.nan
+    )
 
     periods_per_year = 252.0 / float(holding_days)
     ann_factor = np.sqrt(periods_per_year)
@@ -68,7 +71,9 @@ def compute_bt_rolling_sharpe(
                 "net_rolling_n": roll_n.astype(int),
                 "net_rolling_mean": roll_mean.astype(float),
                 "net_rolling_vol_ann": roll_vol_ann.astype(float),
-                "net_rolling_sharpe": pd.Series(roll_sharpe, index=s.index).astype(float),
+                "net_rolling_sharpe": pd.Series(roll_sharpe, index=s.index).astype(
+                    float
+                ),
                 "net_return_col_used": return_col,
             }
         )
@@ -79,13 +84,20 @@ def compute_bt_rolling_sharpe(
     keys = ["date", "phase", "net_return_col_used"]
     if res.duplicated(keys).any():
         dup = res.loc[res.duplicated(keys, keep=False), keys].head(20)
-        raise SystemExit(f"[FAIL] rolling sharpe rebuild has duplicates on {keys}. sample:\n{dup}")
+        raise SystemExit(
+            f"[FAIL] rolling sharpe rebuild has duplicates on {keys}. sample:\n{dup}"
+        )
 
     # finite 강제
     for c in ["net_rolling_mean", "net_rolling_vol_ann", "net_rolling_sharpe"]:
-        res[c] = pd.to_numeric(res[c], errors="coerce").replace([np.inf, -np.inf], np.nan).fillna(0.0)
+        res[c] = (
+            pd.to_numeric(res[c], errors="coerce")
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0.0)
+        )
 
     return res
+
 
 def main():
     print("=== REBUILD bt_rolling_sharpe from bt_returns ===")
@@ -108,18 +120,22 @@ def main():
 
     bt_returns = load_artifact(base_returns)
     if not isinstance(bt_returns, pd.DataFrame) or bt_returns.shape[0] == 0:
-        raise SystemExit(f"[FAIL] bt_returns invalid: shape={getattr(bt_returns,'shape',None)}")
+        raise SystemExit(
+            f"[FAIL] bt_returns invalid: shape={getattr(bt_returns,'shape',None)}"
+        )
 
     # 설정값: config 우선, 없으면 프로젝트 기본값(월 리밸=20, 12개월=12스텝)
-    l7 = (cfg.get("l7", {}) or {})
-    l7d = (cfg.get("l7d", {}) or {})
+    l7 = cfg.get("l7", {}) or {}
+    l7d = cfg.get("l7d", {}) or {}
     holding_days = int(l7.get("holding_days", 20))
     window_rebalances = int(l7d.get("rolling_window_rebalances", 12))
 
     # bt_returns 컬럼은 L7C에서 이미 사용되므로 여기서는 고정
     return_col = "net_return"
     if return_col not in bt_returns.columns:
-        raise SystemExit(f"[FAIL] bt_returns missing '{return_col}'. cols={bt_returns.columns.tolist()}")
+        raise SystemExit(
+            f"[FAIL] bt_returns missing '{return_col}'. cols={bt_returns.columns.tolist()}"
+        )
 
     rebuilt = compute_bt_rolling_sharpe(
         bt_returns,
@@ -137,19 +153,24 @@ def main():
         run_id="rebuild_bt_rolling_sharpe",
         df=rebuilt,
         out_base_path=out_base,
-        warnings=[f"rebuilt from bt_returns with holding_days={holding_days}, window_rebalances={window_rebalances}"],
+        warnings=[
+            f"rebuilt from bt_returns with holding_days={holding_days}, window_rebalances={window_rebalances}"
+        ],
         inputs={"source": "bt_returns"},
         repo_dir=get_path(cfg, "base_dir"),
-        quality={"stability": {
-            "holding_days": holding_days,
-            "window_rebalances": window_rebalances,
-            "net_return_col_used": return_col,
-            "rows": int(rebuilt.shape[0]),
-        }},
+        quality={
+            "stability": {
+                "holding_days": holding_days,
+                "window_rebalances": window_rebalances,
+                "net_return_col_used": return_col,
+                "rows": int(rebuilt.shape[0]),
+            }
+        },
     )
     save_meta(out_base, meta, force=True)
 
     print("✅ REBUILD COMPLETE: bt_rolling_sharpe overwritten (unique keys).")
+
 
 if __name__ == "__main__":
     main()

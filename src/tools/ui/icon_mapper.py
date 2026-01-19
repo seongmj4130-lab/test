@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # src/tools/ui/icon_mapper.py
 # [媛쒖꽑??16踰? ?몃옓(A/B/怨듯넻) ?대뜑 ?ъ젙由? 湲곗〈 import 寃쎈줈 ?명솚 ?섑띁
 

@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/backtest/l7b_sensitivity.py
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import pandas as pd
 
@@ -21,12 +20,14 @@ def _resolve_section(cfg: dict, name: str) -> dict:
     sec2 = cfg.get(name, None)
     return sec2 if isinstance(sec2, dict) else {}
 
+
 def _as_list(x: Any) -> list:
     if x is None:
         return []
     if isinstance(x, (list, tuple, set)):
         return list(x)
     return [x]
+
 
 def _parse_int_list(x: Any) -> list[int]:
     items = _as_list(x)
@@ -52,6 +53,7 @@ def _parse_int_list(x: Any) -> list[int]:
     out = sorted(set(out))
     return out
 
+
 def _parse_float_list(x: Any) -> list[float]:
     items = _as_list(x)
     out: list[float] = []
@@ -74,6 +76,7 @@ def _parse_float_list(x: Any) -> list[float]:
     out = sorted(set(out))
     return out
 
+
 def _parse_str_list(x: Any) -> list[str]:
     items = _as_list(x)
     out: list[str] = []
@@ -93,18 +96,19 @@ def _parse_str_list(x: Any) -> list[str]:
         res.append(s)
     return res
 
+
 def run_sensitivity(
     rebalance_scores: pd.DataFrame,
     *,
     holding_days: int,
-    top_k_grid: List[int],
-    cost_bps_grid: List[float],
-    weighting_grid: List[str],
+    top_k_grid: list[int],
+    cost_bps_grid: list[float],
+    weighting_grid: list[str],
     score_col: str,
     ret_col: str,
-    buffer_k_grid: Optional[List[int]] = None,
-) -> Tuple[pd.DataFrame, pd.DataFrame, List[str]]:
-    warns: List[str] = []
+    buffer_k_grid: Optional[list[int]] = None,
+) -> tuple[pd.DataFrame, pd.DataFrame, list[str]]:
+    warns: list[str] = []
     rows = []
 
     if buffer_k_grid is None or len(buffer_k_grid) == 0:
@@ -123,7 +127,9 @@ def run_sensitivity(
                         weighting=str(w),
                         buffer_k=int(bk),
                     )
-                    _, _, _, met, _, wns, _, _, _ = run_backtest(rebalance_scores, cfg_bt)
+                    _, _, _, met, _, wns, _, _, _ = run_backtest(
+                        rebalance_scores, cfg_bt
+                    )
                     warns.extend(wns or [])
                     met = met.copy()
                     met["grid_top_k"] = int(k)
@@ -140,18 +146,30 @@ def run_sensitivity(
         "cost_bps_grid": list(map(float, cost_bps_grid)),
         "weighting_grid": list(map(str, weighting_grid)),
         "buffer_k_grid": list(map(int, buffer_k_grid)),
-        "n_runs": int(len(top_k_grid) * len(cost_bps_grid) * len(weighting_grid) * len(buffer_k_grid)),
-        "rows_expected": int(2 * len(top_k_grid) * len(cost_bps_grid) * len(weighting_grid) * len(buffer_k_grid)),
+        "n_runs": int(
+            len(top_k_grid)
+            * len(cost_bps_grid)
+            * len(weighting_grid)
+            * len(buffer_k_grid)
+        ),
+        "rows_expected": int(
+            2
+            * len(top_k_grid)
+            * len(cost_bps_grid)
+            * len(weighting_grid)
+            * len(buffer_k_grid)
+        ),
     }
     quality_df = pd.DataFrame([quality])
 
     return out, quality_df, warns
 
+
 def run_l7b_sensitivity(
     *,
     rebalance_scores: pd.DataFrame,
     cfg: dict,
-) -> Tuple[dict, List[str]]:
+) -> tuple[dict, list[str]]:
     """
     run_all.py에서 호출하는 표준 엔트리포인트.
     output artifact: bt_sensitivity

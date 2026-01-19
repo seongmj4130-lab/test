@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/validation/check_stage_completion.py
 """
 Stage 완료 점검 스크립트
@@ -6,12 +5,10 @@ Stage 완료 점검 스크립트
 """
 import argparse
 import hashlib
-import json
-import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import pandas as pd
 import yaml
@@ -19,8 +16,9 @@ import yaml
 
 def load_config(config_path: Path) -> dict:
     """YAML 설정 파일 로드"""
-    with open(config_path, 'r', encoding='utf-8') as f:
+    with open(config_path, encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
+
 
 def get_path(cfg: dict, key: str) -> Path:
     """config에서 경로 추출"""
@@ -31,6 +29,7 @@ def get_path(cfg: dict, key: str) -> Path:
         return Path(path_template.format(base_dir=base_dir))
     return base_dir / key.replace("_", "/")
 
+
 def get_file_hash(filepath: Path) -> str:
     """파일의 SHA256 해시 계산"""
     sha256_hash = hashlib.sha256()
@@ -39,7 +38,10 @@ def get_file_hash(filepath: Path) -> str:
             sha256_hash.update(byte_block)
     return sha256_hash.hexdigest()
 
-def check_l2_protection(base_interim_dir: Path, baseline_tag: str, log_file: Path = None) -> Tuple[bool, str, Optional[str], Optional[str]]:
+
+def check_l2_protection(
+    base_interim_dir: Path, baseline_tag: str, log_file: Path = None
+) -> tuple[bool, str, Optional[str], Optional[str]]:
     """
     L2 파일 보호 확인 (fundamentals_annual.parquet가 변경되지 않았는지)
 
@@ -58,10 +60,13 @@ def check_l2_protection(base_interim_dir: Path, baseline_tag: str, log_file: Pat
 
     if log_file and log_file.exists():
         try:
-            log_content = log_file.read_text(encoding='utf-8', errors='ignore')
+            log_content = log_file.read_text(encoding="utf-8", errors="ignore")
             # "실행 전 해시:" 또는 "L2 검증] 실행 전 해시:" 패턴 찾기
             import re
-            match = re.search(r'실행\s*전\s*해시[:\s]+([0-9a-f]{16})', log_content, re.IGNORECASE)
+
+            match = re.search(
+                r"실행\s*전\s*해시[:\s]+([0-9a-f]{16})", log_content, re.IGNORECASE
+            )
             if match:
                 hash_before = match.group(1) + "..."  # 짧은 버전
         except Exception:
@@ -72,7 +77,12 @@ def check_l2_protection(base_interim_dir: Path, baseline_tag: str, log_file: Pat
     if baseline_l2.exists():
         baseline_hash = get_file_hash(baseline_l2)
         if baseline_hash != current_hash:
-            return False, f"L2 파일이 변경되었습니다 (baseline 해시: {baseline_hash[:16]}..., 현재 해시: {current_hash[:16]}...)", hash_before, hash_after[:16] + "..."
+            return (
+                False,
+                f"L2 파일이 변경되었습니다 (baseline 해시: {baseline_hash[:16]}..., 현재 해시: {current_hash[:16]}...)",
+                hash_before,
+                hash_after[:16] + "...",
+            )
 
     # 파일 크기와 수정 시간 확인
     file_size = l2_file.stat().st_size
@@ -82,14 +92,17 @@ def check_l2_protection(base_interim_dir: Path, baseline_tag: str, log_file: Pat
     if hash_before:
         hash_info = f"실행 전: {hash_before}, 실행 후: {hash_after[:16]}..."
 
-    return True, f"L2 파일 보호 확인: 크기={file_size:,} bytes, 수정시간={mtime.strftime('%Y-%m-%d %H:%M:%S')}, {hash_info}", hash_before, hash_after[:16] + "..."
+    return (
+        True,
+        f"L2 파일 보호 확인: 크기={file_size:,} bytes, 수정시간={mtime.strftime('%Y-%m-%d %H:%M:%S')}, {hash_info}",
+        hash_before,
+        hash_after[:16] + "...",
+    )
+
 
 def check_stage_artifacts(
-    stage: int,
-    run_tag: str,
-    base_interim_dir: Path,
-    cfg: dict
-) -> Dict:
+    stage: int, run_tag: str, base_interim_dir: Path, cfg: dict
+) -> dict:
     """
     Stage별 필수 산출물 체크
     """
@@ -118,8 +131,20 @@ def check_stage_artifacts(
         9: ["ranking_daily"],  # Stage9: 설명가능성 확장
         10: ["market_regime_daily", "ranking_daily"],  # Stage10: 시장 국면 지표 추가
         11: ["ui_top_bottom_daily", "ui_equity_curves"],  # Stage11: UI Payload Builder
-        12: ["timeline_ppt", "kpi_onepager", "latest_snapshot", "equity_curves", "appendix_sources"],  # Stage12: Final Export Pack
-        13: ["bt_positions", "bt_returns", "bt_equity_curve", "bt_metrics", "selection_diagnostics"],  # Stage13: K_eff 복원
+        12: [
+            "timeline_ppt",
+            "kpi_onepager",
+            "latest_snapshot",
+            "equity_curves",
+            "appendix_sources",
+        ],  # Stage12: Final Export Pack
+        13: [
+            "bt_positions",
+            "bt_returns",
+            "bt_equity_curve",
+            "bt_metrics",
+            "selection_diagnostics",
+        ],  # Stage13: K_eff 복원
     }
 
     required = stage_artifacts.get(stage, [])
@@ -162,7 +187,9 @@ def check_stage_artifacts(
             expected_path = base_interim_dir / run_tag / f"{artifact_name}.parquet"
             if str(artifact_path) != str(expected_path):
                 results["pass"] = False
-                results["gate_notes"].append(f"저장 경로 불일치: {artifact_path} (예상: {expected_path})")
+                results["gate_notes"].append(
+                    f"저장 경로 불일치: {artifact_path} (예상: {expected_path})"
+                )
 
         # 스키마 체크
         try:
@@ -209,13 +236,17 @@ def check_stage_artifacts(
             check_info["columns"] = list(df.columns)
 
             # Stage7/Stage8/Stage9/Stage10: ranking_daily 특화 검증
-            if (stage == 7 or stage == 8 or stage == 9 or stage == 10) and artifact_name == "ranking_daily":
+            if (
+                stage == 7 or stage == 8 or stage == 9 or stage == 10
+            ) and artifact_name == "ranking_daily":
                 # 필수 컬럼 확인
                 required_cols = ["date", "ticker", "score_total", "rank_total"]
                 missing_cols = [c for c in required_cols if c not in df.columns]
                 if missing_cols:
                     results["pass"] = False
-                    results["warnings"].append(f"ranking_daily 필수 컬럼 누락: {missing_cols}")
+                    results["warnings"].append(
+                        f"ranking_daily 필수 컬럼 누락: {missing_cols}"
+                    )
 
                 # score 결측률 체크
                 if "score_total" in df.columns:
@@ -237,7 +268,9 @@ def check_stage_artifacts(
                         # 중복 체크
                         duplicates = ranks.duplicated().sum()
                         if duplicates > 0:
-                            rank_issues.append(f"{date.strftime('%Y-%m-%d')}: rank 중복 {duplicates}건")
+                            rank_issues.append(
+                                f"{date.strftime('%Y-%m-%d')}: rank 중복 {duplicates}건"
+                            )
 
                         # 연속성 체크 (1부터 시작하는지)
                         unique_ranks = sorted(ranks.unique())
@@ -245,12 +278,18 @@ def check_stage_artifacts(
                             expected_min = 1
                             expected_max = len(unique_ranks)
                             if unique_ranks[0] != expected_min:
-                                rank_issues.append(f"{date.strftime('%Y-%m-%d')}: rank 시작값 불일치 (실제: {unique_ranks[0]}, 예상: {expected_min})")
+                                rank_issues.append(
+                                    f"{date.strftime('%Y-%m-%d')}: rank 시작값 불일치 (실제: {unique_ranks[0]}, 예상: {expected_min})"
+                                )
                             if unique_ranks[-1] != expected_max:
-                                rank_issues.append(f"{date.strftime('%Y-%m-%d')}: rank 종료값 불일치 (실제: {unique_ranks[-1]}, 예상: {expected_max})")
+                                rank_issues.append(
+                                    f"{date.strftime('%Y-%m-%d')}: rank 종료값 불일치 (실제: {unique_ranks[-1]}, 예상: {expected_max})"
+                                )
 
                     if rank_issues:
-                        results["gate_notes"].append(f"rank 검증 이슈: {rank_issues[:5]}")  # 최대 5개만 표시
+                        results["gate_notes"].append(
+                            f"rank 검증 이슈: {rank_issues[:5]}"
+                        )  # 최대 5개만 표시
                         check_info["rank_issues"] = len(rank_issues)
                     else:
                         check_info["rank_issues"] = 0
@@ -261,9 +300,13 @@ def check_stage_artifacts(
                     has_top_features = "top_features" in df.columns
 
                     if len(contrib_cols) == 0:
-                        results["gate_notes"].append("Stage9: contrib_* 컬럼이 없습니다")
+                        results["gate_notes"].append(
+                            "Stage9: contrib_* 컬럼이 없습니다"
+                        )
                     if not has_top_features:
-                        results["gate_notes"].append("Stage9: top_features 컬럼이 없습니다")
+                        results["gate_notes"].append(
+                            "Stage9: top_features 컬럼이 없습니다"
+                        )
 
                     check_info["explainability_cols"] = {
                         "contrib_cols": len(contrib_cols),
@@ -276,9 +319,13 @@ def check_stage_artifacts(
                     has_regime_label = "regime_label" in df.columns
 
                     if not has_regime_score:
-                        results["gate_notes"].append("Stage10: regime_score 컬럼이 없습니다")
+                        results["gate_notes"].append(
+                            "Stage10: regime_score 컬럼이 없습니다"
+                        )
                     if not has_regime_label:
-                        results["gate_notes"].append("Stage10: regime_label 컬럼이 없습니다")
+                        results["gate_notes"].append(
+                            "Stage10: regime_label 컬럼이 없습니다"
+                        )
 
                     check_info["regime_cols"] = {
                         "has_regime_score": has_regime_score,
@@ -290,7 +337,9 @@ def check_stage_artifacts(
                 missing_pct = df.isnull().sum() / len(df) * 100
                 high_missing = missing_pct[missing_pct > 50].to_dict()
                 if high_missing:
-                    results["warnings"].append(f"{artifact_name} 고결측률 컬럼: {high_missing}")
+                    results["warnings"].append(
+                        f"{artifact_name} 고결측률 컬럼: {high_missing}"
+                    )
 
             results["checks"].append(check_info)
 
@@ -301,12 +350,10 @@ def check_stage_artifacts(
 
     return results
 
+
 def check_kpi_delta_reports(
-    stage: int,
-    run_tag: str,
-    baseline_tag: str,
-    base_dir: Path
-) -> Dict:
+    stage: int, run_tag: str, baseline_tag: str, base_dir: Path
+) -> dict:
     """
     KPI/Delta 리포트 존재 확인
     """
@@ -338,16 +385,31 @@ def check_kpi_delta_reports(
             results["pass"] = False
     elif stage == 8 or stage == 9:
         # Stage8/Stage9: KPI + Delta 모두 필수
-        if not all([results["kpi_csv"], results["kpi_md"], results["delta_csv"], results["delta_md"]]):
+        if not all(
+            [
+                results["kpi_csv"],
+                results["kpi_md"],
+                results["delta_csv"],
+                results["delta_md"],
+            ]
+        ):
             results["pass"] = False
     else:
         # 다른 Stage는 모두 필수
-        if not all([results["kpi_csv"], results["kpi_md"], results["delta_csv"], results["delta_md"]]):
+        if not all(
+            [
+                results["kpi_csv"],
+                results["kpi_md"],
+                results["delta_csv"],
+                results["delta_md"],
+            ]
+        ):
             results["pass"] = False
 
     return results
 
-def check_baselines_yaml(base_dir: Path, run_tag: str, stage: int) -> Tuple[bool, str]:
+
+def check_baselines_yaml(base_dir: Path, run_tag: str, stage: int) -> tuple[bool, str]:
     """
     baselines.yaml 확인 (Stage7)
 
@@ -363,18 +425,25 @@ def check_baselines_yaml(base_dir: Path, run_tag: str, stage: int) -> Tuple[bool
 
     try:
         import yaml
-        with open(baselines_path, 'r', encoding='utf-8') as f:
+
+        with open(baselines_path, encoding="utf-8") as f:
             baselines = yaml.safe_load(f) or {}
 
         ranking_baseline = baselines.get("ranking_baseline_tag")
         if ranking_baseline != run_tag:
-            return False, f"ranking_baseline_tag 불일치: {ranking_baseline} (예상: {run_tag})"
+            return (
+                False,
+                f"ranking_baseline_tag 불일치: {ranking_baseline} (예상: {run_tag})",
+            )
 
         return True, f"ranking_baseline_tag 확인: {ranking_baseline}"
     except Exception as e:
         return False, f"baselines.yaml 읽기 실패: {e}"
 
-def check_history_manifest(base_dir: Path, run_tag: str, stage: int, track: str) -> Tuple[bool, str]:
+
+def check_history_manifest(
+    base_dir: Path, run_tag: str, stage: int, track: str
+) -> tuple[bool, str]:
     """
     history_manifest 확인 (Stage7)
 
@@ -399,28 +468,32 @@ def check_history_manifest(base_dir: Path, run_tag: str, stage: int, track: str)
 
         # stage_no=7, track=ranking, run_tag row 확인
         mask = (
-            (df["stage_no"] == stage) &
-            (df["track"] == track) &
-            (df["run_tag"] == run_tag)
+            (df["stage_no"] == stage)
+            & (df["track"] == track)
+            & (df["run_tag"] == run_tag)
         )
 
         if mask.sum() == 0:
-            return False, f"history_manifest에 stage_no={stage}, track={track}, run_tag={run_tag} row가 없습니다"
+            return (
+                False,
+                f"history_manifest에 stage_no={stage}, track={track}, run_tag={run_tag} row가 없습니다",
+            )
 
         return True, f"history_manifest 확인: {mask.sum()}개 row 발견"
     except Exception as e:
         return False, f"history_manifest 읽기 실패: {e}"
 
+
 def generate_check_report(
     stage: int,
     run_tag: str,
     baseline_tag: str,
-    artifact_results: Dict,
-    report_results: Dict,
-    l2_protection: Tuple[bool, str, Optional[str], Optional[str]],
-    baselines_check: Tuple[bool, str],
-    history_check: Tuple[bool, str],
-    base_dir: Path
+    artifact_results: dict,
+    report_results: dict,
+    l2_protection: tuple[bool, str, Optional[str], Optional[str]],
+    baselines_check: tuple[bool, str],
+    history_check: tuple[bool, str],
+    base_dir: Path,
 ) -> str:
     """
     체크 리포트 Markdown 생성
@@ -455,10 +528,14 @@ def generate_check_report(
     # Stage7/Stage8/Stage9는 상세 테이블, 다른 Stage는 간단 테이블
     if stage == 7 or stage == 8 or stage == 9:
         if stage == 9:
-            lines.append("| 산출물 | 존재 | 행수 | 컬럼 수 | 날짜 범위 | Score 결측률 | Rank 이슈 | 설명가능성 |")
+            lines.append(
+                "| 산출물 | 존재 | 행수 | 컬럼 수 | 날짜 범위 | Score 결측률 | Rank 이슈 | 설명가능성 |"
+            )
             lines.append("|---|---|---|---|---|---|---|---|")
         else:
-            lines.append("| 산출물 | 존재 | 행수 | 컬럼 수 | 날짜 범위 | Score 결측률 | Rank 이슈 |")
+            lines.append(
+                "| 산출물 | 존재 | 행수 | 컬럼 수 | 날짜 범위 | Score 결측률 | Rank 이슈 |"
+            )
             lines.append("|---|---|---|---|---|---|---|")
 
         for check in artifact_results["checks"]:
@@ -479,7 +556,13 @@ def generate_check_report(
             score_str = f"{score_missing:.2f}%" if score_missing is not None else "N/A"
 
             rank_issues = check.get("rank_issues", None)
-            rank_str = f"{rank_issues}건" if rank_issues is not None and rank_issues > 0 else "0건" if rank_issues == 0 else "N/A"
+            rank_str = (
+                f"{rank_issues}건"
+                if rank_issues is not None and rank_issues > 0
+                else "0건"
+                if rank_issues == 0
+                else "N/A"
+            )
 
             # Stage9: 설명가능성 컬럼 정보 추가
             if stage == 9:
@@ -487,9 +570,13 @@ def generate_check_report(
                 contrib_count = explainability.get("contrib_cols", 0)
                 has_top_features = explainability.get("has_top_features", False)
                 explainability_str = f"contrib:{contrib_count}, top_features:{'Y' if has_top_features else 'N'}"
-                lines.append(f"| {artifact} | {exists} | {n_rows} | {n_cols} | {date_str} | {score_str} | {rank_str} | {explainability_str} |")
+                lines.append(
+                    f"| {artifact} | {exists} | {n_rows} | {n_cols} | {date_str} | {score_str} | {rank_str} | {explainability_str} |"
+                )
             else:
-                lines.append(f"| {artifact} | {exists} | {n_rows} | {n_cols} | {date_str} | {score_str} | {rank_str} |")
+                lines.append(
+                    f"| {artifact} | {exists} | {n_rows} | {n_cols} | {date_str} | {score_str} | {rank_str} |"
+                )
     else:
         lines.append("| 산출물 | 존재 | 행수 | 컬럼 수 | 날짜 범위 |")
         lines.append("|---|---|---|---|---|")
@@ -507,7 +594,9 @@ def generate_check_report(
             else:
                 date_str = "N/A"
 
-            lines.append(f"| {artifact} | {exists} | {n_rows} | {n_cols} | {date_str} |")
+            lines.append(
+                f"| {artifact} | {exists} | {n_rows} | {n_cols} | {date_str} |"
+            )
 
     lines.append("")
 
@@ -533,49 +622,105 @@ def generate_check_report(
     lines.append("")
     lines.append("| 리포트 | 존재 |")
     lines.append("|---|---|")
-    lines.append(f"| KPI CSV | {'[OK]' if report_results['kpi_csv'] else '[MISSING]'} |")
+    lines.append(
+        f"| KPI CSV | {'[OK]' if report_results['kpi_csv'] else '[MISSING]'} |"
+    )
     lines.append(f"| KPI MD | {'[OK]' if report_results['kpi_md'] else '[MISSING]'} |")
     if stage == 7:
         # Stage7은 delta 리포트가 선택적
-        lines.append(f"| Delta CSV | {'[OK]' if report_results.get('delta_csv') else '[OPTIONAL]'} |")
-        lines.append(f"| Delta MD | {'[OK]' if report_results.get('delta_md') else '[OPTIONAL]'} |")
-        lines.append(f"| Ranking Snapshot | {'[OK]' if report_results.get('ranking_snapshot') else '[MISSING]'} |")
+        lines.append(
+            f"| Delta CSV | {'[OK]' if report_results.get('delta_csv') else '[OPTIONAL]'} |"
+        )
+        lines.append(
+            f"| Delta MD | {'[OK]' if report_results.get('delta_md') else '[OPTIONAL]'} |"
+        )
+        lines.append(
+            f"| Ranking Snapshot | {'[OK]' if report_results.get('ranking_snapshot') else '[MISSING]'} |"
+        )
     elif stage == 8:
         # Stage8: Delta 리포트 필수 + 섹터 농도 리포트 필수
-        lines.append(f"| Delta CSV | {'[OK]' if report_results['delta_csv'] else '[MISSING]'} |")
-        lines.append(f"| Delta MD | {'[OK]' if report_results['delta_md'] else '[MISSING]'} |")
-        lines.append(f"| Sector Concentration | {'[OK]' if report_results.get('sector_concentration') else '[MISSING]'} |")
+        lines.append(
+            f"| Delta CSV | {'[OK]' if report_results['delta_csv'] else '[MISSING]'} |"
+        )
+        lines.append(
+            f"| Delta MD | {'[OK]' if report_results['delta_md'] else '[MISSING]'} |"
+        )
+        lines.append(
+            f"| Sector Concentration | {'[OK]' if report_results.get('sector_concentration') else '[MISSING]'} |"
+        )
     elif stage == 9:
         # Stage9: Delta 리포트 필수 + Snapshot 필수
-        lines.append(f"| Delta CSV | {'[OK]' if report_results['delta_csv'] else '[MISSING]'} |")
-        lines.append(f"| Delta MD | {'[OK]' if report_results['delta_md'] else '[MISSING]'} |")
-        lines.append(f"| Ranking Snapshot | {'[OK]' if report_results.get('ranking_snapshot') else '[MISSING]'} |")
+        lines.append(
+            f"| Delta CSV | {'[OK]' if report_results['delta_csv'] else '[MISSING]'} |"
+        )
+        lines.append(
+            f"| Delta MD | {'[OK]' if report_results['delta_md'] else '[MISSING]'} |"
+        )
+        lines.append(
+            f"| Ranking Snapshot | {'[OK]' if report_results.get('ranking_snapshot') else '[MISSING]'} |"
+        )
     elif stage == 10:
         # Stage10: Delta 리포트 필수 + Regime Summary 필수
-        lines.append(f"| Delta CSV | {'[OK]' if report_results['delta_csv'] else '[MISSING]'} |")
-        lines.append(f"| Delta MD | {'[OK]' if report_results['delta_md'] else '[MISSING]'} |")
-        lines.append(f"| Regime Summary | {'[OK]' if report_results.get('regime_summary') else '[MISSING]'} |")
+        lines.append(
+            f"| Delta CSV | {'[OK]' if report_results['delta_csv'] else '[MISSING]'} |"
+        )
+        lines.append(
+            f"| Delta MD | {'[OK]' if report_results['delta_md'] else '[MISSING]'} |"
+        )
+        lines.append(
+            f"| Regime Summary | {'[OK]' if report_results.get('regime_summary') else '[MISSING]'} |"
+        )
     elif stage == 11:
         # Stage11: Delta 리포트 필수 + UI Snapshot/Metrics 필수
-        lines.append(f"| Delta CSV | {'[OK]' if report_results['delta_csv'] else '[MISSING]'} |")
-        lines.append(f"| Delta MD | {'[OK]' if report_results['delta_md'] else '[MISSING]'} |")
-        lines.append(f"| UI Snapshot | {'[OK]' if report_results.get('ui_snapshot') else '[MISSING]'} |")
-        lines.append(f"| UI Metrics | {'[OK]' if report_results.get('ui_metrics') else '[MISSING]'} |")
+        lines.append(
+            f"| Delta CSV | {'[OK]' if report_results['delta_csv'] else '[MISSING]'} |"
+        )
+        lines.append(
+            f"| Delta MD | {'[OK]' if report_results['delta_md'] else '[MISSING]'} |"
+        )
+        lines.append(
+            f"| UI Snapshot | {'[OK]' if report_results.get('ui_snapshot') else '[MISSING]'} |"
+        )
+        lines.append(
+            f"| UI Metrics | {'[OK]' if report_results.get('ui_metrics') else '[MISSING]'} |"
+        )
     elif stage == 12:
         # Stage12: Delta 리포트 필수 + Final Export Pack 파일들 필수
-        lines.append(f"| Delta CSV | {'[OK]' if report_results['delta_csv'] else '[MISSING]'} |")
-        lines.append(f"| Delta MD | {'[OK]' if report_results['delta_md'] else '[MISSING]'} |")
-        lines.append(f"| Timeline PPT | {'[OK]' if report_results.get('timeline_ppt_csv') else '[MISSING]'} |")
-        lines.append(f"| KPI Onepager CSV | {'[OK]' if report_results.get('kpi_onepager_csv') else '[MISSING]'} |")
-        lines.append(f"| KPI Onepager MD | {'[OK]' if report_results.get('kpi_onepager_md') else '[MISSING]'} |")
-        lines.append(f"| Latest Snapshot | {'[OK]' if report_results.get('latest_snapshot_csv') else '[MISSING]'} |")
-        lines.append(f"| Equity Curves | {'[OK]' if report_results.get('equity_curves_csv') else '[MISSING]'} |")
-        lines.append(f"| Appendix Sources | {'[OK]' if report_results.get('appendix_sources_md') else '[MISSING]'} |")
+        lines.append(
+            f"| Delta CSV | {'[OK]' if report_results['delta_csv'] else '[MISSING]'} |"
+        )
+        lines.append(
+            f"| Delta MD | {'[OK]' if report_results['delta_md'] else '[MISSING]'} |"
+        )
+        lines.append(
+            f"| Timeline PPT | {'[OK]' if report_results.get('timeline_ppt_csv') else '[MISSING]'} |"
+        )
+        lines.append(
+            f"| KPI Onepager CSV | {'[OK]' if report_results.get('kpi_onepager_csv') else '[MISSING]'} |"
+        )
+        lines.append(
+            f"| KPI Onepager MD | {'[OK]' if report_results.get('kpi_onepager_md') else '[MISSING]'} |"
+        )
+        lines.append(
+            f"| Latest Snapshot | {'[OK]' if report_results.get('latest_snapshot_csv') else '[MISSING]'} |"
+        )
+        lines.append(
+            f"| Equity Curves | {'[OK]' if report_results.get('equity_curves_csv') else '[MISSING]'} |"
+        )
+        lines.append(
+            f"| Appendix Sources | {'[OK]' if report_results.get('appendix_sources_md') else '[MISSING]'} |"
+        )
     elif stage == 13:
         # [Stage13] Delta 리포트 필수 + Selection Diagnostics 필수
-        lines.append(f"| Delta CSV | {'[OK]' if report_results['delta_csv'] else '[MISSING]'} |")
-        lines.append(f"| Delta MD | {'[OK]' if report_results['delta_md'] else '[MISSING]'} |")
-        lines.append(f"| Selection Diagnostics | {'[OK]' if report_results.get('selection_diagnostics') else '[MISSING]'} |")
+        lines.append(
+            f"| Delta CSV | {'[OK]' if report_results['delta_csv'] else '[MISSING]'} |"
+        )
+        lines.append(
+            f"| Delta MD | {'[OK]' if report_results['delta_md'] else '[MISSING]'} |"
+        )
+        lines.append(
+            f"| Selection Diagnostics | {'[OK]' if report_results.get('selection_diagnostics') else '[MISSING]'} |"
+        )
 
         # [Stage13] K_eff 분석 섹션 추가
         if report_results.get("k_eff_analysis"):
@@ -589,12 +734,21 @@ def generate_check_report(
             if k_eff.get("dev_top_k") and k_eff.get("dev_k_eff_mean") is not None:
                 dev_fill = k_eff.get("dev_fill_rate_pct")
                 dev_fill_str = f"{dev_fill:.1f}%" if dev_fill is not None else "N/A"
-                lines.append(f"| Dev | {k_eff['dev_top_k']} | {k_eff['dev_k_eff_mean']:.1f} | {dev_fill_str} |")
+                lines.append(
+                    f"| Dev | {k_eff['dev_top_k']} | {k_eff['dev_k_eff_mean']:.1f} | {dev_fill_str} |"
+                )
 
-            if k_eff.get("holdout_top_k") and k_eff.get("holdout_k_eff_mean") is not None:
+            if (
+                k_eff.get("holdout_top_k")
+                and k_eff.get("holdout_k_eff_mean") is not None
+            ):
                 holdout_fill = k_eff.get("holdout_fill_rate_pct")
-                holdout_fill_str = f"{holdout_fill:.1f}%" if holdout_fill is not None else "N/A"
-                lines.append(f"| Holdout | {k_eff['holdout_top_k']} | {k_eff['holdout_k_eff_mean']:.1f} | {holdout_fill_str} |")
+                holdout_fill_str = (
+                    f"{holdout_fill:.1f}%" if holdout_fill is not None else "N/A"
+                )
+                lines.append(
+                    f"| Holdout | {k_eff['holdout_top_k']} | {k_eff['holdout_k_eff_mean']:.1f} | {holdout_fill_str} |"
+                )
 
             lines.append("")
 
@@ -613,8 +767,12 @@ def generate_check_report(
                     lines.append(f"| {reason} | {count} |")
                 lines.append("")
     else:
-        lines.append(f"| Delta CSV | {'[OK]' if report_results['delta_csv'] else '[MISSING]'} |")
-        lines.append(f"| Delta MD | {'[OK]' if report_results['delta_md'] else '[MISSING]'} |")
+        lines.append(
+            f"| Delta CSV | {'[OK]' if report_results['delta_csv'] else '[MISSING]'} |"
+        )
+        lines.append(
+            f"| Delta MD | {'[OK]' if report_results['delta_md'] else '[MISSING]'} |"
+        )
     lines.append("")
 
     # Stage7 추가 체크
@@ -663,20 +821,32 @@ def generate_check_report(
 
     return "\n".join(lines)
 
+
 def main():
-    parser = argparse.ArgumentParser(
-        description="Check Stage Completion"
+    parser = argparse.ArgumentParser(description="Check Stage Completion")
+    parser.add_argument(
+        "--config", type=str, default="configs/config.yaml", help="Config file path"
     )
-    parser.add_argument("--config", type=str, default="configs/config.yaml",
-                       help="Config file path")
-    parser.add_argument("--run-tag", type=str, required=True,
-                       help="Run tag to check")
-    parser.add_argument("--stage", type=int, required=True, choices=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-                       help="Stage number (0-13)")
-    parser.add_argument("--baseline-tag", type=str, default="baseline_prerefresh_20251219_143636",
-                       help="Baseline tag")
-    parser.add_argument("--out-dir", type=str, default="reports/stages",
-                       help="Output directory for check reports")
+    parser.add_argument("--run-tag", type=str, required=True, help="Run tag to check")
+    parser.add_argument(
+        "--stage",
+        type=int,
+        required=True,
+        choices=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+        help="Stage number (0-13)",
+    )
+    parser.add_argument(
+        "--baseline-tag",
+        type=str,
+        default="baseline_prerefresh_20251219_143636",
+        help="Baseline tag",
+    )
+    parser.add_argument(
+        "--out-dir",
+        type=str,
+        default="reports/stages",
+        help="Output directory for check reports",
+    )
     args = parser.parse_args()
 
     # 경로 설정
@@ -697,7 +867,9 @@ def main():
     print(f"[Stage {args.stage} Check] Baseline Tag: {args.baseline_tag}")
 
     # 로그 파일 경로 (L2 해시 확인용)
-    log_file = base_dir / "reports" / "logs" / f"run__stage{args.stage}__{args.run_tag}.txt"
+    log_file = (
+        base_dir / "reports" / "logs" / f"run__stage{args.stage}__{args.run_tag}.txt"
+    )
 
     # L2 보호 확인
     l2_protection = check_l2_protection(base_interim_dir, args.baseline_tag, log_file)
@@ -714,7 +886,9 @@ def main():
 
     # Stage7 추가 체크: ranking_snapshot
     if args.stage == 7:
-        ranking_snapshot = base_dir / "reports" / "ranking" / f"ranking_snapshot__{args.run_tag}.csv"
+        ranking_snapshot = (
+            base_dir / "reports" / "ranking" / f"ranking_snapshot__{args.run_tag}.csv"
+        )
         if ranking_snapshot.exists():
             report_results["ranking_snapshot"] = True
         else:
@@ -725,10 +899,17 @@ def main():
         baselines_check = check_baselines_yaml(base_dir, args.run_tag, args.stage)
 
         # history_manifest 확인
-        history_check = check_history_manifest(base_dir, args.run_tag, args.stage, "ranking")
+        history_check = check_history_manifest(
+            base_dir, args.run_tag, args.stage, "ranking"
+        )
     elif args.stage == 8:
         # Stage8 추가 체크: 섹터 농도 리포트
-        sector_concentration = base_dir / "reports" / "ranking" / f"sector_concentration__{args.run_tag}.csv"
+        sector_concentration = (
+            base_dir
+            / "reports"
+            / "ranking"
+            / f"sector_concentration__{args.run_tag}.csv"
+        )
         if sector_concentration.exists():
             report_results["sector_concentration"] = True
         else:
@@ -739,7 +920,9 @@ def main():
         history_check = (True, "N/A")
     elif args.stage == 9:
         # Stage9 추가 체크: ranking_snapshot
-        ranking_snapshot = base_dir / "reports" / "ranking" / f"ranking_snapshot__{args.run_tag}.csv"
+        ranking_snapshot = (
+            base_dir / "reports" / "ranking" / f"ranking_snapshot__{args.run_tag}.csv"
+        )
         if ranking_snapshot.exists():
             report_results["ranking_snapshot"] = True
         else:
@@ -750,7 +933,9 @@ def main():
         history_check = (True, "N/A")
     elif args.stage == 10:
         # Stage10 추가 체크: regime_summary
-        regime_summary = base_dir / "reports" / "ranking" / f"regime_summary__{args.run_tag}.csv"
+        regime_summary = (
+            base_dir / "reports" / "ranking" / f"regime_summary__{args.run_tag}.csv"
+        )
         if regime_summary.exists():
             report_results["regime_summary"] = True
         else:
@@ -805,24 +990,46 @@ def main():
         history_check = (True, "N/A")
     elif args.stage == 13:
         # [Stage13] selection_diagnostics 체크
-        selection_diagnostics = base_interim_dir / args.run_tag / "selection_diagnostics.parquet"
+        selection_diagnostics = (
+            base_interim_dir / args.run_tag / "selection_diagnostics.parquet"
+        )
         if selection_diagnostics.exists():
             report_results["selection_diagnostics"] = True
             # K_eff 분석 추가
             try:
                 df_diag = pd.read_parquet(selection_diagnostics)
-                if "phase" in df_diag.columns and "selected_count" in df_diag.columns and "top_k" in df_diag.columns:
+                if (
+                    "phase" in df_diag.columns
+                    and "selected_count" in df_diag.columns
+                    and "top_k" in df_diag.columns
+                ):
                     # K_eff 분석
                     df_dev = df_diag[df_diag["phase"] == "dev"]
                     df_holdout = df_diag[df_diag["phase"] == "holdout"]
 
-                    dev_k_eff_mean = df_dev["selected_count"].mean() if not df_dev.empty else None
-                    holdout_k_eff_mean = df_holdout["selected_count"].mean() if not df_holdout.empty else None
+                    dev_k_eff_mean = (
+                        df_dev["selected_count"].mean() if not df_dev.empty else None
+                    )
+                    holdout_k_eff_mean = (
+                        df_holdout["selected_count"].mean()
+                        if not df_holdout.empty
+                        else None
+                    )
                     dev_top_k = df_dev["top_k"].iloc[0] if not df_dev.empty else None
-                    holdout_top_k = df_holdout["top_k"].iloc[0] if not df_holdout.empty else None
+                    holdout_top_k = (
+                        df_holdout["top_k"].iloc[0] if not df_holdout.empty else None
+                    )
 
-                    dev_fill_rate = (dev_k_eff_mean / dev_top_k * 100) if (dev_k_eff_mean and dev_top_k) else None
-                    holdout_fill_rate = (holdout_k_eff_mean / holdout_top_k * 100) if (holdout_k_eff_mean and holdout_top_k) else None
+                    dev_fill_rate = (
+                        (dev_k_eff_mean / dev_top_k * 100)
+                        if (dev_k_eff_mean and dev_top_k)
+                        else None
+                    )
+                    holdout_fill_rate = (
+                        (holdout_k_eff_mean / holdout_top_k * 100)
+                        if (holdout_k_eff_mean and holdout_top_k)
+                        else None
+                    )
 
                     # Drop reason top3
                     if "drop_reasons" in df_diag.columns:
@@ -832,14 +1039,19 @@ def main():
                             if isinstance(reasons_str, str):
                                 # 간단한 파싱 (예: "{'missing_price': 5, 'sectorcap_IT': 3}")
                                 import ast
+
                                 try:
                                     reasons_dict = ast.literal_eval(reasons_str)
                                     for reason, count in reasons_dict.items():
-                                        all_reasons[reason] = all_reasons.get(reason, 0) + count
+                                        all_reasons[reason] = (
+                                            all_reasons.get(reason, 0) + count
+                                        )
                                 except:
                                     pass
 
-                        top3_reasons = sorted(all_reasons.items(), key=lambda x: x[1], reverse=True)[:3]
+                        top3_reasons = sorted(
+                            all_reasons.items(), key=lambda x: x[1], reverse=True
+                        )[:3]
                         report_results["drop_reasons_top3"] = top3_reasons
                     else:
                         report_results["drop_reasons_top3"] = []
@@ -855,15 +1067,20 @@ def main():
                                 try:
                                     # 문자열을 dict로 파싱 시도 (예: "{'missing_required_cols': 5, 'sectorcap_IT': 2}")
                                     import ast
+
                                     reasons_dict = ast.literal_eval(reasons_str)
                                     for reason, count in reasons_dict.items():
-                                        all_reasons[reason] = all_reasons.get(reason, 0) + count
+                                        all_reasons[reason] = (
+                                            all_reasons.get(reason, 0) + count
+                                        )
                                 except Exception:
                                     pass
 
                         # 상위 3개 추출
                         if all_reasons:
-                            sorted_reasons = sorted(all_reasons.items(), key=lambda x: x[1], reverse=True)
+                            sorted_reasons = sorted(
+                                all_reasons.items(), key=lambda x: x[1], reverse=True
+                            )
                             drop_reasons_top3 = sorted_reasons[:3]
 
                     report_results["k_eff_analysis"] = {
@@ -891,9 +1108,15 @@ def main():
 
     # 리포트 생성
     report_content = generate_check_report(
-        args.stage, args.run_tag, args.baseline_tag,
-        artifact_results, report_results, l2_protection,
-        baselines_check, history_check, base_dir
+        args.stage,
+        args.run_tag,
+        args.baseline_tag,
+        artifact_results,
+        report_results,
+        l2_protection,
+        baselines_check,
+        history_check,
+        base_dir,
     )
 
     # 저장
@@ -902,12 +1125,16 @@ def main():
     print(f"[Stage {args.stage} Check] Report saved: {report_path}")
 
     # 최종 판정 출력
-    overall_pass = artifact_results["pass"] and report_results["pass"] and l2_protection[0]
+    overall_pass = (
+        artifact_results["pass"] and report_results["pass"] and l2_protection[0]
+    )
     if args.stage == 7:
         overall_pass = overall_pass and baselines_check[0] and history_check[0]
     elif args.stage == 8:
         # Stage8: 섹터 농도 리포트 필수
-        overall_pass = overall_pass and report_results.get("sector_concentration", False)
+        overall_pass = overall_pass and report_results.get(
+            "sector_concentration", False
+        )
     elif args.stage == 9:
         # Stage9: ranking_snapshot 필수
         overall_pass = overall_pass and report_results.get("ranking_snapshot", False)
@@ -916,7 +1143,11 @@ def main():
         overall_pass = overall_pass and report_results.get("regime_summary", False)
     elif args.stage == 11:
         # Stage11: UI Snapshot/Metrics 필수
-        overall_pass = overall_pass and report_results.get("ui_snapshot", False) and report_results.get("ui_metrics", False)
+        overall_pass = (
+            overall_pass
+            and report_results.get("ui_snapshot", False)
+            and report_results.get("ui_metrics", False)
+        )
     elif args.stage == 12:
         # Stage12: Final Export Pack 파일들 필수
         required_files = [
@@ -931,7 +1162,9 @@ def main():
             overall_pass = overall_pass and report_results.get(key, False)
     elif args.stage == 13:
         # [Stage13] Selection Diagnostics 필수
-        overall_pass = overall_pass and report_results.get("selection_diagnostics", False)
+        overall_pass = overall_pass and report_results.get(
+            "selection_diagnostics", False
+        )
 
     if overall_pass:
         print(f"[Stage {args.stage} Check] [PASS]")
@@ -944,6 +1177,7 @@ def main():
             if not history_check[0]:
                 print(f"  - history_manifest: {history_check[1]}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

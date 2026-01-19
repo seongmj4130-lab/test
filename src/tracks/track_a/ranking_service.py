@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Track A: 랭킹 엔진 서비스 모듈
 
@@ -8,7 +7,6 @@ UI에서 import 가능한 형태로 랭킹 생성 함수를 제공합니다.
 """
 import logging
 from pathlib import Path
-from typing import Dict, Optional
 
 import pandas as pd
 
@@ -25,7 +23,7 @@ logger = logging.getLogger(__name__)
 def generate_rankings(
     config_path: str = "configs/config.yaml",
     force_rebuild: bool = False,
-) -> Dict[str, pd.DataFrame]:
+) -> dict[str, pd.DataFrame]:
     """
     랭킹을 생성하는 함수 (Track A 핵심 기능).
 
@@ -53,7 +51,9 @@ def generate_rankings(
     cfg = load_config(config_path)
 
     # 공통 데이터 준비
-    artifacts = prepare_common_data(config_path=config_path, force_rebuild=force_rebuild)
+    artifacts = prepare_common_data(
+        config_path=config_path, force_rebuild=force_rebuild
+    )
 
     # L8: 랭킹 엔진 실행
     logger.info("[L8] 랭킹 엔진 실행")
@@ -141,12 +141,15 @@ def inspect_holdout_day_rankings(
 
 if __name__ == "__main__":
     import sys
+
     logging.basicConfig(
         level=logging.INFO,
         format="[%(asctime)s] [%(levelname)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     force = "--force" in sys.argv
     rankings = generate_rankings(force_rebuild=force)
-    print(f"\n✅ 완료: 단기 랭킹 {len(rankings['ranking_short_daily']):,}행, 장기 랭킹 {len(rankings['ranking_long_daily']):,}행")
+    print(
+        f"\n✅ 완료: 단기 랭킹 {len(rankings['ranking_short_daily']):,}행, 장기 랭킹 {len(rankings['ranking_long_daily']):,}행"
+    )

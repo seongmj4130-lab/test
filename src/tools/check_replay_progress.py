@@ -1,15 +1,14 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/check_replay_progress.py
 """
 리플레이 진행 상황 실시간 확인 스크립트
 """
-import sys
 from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
 
 PROJECT_ROOT = Path("C:/Users/seong/OneDrive/Desktop/bootcamp/03_code")
+
 
 def check_progress():
     """리플레이 진행 상황 확인"""
@@ -26,14 +25,20 @@ def check_progress():
     # 1. 최신 run_tag 확인
     print("## 1. 최신 실행 태그")
     stage_dirs = sorted(
-        [d for d in base_interim_dir.iterdir() if d.is_dir() and d.name.startswith("stage")],
+        [
+            d
+            for d in base_interim_dir.iterdir()
+            if d.is_dir() and d.name.startswith("stage")
+        ],
         key=lambda x: x.stat().st_mtime,
-        reverse=True
+        reverse=True,
     )
 
     if stage_dirs:
         print(f"최신 실행 태그: {stage_dirs[0].name}")
-        print(f"생성 시간: {datetime.fromtimestamp(stage_dirs[0].stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')}")
+        print(
+            f"생성 시간: {datetime.fromtimestamp(stage_dirs[0].stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')}"
+        )
         print()
 
         # 최신 태그의 산출물 확인
@@ -42,8 +47,12 @@ def check_progress():
         print(f"생성된 산출물 수: {len(artifacts)}")
         if artifacts:
             print("주요 산출물:")
-            for art in sorted(artifacts, key=lambda x: x.stat().st_mtime, reverse=True)[:5]:
-                print(f"  - {art.name} ({datetime.fromtimestamp(art.stat().st_mtime).strftime('%H:%M:%S')})")
+            for art in sorted(artifacts, key=lambda x: x.stat().st_mtime, reverse=True)[
+                :5
+            ]:
+                print(
+                    f"  - {art.name} ({datetime.fromtimestamp(art.stat().st_mtime).strftime('%H:%M:%S')})"
+                )
     else:
         print("실행 중인 Stage가 없습니다.")
     print()
@@ -53,11 +62,13 @@ def check_progress():
     summary_md = analysis_dir / "stage_replay_summary_0_13.md"
     if summary_md.exists():
         print(f"요약 리포트: {summary_md}")
-        print(f"수정 시간: {datetime.fromtimestamp(summary_md.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')}")
+        print(
+            f"수정 시간: {datetime.fromtimestamp(summary_md.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')}"
+        )
 
         # 내용 일부 읽기
         try:
-            with open(summary_md, "r", encoding="utf-8") as f:
+            with open(summary_md, encoding="utf-8") as f:
                 lines = f.readlines()
                 for line in lines[:15]:
                     print(f"  {line.rstrip()}")
@@ -77,7 +88,9 @@ def check_progress():
 
     for name, path in csv_files.items():
         if path.exists():
-            mtime = datetime.fromtimestamp(path.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+            mtime = datetime.fromtimestamp(path.stat().st_mtime).strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
             try:
                 df = pd.read_csv(path)
                 print(f"{name}: [OK] 생성됨 ({mtime}, {len(df)}행)")
@@ -104,7 +117,7 @@ def check_progress():
         stage_numbers.sort(key=lambda x: x[0])  # stage_no 순으로 정렬
         print("완료된 Stage (추정):")
         for stage_no, name, mtime in stage_numbers:
-            time_str = datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M:%S')
+            time_str = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
             # 산출물 확인
             has_bt = (base_interim_dir / name / "bt_metrics.parquet").exists()
             has_ranking = (base_interim_dir / name / "ranking_daily.parquet").exists()
@@ -119,6 +132,7 @@ def check_progress():
     print()
 
     print("=" * 80)
+
 
 if __name__ == "__main__":
     check_progress()

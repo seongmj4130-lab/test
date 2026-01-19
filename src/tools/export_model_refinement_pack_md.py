@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 [개선안 19번] 모델 정교화 패키지(Model Refinement Pack) 보고서 생성기
 
@@ -29,7 +28,9 @@ def _read_yaml(path: Path) -> dict:
     try:
         import yaml
     except Exception as e:
-        raise ImportError("PyYAML이 필요합니다. `pip install pyyaml` 후 재실행하세요.") from e
+        raise ImportError(
+            "PyYAML이 필요합니다. `pip install pyyaml` 후 재실행하세요."
+        ) from e
     return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
 
 
@@ -84,15 +85,47 @@ def build_md(
                 return float("nan")
 
         # [개선안 19번] alpha 튜닝 컬럼이 없을 수도 있으므로, 없으면 NaN으로 표기
-        g = mm.groupby(["phase", "horizon"], sort=False).agg(
-            folds=("fold_id", "nunique") if "fold_id" in mm.columns else ("phase", "size"),
-            ic_rank_mean=("ic_rank", _nan_mean) if "ic_rank" in mm.columns else ("phase", lambda _: float("nan")),
-            hit_ratio_mean=("hit_ratio", _nan_mean) if "hit_ratio" in mm.columns else ("phase", lambda _: float("nan")),
-            rmse_mean=("rmse", _nan_mean) if "rmse" in mm.columns else ("phase", lambda _: float("nan")),
-            r2_oos_mean=("r2_oos", _nan_mean) if "r2_oos" in mm.columns else ("phase", lambda _: float("nan")),
-            alpha_tuned_pct=("alpha_tuned", _nan_pct_true) if "alpha_tuned" in mm.columns else ("phase", lambda _: float("nan")),
-            ridge_alpha_median=("ridge_alpha_used", _nan_median) if "ridge_alpha_used" in mm.columns else ("phase", lambda _: float("nan")),
-        ).reset_index()
+        g = (
+            mm.groupby(["phase", "horizon"], sort=False)
+            .agg(
+                folds=(
+                    ("fold_id", "nunique")
+                    if "fold_id" in mm.columns
+                    else ("phase", "size")
+                ),
+                ic_rank_mean=(
+                    ("ic_rank", _nan_mean)
+                    if "ic_rank" in mm.columns
+                    else ("phase", lambda _: float("nan"))
+                ),
+                hit_ratio_mean=(
+                    ("hit_ratio", _nan_mean)
+                    if "hit_ratio" in mm.columns
+                    else ("phase", lambda _: float("nan"))
+                ),
+                rmse_mean=(
+                    ("rmse", _nan_mean)
+                    if "rmse" in mm.columns
+                    else ("phase", lambda _: float("nan"))
+                ),
+                r2_oos_mean=(
+                    ("r2_oos", _nan_mean)
+                    if "r2_oos" in mm.columns
+                    else ("phase", lambda _: float("nan"))
+                ),
+                alpha_tuned_pct=(
+                    ("alpha_tuned", _nan_pct_true)
+                    if "alpha_tuned" in mm.columns
+                    else ("phase", lambda _: float("nan"))
+                ),
+                ridge_alpha_median=(
+                    ("ridge_alpha_used", _nan_median)
+                    if "ridge_alpha_used" in mm.columns
+                    else ("phase", lambda _: float("nan"))
+                ),
+            )
+            .reset_index()
+        )
         mm_md = "| phase | horizon | folds | ic_rank_mean | hit_ratio_mean | rmse_mean | r2_oos_mean | alpha_tuned_% | ridge_alpha_median |\n"
         mm_md += "|---|---:|---:|---:|---:|---:|---:|---:|---:|\n"
         for _, r in g.iterrows():
@@ -106,7 +139,13 @@ def build_md(
     # feature group balance
     gb_md = "_feature_group_balance.parquet 없음_\n"
     if feature_group_balance is not None and not feature_group_balance.empty:
-        cols_need = ["group_name", "n_features", "target_weight", "actual_weight", "balance_ratio"]
+        cols_need = [
+            "group_name",
+            "n_features",
+            "target_weight",
+            "actual_weight",
+            "balance_ratio",
+        ]
         if all(c in feature_group_balance.columns for c in cols_need):
             gb_md = "| group | n_features | target_weight | actual_weight | balance_ratio |\n"
             gb_md += "|---|---:|---:|---:|---:|\n"
@@ -116,7 +155,14 @@ def build_md(
     # coefficient stability (top unstable)
     fi_md = "_feature_importance_summary.parquet 없음_\n"
     if feature_importance_summary is not None and not feature_importance_summary.empty:
-        cols_need = ["phase", "horizon", "feature", "abs_coef_mean", "coef_sign_stability", "n_folds"]
+        cols_need = [
+            "phase",
+            "horizon",
+            "feature",
+            "abs_coef_mean",
+            "coef_sign_stability",
+            "n_folds",
+        ]
         if all(c in feature_importance_summary.columns for c in cols_need):
             fi = feature_importance_summary[cols_need].copy()
             # low sign_stability but large abs coef => 위험
@@ -133,11 +179,19 @@ def build_md(
 
     # Dev/Holdout inversion note (Option A 20d)
     inv_md = ""
-    if bt_metrics_option_a_20d is not None and not bt_metrics_option_a_20d.empty and "phase" in bt_metrics_option_a_20d.columns:
+    if (
+        bt_metrics_option_a_20d is not None
+        and not bt_metrics_option_a_20d.empty
+        and "phase" in bt_metrics_option_a_20d.columns
+    ):
         bt = bt_metrics_option_a_20d.set_index("phase")
         if "net_sharpe" in bt.columns:
             dev = float(bt.loc["dev", "net_sharpe"]) if "dev" in bt.index else None
-            ho = float(bt.loc["holdout", "net_sharpe"]) if "holdout" in bt.index else None
+            ho = (
+                float(bt.loc["holdout", "net_sharpe"])
+                if "holdout" in bt.index
+                else None
+            )
             if (dev is not None) and (ho is not None):
                 inv_md = f"- Option A(20d) 기준: **Dev net_sharpe={dev:.4f} vs Holdout net_sharpe={ho:.4f}** (역전 여부 확인)\n"
 
@@ -151,9 +205,15 @@ def main():
 
     interim = root / "data" / "interim"
     model_metrics = _safe_read_parquet(interim / "model_metrics.parquet")
-    feature_group_balance = _safe_read_parquet(interim / "feature_group_balance.parquet")
-    feature_importance_summary = _safe_read_parquet(interim / "feature_importance_summary.parquet")
-    bt_metrics_option_a_20d = _safe_read_parquet(interim / "option_a_only_20d" / "bt_metrics.parquet")
+    feature_group_balance = _safe_read_parquet(
+        interim / "feature_group_balance.parquet"
+    )
+    feature_importance_summary = _safe_read_parquet(
+        interim / "feature_importance_summary.parquet"
+    )
+    bt_metrics_option_a_20d = _safe_read_parquet(
+        interim / "option_a_only_20d" / "bt_metrics.parquet"
+    )
 
     md = build_md(
         cfg=cfg,

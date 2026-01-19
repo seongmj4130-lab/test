@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 
 
@@ -9,25 +8,27 @@ def create_total_return_based_report():
     print("=" * 70)
 
     # 신규 백테스트 결과 로드 (top_k=20)
-    new_results = pd.read_csv('results/topk20_performance_metrics.csv')
+    new_results = pd.read_csv("results/topk20_performance_metrics.csv")
 
     # 전략별 총수익률 순위
     rankings = []
     for _, row in new_results.iterrows():
-        rankings.append({
-            '전략': row['전략'],
-            '총수익률': row['총수익률'],
-            'MDD': row['MDD'],
-            'Sharpe': row['Sharpe'],
-            'Calmar': row['Calmar']
-        })
+        rankings.append(
+            {
+                "전략": row["전략"],
+                "총수익률": row["총수익률"],
+                "MDD": row["MDD"],
+                "Sharpe": row["Sharpe"],
+                "Calmar": row["Calmar"],
+            }
+        )
 
-    rankings.sort(key=lambda x: x['총수익률'], reverse=True)
+    rankings.sort(key=lambda x: x["총수익률"], reverse=True)
 
     print("🏆 총수익률 기준 최종 전략 순위 (top_k=20)")
     print("=" * 60)
 
-    medal_emojis = ['🥇', '🥈', '🥉', '4️⃣']
+    medal_emojis = ["🥇", "🥈", "🥉", "4️⃣"]
 
     for i, strategy in enumerate(rankings):
         medal = medal_emojis[i] if i < len(medal_emojis) else f"{i+1}️⃣"
@@ -43,9 +44,9 @@ def create_total_return_based_report():
     print("=" * 40)
 
     for strategy in rankings:
-        name = strategy['전략']
-        total_return = strategy['총수익률']
-        mdd = abs(strategy['MDD'])
+        name = strategy["전략"]
+        total_return = strategy["총수익률"]
+        mdd = abs(strategy["MDD"])
 
         # 수익성 등급
         if total_return > 0.10:
@@ -70,7 +71,11 @@ def create_total_return_based_report():
         print(f"🏆 {name}")
         print(f"   • 수익성: {profit_grade}")
         print(f"   • 리스크: {risk_grade}")
-        print(f"   • 수익/리스크 비율: {total_return/mdd:.3f}" if mdd > 0 else "   • 수익/리스크 비율: N/A")
+        print(
+            f"   • 수익/리스크 비율: {total_return/mdd:.3f}"
+            if mdd > 0
+            else "   • 수익/리스크 비율: N/A"
+        )
         print()
 
     # 투자 추천
@@ -130,8 +135,11 @@ def create_total_return_based_report():
 
     # CSV로 최종 결과 저장
     final_results = pd.DataFrame(rankings)
-    final_results.to_csv('results/final_total_return_ranking.csv', index=False, encoding='utf-8-sig')
+    final_results.to_csv(
+        "results/final_total_return_ranking.csv", index=False, encoding="utf-8-sig"
+    )
     print("\n✅ 최종 결과 CSV 저장: results/final_total_return_ranking.csv")
+
 
 if __name__ == "__main__":
     create_total_return_based_report()

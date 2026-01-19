@@ -15,8 +15,8 @@ def explain_metrics_relationship():
     print("=" * 50)
 
     # 최신 결과 파일 로드
-    results_dir = Path('results')
-    csv_files = list(results_dir.glob('dynamic_period_backtest_clean_*.csv'))
+    results_dir = Path("results")
+    csv_files = list(results_dir.glob("dynamic_period_backtest_clean_*.csv"))
     latest_file = max(csv_files, key=lambda x: x.stat().st_mtime)
 
     df = pd.read_csv(latest_file)
@@ -25,9 +25,20 @@ def explain_metrics_relationship():
     print()
 
     # 샘플 데이터로 관계 설명
-    sample = df[df['strategy'] == 'bt20_short'].head(3)
+    sample = df[df["strategy"] == "bt20_short"].head(3)
     print("🔍 단기 전략 샘플 데이터:")
-    print(sample[['strategy', 'holding_days', 'sharpe', 'CAGR (%)', 'Total Return (%)', 'MDD (%)']].to_string(index=False, float_format='%.2f'))
+    print(
+        sample[
+            [
+                "strategy",
+                "holding_days",
+                "sharpe",
+                "CAGR (%)",
+                "Total Return (%)",
+                "MDD (%)",
+            ]
+        ].to_string(index=False, float_format="%.2f")
+    )
     print()
 
     print("📋 성과 지표 계산 관계:")
@@ -83,8 +94,8 @@ def explain_metrics_relationship():
     print("-" * 30)
 
     # 20일 vs 80일 비교
-    day20 = df[(df['strategy'] == 'bt20_short') & (df['holding_days'] == 20)]
-    day80 = df[(df['strategy'] == 'bt20_short') & (df['holding_days'] == 80)]
+    day20 = df[(df["strategy"] == "bt20_short") & (df["holding_days"] == 20)]
+    day80 = df[(df["strategy"] == "bt20_short") & (df["holding_days"] == 80)]
 
     if len(day20) > 0 and len(day80) > 0:
         print("단기 전략 20일 vs 80일 비교:")
@@ -99,6 +110,7 @@ def explain_metrics_relationship():
     print("수익률은 모든 성과 지표의 '근본 입력값'입니다.")
     print("수익률을 수정하면 관련된 모든 지표가 함께 변합니다.")
     print("이는 정상적인 현상이며, 데이터의 일관성을 보장합니다.")
+
 
 if __name__ == "__main__":
     explain_metrics_relationship()

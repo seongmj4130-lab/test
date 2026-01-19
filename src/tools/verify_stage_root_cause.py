@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/verify_stage_root_cause.py
 """
 Stage0~12 변화값의 "근원 원인" 확정을 위한 필수 검증 5개
@@ -12,25 +11,26 @@ Stage0~12 변화값의 "근원 원인" 확정을 위한 필수 검증 5개
 """
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
+
 def load_config(config_path: Path) -> dict:
     """Config 파일 로드"""
-    with open(config_path, 'r', encoding='utf-8') as f:
+    with open(config_path, encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
-def verify_bt_returns_consistency(run_tags: List[str], base_interim_dir: Path) -> Dict:
+
+def verify_bt_returns_consistency(run_tags: list[str], base_interim_dir: Path) -> dict:
     """
     검증 1: bt_returns의 (date_start, date_end, n_rebalances) 완전 일치 여부
     """
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("검증 1: bt_returns 일관성 확인")
-    print("="*80)
+    print("=" * 80)
 
     results = {}
 
@@ -38,10 +38,7 @@ def verify_bt_returns_consistency(run_tags: List[str], base_interim_dir: Path) -
         bt_returns_path = base_interim_dir / run_tag / "bt_returns.parquet"
 
         if not bt_returns_path.exists():
-            results[run_tag] = {
-                "exists": False,
-                "error": "bt_returns.parquet 없음"
-            }
+            results[run_tag] = {"exists": False, "error": "bt_returns.parquet 없음"}
             continue
 
         try:
@@ -79,10 +76,7 @@ def verify_bt_returns_consistency(run_tags: List[str], base_interim_dir: Path) -
             print(f"  n_rebalances: {n_rebalances}")
 
         except Exception as e:
-            results[run_tag] = {
-                "exists": False,
-                "error": str(e)
-            }
+            results[run_tag] = {"exists": False, "error": str(e)}
 
     # 일치 여부 확인
     print("\n[일치 여부 확인]")
@@ -109,24 +103,33 @@ def verify_bt_returns_consistency(run_tags: List[str], base_interim_dir: Path) -
             all_match = False
             print(f"\n  [FAIL] {run_tag} vs {baseline_tag}:")
             if not date_start_match:
-                print(f"    date_start 불일치: {data['date_start']} vs {baseline['date_start']}")
+                print(
+                    f"    date_start 불일치: {data['date_start']} vs {baseline['date_start']}"
+                )
             if not date_end_match:
-                print(f"    date_end 불일치: {data['date_end']} vs {baseline['date_end']}")
+                print(
+                    f"    date_end 불일치: {data['date_end']} vs {baseline['date_end']}"
+                )
             if not n_rebalances_match:
-                print(f"    n_rebalances 불일치: {data['n_rebalances']} vs {baseline['n_rebalances']}")
+                print(
+                    f"    n_rebalances 불일치: {data['n_rebalances']} vs {baseline['n_rebalances']}"
+                )
 
     if all_match:
-        print(f"\n  [PASS] 모든 run_tag의 bt_returns 일관성 확인됨")
+        print("\n  [PASS] 모든 run_tag의 bt_returns 일관성 확인됨")
 
     return results
 
-def verify_avg_n_tickers_vs_top_k(run_tags: List[str], base_interim_dir: Path, cfg: dict) -> Dict:
+
+def verify_avg_n_tickers_vs_top_k(
+    run_tags: list[str], base_interim_dir: Path, cfg: dict
+) -> dict:
     """
     검증 2: avg_n_tickers가 top_k와 일치하는지
     """
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("검증 2: avg_n_tickers vs top_k 일치 여부")
-    print("="*80)
+    print("=" * 80)
 
     # config에서 top_k 가져오기
     l7_config = cfg.get("l7", {}) or {}
@@ -140,10 +143,7 @@ def verify_avg_n_tickers_vs_top_k(run_tags: List[str], base_interim_dir: Path, c
         bt_metrics_path = base_interim_dir / run_tag / "bt_metrics.parquet"
 
         if not bt_metrics_path.exists():
-            results[run_tag] = {
-                "exists": False,
-                "error": "bt_metrics.parquet 없음"
-            }
+            results[run_tag] = {"exists": False, "error": "bt_metrics.parquet 없음"}
             continue
 
         try:
@@ -163,8 +163,11 @@ def verify_avg_n_tickers_vs_top_k(run_tags: List[str], base_interim_dir: Path, c
             else:
                 top_k_used = config_top_k
 
-            match = (avg_n_tickers is not None and top_k_used is not None and
-                    abs(avg_n_tickers - top_k_used) < 0.5)  # 반올림 허용
+            match = (
+                avg_n_tickers is not None
+                and top_k_used is not None
+                and abs(avg_n_tickers - top_k_used) < 0.5
+            )  # 반올림 허용
 
             results[run_tag] = {
                 "exists": True,
@@ -181,24 +184,24 @@ def verify_avg_n_tickers_vs_top_k(run_tags: List[str], base_interim_dir: Path, c
             print(f"  config_top_k: {config_top_k}")
 
             if not match:
-                print(f"  ⚠️ 불일치! 종목 수가 예상과 다릅니다.")
-                print(f"    → 결측/필터, 선택 로직 버그, 섹터 제약 가능성")
+                print("  ⚠️ 불일치! 종목 수가 예상과 다릅니다.")
+                print("    → 결측/필터, 선택 로직 버그, 섹터 제약 가능성")
 
         except Exception as e:
-            results[run_tag] = {
-                "exists": False,
-                "error": str(e)
-            }
+            results[run_tag] = {"exists": False, "error": str(e)}
 
     return results
 
-def verify_cost_bps_consistency(run_tags: List[str], base_interim_dir: Path, cfg: dict) -> Dict:
+
+def verify_cost_bps_consistency(
+    run_tags: list[str], base_interim_dir: Path, cfg: dict
+) -> dict:
     """
     검증 3: cost_bps_used vs config(l7_cost_bps) 불일치 여부
     """
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("검증 3: cost_bps_used vs config(l7_cost_bps) 일치 여부")
-    print("="*80)
+    print("=" * 80)
 
     # config에서 cost_bps 가져오기
     l7_config = cfg.get("l7", {}) or {}
@@ -212,10 +215,7 @@ def verify_cost_bps_consistency(run_tags: List[str], base_interim_dir: Path, cfg
         bt_metrics_path = base_interim_dir / run_tag / "bt_metrics.parquet"
 
         if not bt_metrics_path.exists():
-            results[run_tag] = {
-                "exists": False,
-                "error": "bt_metrics.parquet 없음"
-            }
+            results[run_tag] = {"exists": False, "error": "bt_metrics.parquet 없음"}
             continue
 
         try:
@@ -229,8 +229,10 @@ def verify_cost_bps_consistency(run_tags: List[str], base_interim_dir: Path, cfg
             else:
                 cost_bps_used = None
 
-            match = (cost_bps_used is not None and
-                    abs(cost_bps_used - config_cost_bps) < 0.01)  # 0.01bps 허용
+            match = (
+                cost_bps_used is not None
+                and abs(cost_bps_used - config_cost_bps) < 0.01
+            )  # 0.01bps 허용
 
             results[run_tag] = {
                 "exists": True,
@@ -245,28 +247,24 @@ def verify_cost_bps_consistency(run_tags: List[str], base_interim_dir: Path, cfg
             print(f"  config_cost_bps: {config_cost_bps}")
 
             if not match:
-                print(f"  ⚠️ 불일치! 비용 설정이 다릅니다.")
-                print(f"    → net/gross 관계가 바뀔 수 있습니다.")
+                print("  ⚠️ 불일치! 비용 설정이 다릅니다.")
+                print("    → net/gross 관계가 바뀔 수 있습니다.")
 
         except Exception as e:
-            results[run_tag] = {
-                "exists": False,
-                "error": str(e)
-            }
+            results[run_tag] = {"exists": False, "error": str(e)}
 
     return results
 
+
 def verify_stage6_to_stage7_positions_diff(
-    stage6_tag: str,
-    stage7_tag: str,
-    base_interim_dir: Path
-) -> Dict:
+    stage6_tag: str, stage7_tag: str, base_interim_dir: Path
+) -> dict:
     """
     검증 4: Stage6→Stage7에서 bt_positions가 동일한지(diff)
     """
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("검증 4: Stage6→Stage7 bt_positions 동일 여부")
-    print("="*80)
+    print("=" * 80)
 
     stage6_path = base_interim_dir / stage6_tag / "bt_positions.parquet"
     stage7_path = base_interim_dir / stage7_tag / "bt_positions.parquet"
@@ -302,7 +300,11 @@ def verify_stage6_to_stage7_positions_diff(
 
         # 공통 컬럼으로 비교
         common_cols = cols6 & cols7
-        key_cols = ["date", "ticker", "position"] if "position" in common_cols else ["date", "ticker"]
+        key_cols = (
+            ["date", "ticker", "position"]
+            if "position" in common_cols
+            else ["date", "ticker"]
+        )
         available_key_cols = [c for c in key_cols if c in common_cols]
 
         if not available_key_cols:
@@ -310,18 +312,33 @@ def verify_stage6_to_stage7_positions_diff(
             return results
 
         # 정렬 후 비교
-        df6_sorted = df6[available_key_cols + list(common_cols - set(available_key_cols))].sort_values(available_key_cols).reset_index(drop=True)
-        df7_sorted = df7[available_key_cols + list(common_cols - set(available_key_cols))].sort_values(available_key_cols).reset_index(drop=True)
+        df6_sorted = (
+            df6[available_key_cols + list(common_cols - set(available_key_cols))]
+            .sort_values(available_key_cols)
+            .reset_index(drop=True)
+        )
+        df7_sorted = (
+            df7[available_key_cols + list(common_cols - set(available_key_cols))]
+            .sort_values(available_key_cols)
+            .reset_index(drop=True)
+        )
 
         # 행 수 비교
         if len(df6_sorted) != len(df7_sorted):
             results["identical"] = False
             results["diff_rows"] = abs(len(df6_sorted) - len(df7_sorted))
-            print(f"\n[FAIL] 행 수 불일치: Stage6={len(df6_sorted)}, Stage7={len(df7_sorted)}")
+            print(
+                f"\n[FAIL] 행 수 불일치: Stage6={len(df6_sorted)}, Stage7={len(df7_sorted)}"
+            )
             return results
 
         # 값 비교 (공통 컬럼만)
-        numeric_cols = [c for c in common_cols if df6_sorted[c].dtype in ['float64', 'int64'] and c not in available_key_cols]
+        numeric_cols = [
+            c
+            for c in common_cols
+            if df6_sorted[c].dtype in ["float64", "int64"]
+            and c not in available_key_cols
+        ]
 
         if numeric_cols:
             # 숫자 컬럼 비교
@@ -339,37 +356,41 @@ def verify_stage6_to_stage7_positions_diff(
             all_identical = all(v == "identical" for v in diff_summary.values())
 
             if all_identical:
-                print(f"\n[PASS] bt_positions 완전 일치")
+                print("\n[PASS] bt_positions 완전 일치")
                 results["identical"] = True
             else:
-                print(f"\n[FAIL] bt_positions 차이 발견")
+                print("\n[FAIL] bt_positions 차이 발견")
                 for col, status in diff_summary.items():
                     print(f"  {col}: {status}")
                 results["identical"] = False
         else:
             # 키 컬럼만 비교
             if df6_sorted[available_key_cols].equals(df7_sorted[available_key_cols]):
-                print(f"\n[PASS] 키 컬럼 일치 (값 비교 불가)")
+                print("\n[PASS] 키 컬럼 일치 (값 비교 불가)")
                 results["identical"] = True
             else:
-                print(f"\n[FAIL] 키 컬럼 불일치")
+                print("\n[FAIL] 키 컬럼 불일치")
                 results["identical"] = False
 
     except Exception as e:
         results["error"] = str(e)
         print(f"\n[ERROR] 비교 실패: {e}")
         import traceback
+
         traceback.print_exc()
 
     return results
 
-def verify_artifact_paths_in_manifest(run_tags: List[str], base_interim_dir: Path) -> Dict:
+
+def verify_artifact_paths_in_manifest(
+    run_tags: list[str], base_interim_dir: Path
+) -> dict:
     """
     검증 5: manifest/링크가 가리키는 산출물 경로가 진짜 그 run_tag 폴더인지
     """
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("검증 5: 산출물 경로 일치 여부")
-    print("="*80)
+    print("=" * 80)
 
     results = {}
 
@@ -415,7 +436,9 @@ def verify_artifact_paths_in_manifest(run_tags: List[str], base_interim_dir: Pat
                 "bt_metrics": expected_base / "bt_metrics.parquet",
             }
 
-            tag_results["expected_paths"] = {k: str(v) for k, v in expected_paths.items()}
+            tag_results["expected_paths"] = {
+                k: str(v) for k, v in expected_paths.items()
+            }
 
             # 실제 파일 존재 확인
             for name, path in expected_paths.items():
@@ -434,17 +457,19 @@ def verify_artifact_paths_in_manifest(run_tags: List[str], base_interim_dir: Pat
                 print(f"    {name}: {match_str} {tag_results['actual_paths'][name]}")
 
             if not all_match:
-                print(f"  [WARNING] 일부 산출물이 예상 경로에 없습니다.")
-                print(f"    -> 다른 run의 산출물을 참조했을 가능성")
+                print("  [WARNING] 일부 산출물이 예상 경로에 없습니다.")
+                print("    -> 다른 run의 산출물을 참조했을 가능성")
 
             results[run_tag] = tag_results
 
     except Exception as e:
         print(f"[ERROR] manifest 확인 실패: {e}")
         import traceback
+
         traceback.print_exc()
 
     return results
+
 
 def main():
     config_path = PROJECT_ROOT / "configs" / "config.yaml"
@@ -475,22 +500,21 @@ def main():
 
     # Pipeline 트랙의 run_tag만 필터링 (백테스트가 있는 Stage)
     pipeline_tags = manifest_df[
-        (manifest_df["track"] == "pipeline") &
-        (manifest_df["stage_no"] >= 0) &
-        (manifest_df["stage_no"] <= 6)
+        (manifest_df["track"] == "pipeline")
+        & (manifest_df["stage_no"] >= 0)
+        & (manifest_df["stage_no"] <= 6)
     ]["run_tag"].tolist()
 
     # Ranking 트랙의 Stage7도 포함
     ranking_stage7 = manifest_df[
-        (manifest_df["track"] == "ranking") &
-        (manifest_df["stage_no"] == 7)
+        (manifest_df["track"] == "ranking") & (manifest_df["stage_no"] == 7)
     ]["run_tag"].tolist()
 
     all_tags = sorted(set(pipeline_tags + ranking_stage7))
 
-    print("="*80)
+    print("=" * 80)
     print("근원 원인 확정을 위한 필수 검증 5개")
-    print("="*80)
+    print("=" * 80)
     print(f"\n분석 대상 run_tag ({len(all_tags)}개):")
     for tag in all_tags:
         print(f"  - {tag}")
@@ -506,7 +530,16 @@ def main():
 
     # 검증 4: Stage6→Stage7 positions diff
     stage6_tags = [t for t in all_tags if "stage6" in t]
-    stage7_tags = [t for t in all_tags if "stage7" in t or ("ranking" in str(manifest_df[manifest_df["run_tag"] == t]["track"].iloc[0]) if len(manifest_df[manifest_df["run_tag"] == t]) > 0 else False)]
+    stage7_tags = [
+        t
+        for t in all_tags
+        if "stage7" in t
+        or (
+            "ranking" in str(manifest_df[manifest_df["run_tag"] == t]["track"].iloc[0])
+            if len(manifest_df[manifest_df["run_tag"] == t]) > 0
+            else False
+        )
+    ]
 
     if stage6_tags and stage7_tags:
         stage6_tag = stage6_tags[-1]  # 최신
@@ -518,9 +551,10 @@ def main():
     # 검증 5: 산출물 경로 일치 여부
     verify_artifact_paths_in_manifest(all_tags, base_interim_dir)
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("검증 완료")
-    print("="*80)
+    print("=" * 80)
+
 
 if __name__ == "__main__":
     main()

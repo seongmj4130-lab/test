@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 # [개선안 36번] Track A: Holdout 단일 일자 TopK 랭킹 + 팩터셋(그룹) 기여도 Top3 분석 (함수화)
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Literal, Optional, Tuple
+from typing import Literal, Optional
 
 import pandas as pd
 import yaml
@@ -32,7 +31,7 @@ class HoldoutDayInspectResult:
     long: Optional[pd.DataFrame]
 
 
-def holdout_range_from_cfg(cfg: dict) -> Tuple[pd.Timestamp, pd.Timestamp]:
+def holdout_range_from_cfg(cfg: dict) -> tuple[pd.Timestamp, pd.Timestamp]:
     """
     [개선안 36번] 현재 dataset_daily에 phase/dev/holdout 컬럼이 없어서 config 기반으로 holdout 기간을 산출.
     - end_date 기준 마지막 N년을 holdout으로 가정 (holdout_years)
@@ -47,7 +46,9 @@ def holdout_range_from_cfg(cfg: dict) -> Tuple[pd.Timestamp, pd.Timestamp]:
     return holdout_start, holdout_end
 
 
-def _pick_ranking_file(interim_dir: Path, base_name: str, normalization_method: str) -> Path:
+def _pick_ranking_file(
+    interim_dir: Path, base_name: str, normalization_method: str
+) -> Path:
     """
     ranking_short_daily_zscore.parquet 같은 변형 파일이 있으면 우선 사용.
     """
@@ -62,7 +63,7 @@ def _load_feature_weights_and_group_map(
     cfg: dict,
     *,
     horizon: Literal["short", "long"],
-) -> Tuple[Dict[str, float], Optional[Dict[str, list[str]]]]:
+) -> tuple[dict[str, float], Optional[dict[str, list[str]]]]:
     """
     [개선안 36번] l8_short/l8_long의 feature_weights_config를 로드하고,
     feature_groups_config가 존재하면 group_map도 함께 로드.
@@ -78,7 +79,7 @@ def _load_feature_weights_and_group_map(
     if not weights_path.exists():
         raise FileNotFoundError(f"feature_weights_config not found: {weights_path}")
 
-    with open(weights_path, "r", encoding="utf-8") as f:
+    with open(weights_path, encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
     feature_weights = data.get("feature_weights", {}) or {}
     feature_weights = {str(k): float(v) for k, v in feature_weights.items()}
@@ -154,7 +155,9 @@ def inspect_holdout_day(
         r["ticker"] = r["ticker"].astype(str).str.zfill(6)
         day_rank = r[r["date"] == date_ts].copy()
         if len(day_rank) == 0:
-            raise ValueError(f"[{h}] ranking_daily에 date={date_ts.date()} 행이 없습니다.")
+            raise ValueError(
+                f"[{h}] ranking_daily에 date={date_ts.date()} 행이 없습니다."
+            )
 
         day_rank = day_rank[day_rank["rank_total"].notna()].copy()
         day_top = day_rank.nsmallest(topk, "rank_total").copy()
@@ -180,9 +183,19 @@ def inspect_holdout_day(
         merged["top_groups"] = merged.apply(_format_top_groups_row, axis=1)
 
         if "score_total" in merged.columns:
-            merged["score_gap"] = (merged["score_total"] - merged["score_total_calc"]).astype(float)
+            merged["score_gap"] = (
+                merged["score_total"] - merged["score_total_calc"]
+            ).astype(float)
 
-        cols = ["date", "rank_total", "ticker", "score_total", "score_total_calc", "score_gap", "top_groups"]
+        cols = [
+            "date",
+            "rank_total",
+            "ticker",
+            "score_total",
+            "score_total_calc",
+            "score_gap",
+            "top_groups",
+        ]
         cols = [c for c in cols if c in merged.columns]
         return merged[cols].sort_values("rank_total").reset_index(drop=True)
 

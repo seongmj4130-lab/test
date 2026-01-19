@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 [Phase 2] 국면별 α 자동 학습 스크립트
 
@@ -12,11 +11,8 @@ from __future__ import annotations
 
 import logging
 import sys
-from itertools import product
 from pathlib import Path
-from typing import Dict, Optional, Tuple
 
-import numpy as np
 import pandas as pd
 
 # 프로젝트 루트 경로 추가
@@ -25,11 +21,10 @@ sys.path.insert(0, str(project_root))
 
 from src.stages.backtest.regime_utils import map_regime_to_3level
 from src.utils.config import get_path, load_config
-from src.utils.io import artifact_exists, load_artifact, save_artifact
+from src.utils.io import artifact_exists, load_artifact
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -86,7 +81,10 @@ def load_market_regime(cfg: dict, rebalance_dates: pd.Series) -> pd.DataFrame:
     # 3단계 국면 컬럼 추가
     if "regime_3" not in regime_df.columns:
         from src.stages.backtest.regime_utils import apply_3level_regime
-        regime_df = apply_3level_regime(regime_df, regime_col="regime", out_col="regime_3")
+
+        regime_df = apply_3level_regime(
+            regime_df, regime_col="regime", out_col="regime_3"
+        )
 
     logger.info(f"Generated market_regime_daily: {len(regime_df):,} rows")
     return regime_df
@@ -108,10 +106,10 @@ def get_dev_rebalance_dates(cv_folds: pd.DataFrame) -> pd.Series:
 def evaluate_alpha_combination(
     cfg: dict,
     artifacts: dict,
-    regime_alpha: Dict[str, float],
+    regime_alpha: dict[str, float],
     dev_dates: pd.Series,
     market_regime_df: pd.DataFrame,
-) -> Tuple[float, dict]:
+) -> tuple[float, dict]:
     """
     특정 α 조합에 대한 Dev 성과 평가
 
@@ -140,8 +138,8 @@ def evaluate_alpha_combination(
         # Dev만 필터링
         rebalance_scores["date"] = pd.to_datetime(rebalance_scores["date"])
         dev_scores = rebalance_scores[
-            (rebalance_scores["phase"] == "dev") &
-            (rebalance_scores["date"].isin(dev_dates))
+            (rebalance_scores["phase"] == "dev")
+            & (rebalance_scores["date"].isin(dev_dates))
         ].copy()
 
         if len(dev_scores) == 0:
@@ -192,7 +190,9 @@ def evaluate_alpha_combination(
         return net_sharpe, metrics
 
     except Exception as e:
-        logger.error(f"Error evaluating alpha combination {regime_alpha}: {e}", exc_info=True)
+        logger.error(
+            f"Error evaluating alpha combination {regime_alpha}: {e}", exc_info=True
+        )
         return -999.0, {}
 
 
@@ -202,7 +202,7 @@ def grid_search_regime_alpha(
     dev_dates: pd.Series,
     market_regime_df: pd.DataFrame,
     alpha_candidates: list[float] = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     그리드 서치를 통한 국면별 최적 α 학습
 
@@ -222,7 +222,9 @@ def grid_search_regime_alpha(
     regime_col = "regime_3" if "regime_3" in market_regime_df.columns else "regime"
     if regime_col == "regime":
         # 3단계로 변환
-        market_regime_df["regime_3"] = market_regime_df["regime"].apply(map_regime_to_3level)
+        market_regime_df["regime_3"] = market_regime_df["regime"].apply(
+            map_regime_to_3level
+        )
         regime_col = "regime_3"
 
     # Dev 날짜에 해당하는 국면 매핑
@@ -233,7 +235,7 @@ def grid_search_regime_alpha(
         dev_regimes[date] = regime
 
     regime_counts = pd.Series(dev_regimes.values()).value_counts()
-    logger.info(f"\nDev 국면 분포:")
+    logger.info("\nDev 국면 분포:")
     for regime, count in regime_counts.items():
         logger.info(f"  {regime}: {count} dates ({count/len(dev_dates)*100:.1f}%)")
 
@@ -255,7 +257,9 @@ def grid_search_regime_alpha(
             optimal_alphas[regime] = 0.5
             continue
 
-        logger.info(f"Evaluating {len(alpha_candidates)} alpha values for {len(regime_dates)} dates...")
+        logger.info(
+            f"Evaluating {len(alpha_candidates)} alpha values for {len(regime_dates)} dates..."
+        )
 
         best_sharpe = -999.0
         best_alpha = 0.5
@@ -282,12 +286,14 @@ def grid_search_regime_alpha(
             )
 
             logger.info(f"    Sharpe: {net_sharpe:.4f}")
-            results_summary.append({
-                "regime": regime,
-                "alpha": alpha,
-                "net_sharpe": net_sharpe,
-                **metrics,
-            })
+            results_summary.append(
+                {
+                    "regime": regime,
+                    "alpha": alpha,
+                    "net_sharpe": net_sharpe,
+                    **metrics,
+                }
+            )
 
             if net_sharpe > best_sharpe:
                 best_sharpe = net_sharpe
@@ -295,13 +301,15 @@ def grid_search_regime_alpha(
                 best_metrics = metrics
 
         optimal_alphas[regime] = best_alpha
-        logger.info(f"\n  Best alpha for {regime}: {best_alpha:.1f} (Sharpe: {best_sharpe:.4f})")
+        logger.info(
+            f"\n  Best alpha for {regime}: {best_alpha:.1f} (Sharpe: {best_sharpe:.4f})"
+        )
         logger.info(f"  Metrics: {best_metrics}")
 
     logger.info(f"\n{'='*80}")
     logger.info("최적 α 학습 완료")
     logger.info(f"{'='*80}")
-    logger.info(f"Optimal regime_alpha:")
+    logger.info("Optimal regime_alpha:")
     for regime, alpha in optimal_alphas.items():
         logger.info(f"  {regime}: {alpha:.1f}")
 
@@ -314,7 +322,9 @@ def main():
 
     parser = argparse.ArgumentParser(description="국면별 α 자동 학습")
     parser.add_argument("--config", type=str, default="configs/config.yaml")
-    parser.add_argument("--output", type=str, default="docs/regime_alpha_learning_results.json")
+    parser.add_argument(
+        "--output", type=str, default="docs/regime_alpha_learning_results.json"
+    )
     args = parser.parse_args()
 
     # 설정 로드
@@ -351,6 +361,7 @@ def main():
     # 결과 저장
     logger.info("\n[5] 결과 저장")
     import json
+
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 

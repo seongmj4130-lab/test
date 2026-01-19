@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/ranking/ranking_merge_regime.py
 """
 [Stage10] ranking_daily에 시장 국면(regime) 조인
 """
 from __future__ import annotations
-
-from typing import Optional
 
 import pandas as pd
 
@@ -37,7 +34,9 @@ def merge_regime_to_ranking(
     available_regime_cols = [c for c in regime_cols if c in market_regime_daily.columns]
 
     if len(available_regime_cols) == 0:
-        raise ValueError("market_regime_daily에 regime_score 또는 regime_label 컬럼이 없습니다.")
+        raise ValueError(
+            "market_regime_daily에 regime_score 또는 regime_label 컬럼이 없습니다."
+        )
 
     merge_df = market_regime_daily[[date_col] + available_regime_cols].copy()
     result = result.merge(merge_df, on=date_col, how="left")

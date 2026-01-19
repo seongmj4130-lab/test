@@ -9,7 +9,7 @@ def display_total_returns_results():
 
     # 결과 파일 읽기
     try:
-        df = pd.read_csv('results/total_returns_unified_parameters.csv')
+        df = pd.read_csv("results/total_returns_unified_parameters.csv")
     except FileNotFoundError:
         print("❌ 결과 파일을 찾을 수 없습니다.")
         return
@@ -19,12 +19,12 @@ def display_total_returns_results():
     print("-" * 80)
 
     for _, row in df.iterrows():
-        strategy = row['전략']
-        cagr = row['CAGR']
-        total_return = row['총수익률']
-        mdd = row['MDD']
-        sharpe = row['Sharpe']
-        calmar = row['Calmar']
+        strategy = row["전략"]
+        cagr = row["CAGR"]
+        total_return = row["총수익률"]
+        mdd = row["MDD"]
+        sharpe = row["Sharpe"]
+        calmar = row["Calmar"]
 
         print("<12")
 
@@ -34,8 +34,8 @@ def display_total_returns_results():
     print("🔍 전략별 그룹 분석")
     print("-" * 50)
 
-    bt120_data = df[df['전략'].str.contains('BT120')]
-    bt20_data = df[df['전략'].str.contains('BT20')]
+    bt120_data = df[df["전략"].str.contains("BT120")]
+    bt20_data = df[df["전략"].str.contains("BT20")]
 
     print("🏆 BT120 전략군 (안정성 중심):")
     print(".2%")
@@ -56,10 +56,10 @@ def display_total_returns_results():
     print("-" * 40)
 
     # Sharpe 기준 정렬
-    sorted_df = df.sort_values('Sharpe', ascending=False)
+    sorted_df = df.sort_values("Sharpe", ascending=False)
 
     print("🥇 Sharpe 비율 순위:")
-    medals = ['🥇', '🥈', '🥉', '4️⃣']
+    medals = ["🥇", "🥈", "🥉", "4️⃣"]
     for i, (_, row) in enumerate(sorted_df.iterrows()):
         medal = medals[i] if i < len(medals) else f"{i+1}️⃣"
         print(f"{medal} {row['전략']}: Sharpe {row['Sharpe']:.3f}")
@@ -95,6 +95,7 @@ def display_total_returns_results():
     print()
 
     print("🚀 결론: 통일 파라미터로 안정적이고 현실적인 성과 달성!")
+
 
 if __name__ == "__main__":
     display_total_returns_results()

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 [Phase 4.3] 통합 최적화 스크립트: L8 가중치 + L6R α 동시 최적화
 
@@ -18,13 +17,10 @@ from __future__ import annotations
 import copy
 import json
 import logging
-import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
-import numpy as np
 import pandas as pd
 import yaml
 
@@ -34,11 +30,10 @@ sys.path.insert(0, str(project_root))
 
 from src.stages.backtest.regime_utils import map_regime_to_3level
 from src.utils.config import get_path, load_config
-from src.utils.io import artifact_exists, load_artifact, save_artifact
+from src.utils.io import artifact_exists, load_artifact
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -86,7 +81,9 @@ def load_market_regime(cfg: dict, rebalance_dates: pd.Series) -> pd.DataFrame:
             )
 
             start_date = cfg["params"]["start_date"]
-            end_date = cfg["params"].get("end_date", pd.Timestamp.now().strftime("%Y-%m-%d"))
+            end_date = cfg["params"].get(
+                "end_date", pd.Timestamp.now().strftime("%Y-%m-%d")
+            )
 
             regime_cfg = cfg.get("l7", {}).get("regime", {})
             regime_df = build_market_regime(
@@ -101,7 +98,10 @@ def load_market_regime(cfg: dict, rebalance_dates: pd.Series) -> pd.DataFrame:
     # 3단계 국면 컬럼 추가
     if "regime_3" not in regime_df.columns:
         from src.stages.backtest.regime_utils import apply_3level_regime
-        regime_df = apply_3level_regime(regime_df, regime_col="regime", out_col="regime_3")
+
+        regime_df = apply_3level_regime(
+            regime_df, regime_col="regime", out_col="regime_3"
+        )
 
     return regime_df
 
@@ -119,7 +119,7 @@ def get_dev_rebalance_dates(cv_folds: pd.DataFrame) -> pd.Series:
     return pd.Series(sorted(dev_dates), name="date")
 
 
-def generate_l8_weight_combinations() -> List[dict]:
+def generate_l8_weight_combinations() -> list[dict]:
     """
     L8 가중치 조합 생성
 
@@ -136,107 +136,119 @@ def generate_l8_weight_combinations() -> List[dict]:
     combinations = []
 
     # Phase 4.1 기준 조합 (기준선)
-    combinations.append({
-        "name": "phase4_1_baseline",
-        "short": {
-            "technical": 0.50,
-            "value": 0.15,
-            "profitability": 0.15,
-            "other": 0.20,
-        },
-        "long": {
-            "technical": 0.20,
-            "value": 0.40,
-            "profitability": 0.40,
-            "other": 0.00,
+    combinations.append(
+        {
+            "name": "phase4_1_baseline",
+            "short": {
+                "technical": 0.50,
+                "value": 0.15,
+                "profitability": 0.15,
+                "other": 0.20,
+            },
+            "long": {
+                "technical": 0.20,
+                "value": 0.40,
+                "profitability": 0.40,
+                "other": 0.00,
+            },
         }
-    })
+    )
 
     # 변형 조합들
     # 1. 단기 기술적 팩터 강화
-    combinations.append({
-        "name": "short_tech_high",
-        "short": {
-            "technical": 0.60,
-            "value": 0.10,
-            "profitability": 0.10,
-            "other": 0.20,
-        },
-        "long": {
-            "technical": 0.20,
-            "value": 0.40,
-            "profitability": 0.40,
-            "other": 0.00,
+    combinations.append(
+        {
+            "name": "short_tech_high",
+            "short": {
+                "technical": 0.60,
+                "value": 0.10,
+                "profitability": 0.10,
+                "other": 0.20,
+            },
+            "long": {
+                "technical": 0.20,
+                "value": 0.40,
+                "profitability": 0.40,
+                "other": 0.00,
+            },
         }
-    })
+    )
 
     # 2. 단기 기술적 팩터 완화
-    combinations.append({
-        "name": "short_tech_low",
-        "short": {
-            "technical": 0.40,
-            "value": 0.20,
-            "profitability": 0.20,
-            "other": 0.20,
-        },
-        "long": {
-            "technical": 0.20,
-            "value": 0.40,
-            "profitability": 0.40,
-            "other": 0.00,
+    combinations.append(
+        {
+            "name": "short_tech_low",
+            "short": {
+                "technical": 0.40,
+                "value": 0.20,
+                "profitability": 0.20,
+                "other": 0.20,
+            },
+            "long": {
+                "technical": 0.20,
+                "value": 0.40,
+                "profitability": 0.40,
+                "other": 0.00,
+            },
         }
-    })
+    )
 
     # 3. 장기 가치/수익성 강화
-    combinations.append({
-        "name": "long_value_high",
-        "short": {
-            "technical": 0.50,
-            "value": 0.15,
-            "profitability": 0.15,
-            "other": 0.20,
-        },
-        "long": {
-            "technical": 0.15,
-            "value": 0.45,
-            "profitability": 0.40,
-            "other": 0.00,
+    combinations.append(
+        {
+            "name": "long_value_high",
+            "short": {
+                "technical": 0.50,
+                "value": 0.15,
+                "profitability": 0.15,
+                "other": 0.20,
+            },
+            "long": {
+                "technical": 0.15,
+                "value": 0.45,
+                "profitability": 0.40,
+                "other": 0.00,
+            },
         }
-    })
+    )
 
     # 4. 장기 가치/수익성 완화
-    combinations.append({
-        "name": "long_value_low",
-        "short": {
-            "technical": 0.50,
-            "value": 0.15,
-            "profitability": 0.15,
-            "other": 0.20,
-        },
-        "long": {
-            "technical": 0.25,
-            "value": 0.35,
-            "profitability": 0.40,
-            "other": 0.00,
+    combinations.append(
+        {
+            "name": "long_value_low",
+            "short": {
+                "technical": 0.50,
+                "value": 0.15,
+                "profitability": 0.15,
+                "other": 0.20,
+            },
+            "long": {
+                "technical": 0.25,
+                "value": 0.35,
+                "profitability": 0.40,
+                "other": 0.00,
+            },
         }
-    })
+    )
 
     # 5. 균형 조합
-    combinations.append({
-        "name": "balanced",
-        "short": {
-            "technical": 0.45,
-            "value": 0.20,
-            "profitability": 0.20,
-            "other": 0.15,
-        },
-        "long": {
-            "technical": 0.20,
-            "value": 0.40,
-            "profitability": 0.40,
-            "other": 0.00,
+    combinations.append(
+        {
+            "name": "balanced",
+            "short": {
+                "technical": 0.45,
+                "value": 0.20,
+                "profitability": 0.20,
+                "other": 0.15,
+            },
+            "long": {
+                "technical": 0.20,
+                "value": 0.40,
+                "profitability": 0.40,
+                "other": 0.00,
+            },
         }
-    })
+    )
 
     return combinations
 
@@ -247,7 +259,7 @@ def update_feature_groups_config(
     output_path: Path,
 ) -> None:
     """feature_groups config 파일 업데이트"""
-    with open(config_path, "r", encoding="utf-8") as f:
+    with open(config_path, encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
     # target_weight 업데이트
@@ -257,8 +269,7 @@ def update_feature_groups_config(
 
     # 합계가 1.0이 되도록 정규화
     total = sum(
-        g.get("target_weight", 0.0)
-        for g in config.get("feature_groups", {}).values()
+        g.get("target_weight", 0.0) for g in config.get("feature_groups", {}).values()
     )
     if total > 0:
         for group_name in config.get("feature_groups", {}):
@@ -268,7 +279,9 @@ def update_feature_groups_config(
     # 저장
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
-        yaml.dump(config, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+        yaml.dump(
+            config, f, default_flow_style=False, allow_unicode=True, sort_keys=False
+        )
 
     logger.info(f"Updated feature_groups config: {output_path}")
 
@@ -278,7 +291,7 @@ def run_l8_with_weights(
     artifacts: dict,
     weight_combination: dict,
     temp_dir: Path,
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     특정 가중치 조합으로 L8_short/L8_long 재실행
 
@@ -353,7 +366,7 @@ def compute_rebalance_scores_with_alpha(
     rebalance_dates: pd.Series,
     cv_folds: pd.DataFrame,
     market_regime_df: pd.DataFrame,
-    regime_alpha: Dict[str, float],
+    regime_alpha: dict[str, float],
     score_source: str = "score_total",
 ) -> pd.DataFrame:
     """
@@ -371,9 +384,15 @@ def compute_rebalance_scores_with_alpha(
     # 리밸런싱 날짜 매핑 (phase 포함)
     cv_folds = cv_folds.copy()
     cv_folds["test_end"] = pd.to_datetime(cv_folds["test_end"])
-    cv_folds["phase"] = cv_folds["segment"].map({"dev": "dev", "holdout": "holdout"}).fillna("dev")
+    cv_folds["phase"] = (
+        cv_folds["segment"].map({"dev": "dev", "holdout": "holdout"}).fillna("dev")
+    )
 
-    rebal_map = cv_folds[["test_end", "phase"]].rename(columns={"test_end": "date"}).drop_duplicates("date")
+    rebal_map = (
+        cv_folds[["test_end", "phase"]]
+        .rename(columns={"test_end": "date"})
+        .drop_duplicates("date")
+    )
 
     # 리밸런싱 날짜로 필터링
     r_short = r_short[r_short["date"].isin(rebalance_dates)].copy()
@@ -390,16 +409,24 @@ def compute_rebalance_scores_with_alpha(
         on=key,
         how="outer",
         suffixes=("_short", "_long"),
-        validate="one_to_one"
+        validate="one_to_one",
     )
 
     # 정규화: score_total 사용 (높을수록 좋음)
     if score_source == "rank_total":
-        r["score_short_norm"] = -pd.to_numeric(r["rank_total_short"], errors="coerce").fillna(0)
-        r["score_long_norm"] = -pd.to_numeric(r["rank_total_long"], errors="coerce").fillna(0)
+        r["score_short_norm"] = -pd.to_numeric(
+            r["rank_total_short"], errors="coerce"
+        ).fillna(0)
+        r["score_long_norm"] = -pd.to_numeric(
+            r["rank_total_long"], errors="coerce"
+        ).fillna(0)
     else:
-        r["score_short_norm"] = pd.to_numeric(r["score_total_short"], errors="coerce").fillna(0)
-        r["score_long_norm"] = pd.to_numeric(r["score_total_long"], errors="coerce").fillna(0)
+        r["score_short_norm"] = pd.to_numeric(
+            r["score_total_short"], errors="coerce"
+        ).fillna(0)
+        r["score_long_norm"] = pd.to_numeric(
+            r["score_total_long"], errors="coerce"
+        ).fillna(0)
 
     # 시장 국면 데이터와 병합
     market_regime_df = market_regime_df.copy()
@@ -408,7 +435,9 @@ def compute_rebalance_scores_with_alpha(
 
     regime_col = "regime_3" if "regime_3" in market_regime_df.columns else "regime"
     if regime_col == "regime" and "regime" in market_regime_df.columns:
-        market_regime_df["regime_3"] = market_regime_df["regime"].apply(map_regime_to_3level)
+        market_regime_df["regime_3"] = market_regime_df["regime"].apply(
+            map_regime_to_3level
+        )
         regime_col = "regime_3"
 
     if regime_col not in market_regime_df.columns:
@@ -418,7 +447,7 @@ def compute_rebalance_scores_with_alpha(
             market_regime_df[["date", regime_col]],
             on="date",
             how="left",
-            validate="many_to_one"
+            validate="many_to_one",
         )
         r[regime_col] = r[regime_col].fillna("neutral")
 
@@ -435,7 +464,8 @@ def compute_rebalance_scores_with_alpha(
 
     # 결합: score_ens = α * score_short + (1-α) * score_long
     r["score_ens"] = (
-        r["alpha_short"] * r["score_short_norm"] + r["alpha_long"] * r["score_long_norm"]
+        r["alpha_short"] * r["score_short_norm"]
+        + r["alpha_long"] * r["score_long_norm"]
     )
 
     # 재랭킹
@@ -444,7 +474,9 @@ def compute_rebalance_scores_with_alpha(
         method="first", ascending=False
     )
 
-    result = r[["date", "ticker", "phase", "score_total", "rank_total", "score_ens"]].copy()
+    result = r[
+        ["date", "ticker", "phase", "score_total", "rank_total", "score_ens"]
+    ].copy()
 
     return result
 
@@ -453,11 +485,11 @@ def evaluate_combination(
     cfg: dict,
     artifacts: dict,
     weight_combination: dict,
-    regime_alpha: Dict[str, float],
+    regime_alpha: dict[str, float],
     dev_dates: pd.Series,
     market_regime_df: pd.DataFrame,
     temp_dir: Path,
-) -> Tuple[float, dict]:
+) -> tuple[float, dict]:
     """
     특정 가중치 조합 + α 조합에 대한 Dev 성과 평가
 
@@ -498,7 +530,10 @@ def evaluate_combination(
                 break
 
         if ret_col is None:
-            logger.warning("No return column found in dataset_daily. Available columns: " + str(list(dataset.columns)))
+            logger.warning(
+                "No return column found in dataset_daily. Available columns: "
+                + str(list(dataset.columns))
+            )
             return -999.0, {}
 
         true_cols = ["date", "ticker", ret_col]
@@ -511,8 +546,8 @@ def evaluate_combination(
 
         # Dev만 필터링
         dev_scores = recomputed_scores[
-            (recomputed_scores["phase"] == "dev") &
-            (recomputed_scores["date"].isin(dev_dates))
+            (recomputed_scores["phase"] == "dev")
+            & (recomputed_scores["date"].isin(dev_dates))
         ].copy()
 
         if len(dev_scores) == 0:
@@ -528,7 +563,10 @@ def evaluate_combination(
                     logger.info(f"Using {col} as true_short for backtest")
                     break
 
-        if "true_short" not in dev_scores.columns or dev_scores["true_short"].isna().all():
+        if (
+            "true_short" not in dev_scores.columns
+            or dev_scores["true_short"].isna().all()
+        ):
             logger.warning("true_short not found, cannot compute accurate metrics")
             return -999.0, {}
 
@@ -587,15 +625,17 @@ def optimize_alpha_for_weights(
     dev_dates: pd.Series,
     market_regime_df: pd.DataFrame,
     temp_dir: Path,
-    alpha_candidates: List[float] = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
-) -> Tuple[Dict[str, float], float, dict]:
+    alpha_candidates: list[float] = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+) -> tuple[dict[str, float], float, dict]:
     """
     특정 가중치 조합에 대해 L6R α 최적화
 
     Returns:
         (최적 regime_alpha, 최적 Sharpe, 최적 metrics)
     """
-    logger.info(f"Optimizing alpha for weight combination: {weight_combination['name']}")
+    logger.info(
+        f"Optimizing alpha for weight combination: {weight_combination['name']}"
+    )
 
     # 국면별 날짜 분류
     market_regime_df = market_regime_df.copy()
@@ -604,7 +644,9 @@ def optimize_alpha_for_weights(
 
     regime_col = "regime_3" if "regime_3" in market_regime_df.columns else "regime"
     if regime_col == "regime" and "regime" in market_regime_df.columns:
-        market_regime_df["regime_3"] = market_regime_df["regime"].apply(map_regime_to_3level)
+        market_regime_df["regime_3"] = market_regime_df["regime"].apply(
+            map_regime_to_3level
+        )
         regime_col = "regime_3"
 
     if regime_col in market_regime_df.columns and "date" in market_regime_df.columns:
@@ -653,7 +695,9 @@ def optimize_alpha_for_weights(
                 best_alpha = alpha
 
         optimal_alphas[regime] = best_alpha
-        logger.info(f"    Best alpha for {regime}: {best_alpha:.1f} (Sharpe: {best_sharpe:.4f})")
+        logger.info(
+            f"    Best alpha for {regime}: {best_alpha:.1f} (Sharpe: {best_sharpe:.4f})"
+        )
 
     # 최적 α로 최종 평가
     final_sharpe, final_metrics = evaluate_combination(
@@ -673,9 +717,15 @@ def main():
     """메인 함수"""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Phase 4.3: 통합 최적화 (L8 가중치 + L6R α)")
+    parser = argparse.ArgumentParser(
+        description="Phase 4.3: 통합 최적화 (L8 가중치 + L6R α)"
+    )
     parser.add_argument("--config", type=str, default="configs/config.yaml")
-    parser.add_argument("--output", type=str, default="docs/phase4_3_integrated_optimization_results.json")
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="docs/phase4_3_integrated_optimization_results.json",
+    )
     parser.add_argument("--temp-dir", type=str, default="data/interim/phase4_3_temp")
     args = parser.parse_args()
 
@@ -720,7 +770,9 @@ def main():
 
     for i, weight_combo in enumerate(weight_combinations, 1):
         logger.info(f"\n{'='*80}")
-        logger.info(f"Weight Combination {i}/{len(weight_combinations)}: {weight_combo['name']}")
+        logger.info(
+            f"Weight Combination {i}/{len(weight_combinations)}: {weight_combo['name']}"
+        )
         logger.info(f"{'='*80}")
 
         optimal_alphas, best_sharpe, best_metrics = optimize_alpha_for_weights(
@@ -732,12 +784,14 @@ def main():
             temp_dir=temp_dir,
         )
 
-        results.append({
-            "weight_combination": weight_combo,
-            "optimal_regime_alpha": optimal_alphas,
-            "dev_sharpe": best_sharpe,
-            "dev_metrics": best_metrics,
-        })
+        results.append(
+            {
+                "weight_combination": weight_combo,
+                "optimal_regime_alpha": optimal_alphas,
+                "dev_sharpe": best_sharpe,
+                "dev_metrics": best_metrics,
+            }
+        )
 
         logger.info(f"\n  ✅ Best Sharpe: {best_sharpe:.4f}")
         logger.info(f"  Optimal alphas: {optimal_alphas}")
@@ -782,7 +836,9 @@ def main():
     logger.info("통합 최적화 완료!")
     logger.info("=" * 80)
     logger.info("\n다음 단계:")
-    logger.info("1. 최적 가중치를 feature_groups_short.yaml, feature_groups_long.yaml에 반영")
+    logger.info(
+        "1. 최적 가중치를 feature_groups_short.yaml, feature_groups_long.yaml에 반영"
+    )
     logger.info("2. 최적 α 값을 config.yaml의 l6r.regime_alpha에 반영")
     logger.info("3. 전체 파이프라인 재실행 (Holdout 성과 검증)")
     logger.info("4. docs/phase_status.md 및 관련 문서 업데이트")

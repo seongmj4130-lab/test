@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 rebalance_interval이 지표에 미치는 영향 확인
 """
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 # 백테스트 결과 파일 확인
@@ -21,10 +19,10 @@ for f in sorted(bt_files):
     print(f"\n{model_name}:")
     print(f"  총 행 수: {len(df):,}")
     print(f"  날짜 수: {df['date'].nunique():,}")
-    print(f"  Phase별 행 수:")
+    print("  Phase별 행 수:")
     for phase, g in df.groupby("phase"):
         print(f"    {phase}: {len(g):,}행, {g['date'].nunique():,}개 날짜")
-    print(f"  샘플 날짜 (처음 10개):")
+    print("  샘플 날짜 (처음 10개):")
     print(f"    {sorted(df['date'].unique())[:10]}")
 
 print("\n" + "=" * 80)

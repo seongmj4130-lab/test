@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/run_full_baseline_pipeline.py
 """
 베이스라인 풀런 오케스트레이터
@@ -14,10 +13,7 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
-
-import pandas as pd
-import yaml
+from typing import Any, Optional
 
 # 프로젝트 루트를 sys.path에 추가
 ROOT = Path(__file__).resolve().parents[2]
@@ -58,10 +54,40 @@ REQUIRED_COLS_BY_OUTPUT = {
     "fundamentals_annual": ["date", "ticker"],
     "panel_merged_daily": ["date", "ticker"],
     "dataset_daily": ["date", "ticker"],
-    "cv_folds_short": ["fold_id", "segment", "train_start", "train_end", "test_start", "test_end"],
-    "cv_folds_long": ["fold_id", "segment", "train_start", "train_end", "test_start", "test_end"],
-    "pred_short_oos": ["date", "ticker", "y_true", "y_pred", "fold_id", "phase", "horizon"],
-    "pred_long_oos": ["date", "ticker", "y_true", "y_pred", "fold_id", "phase", "horizon"],
+    "cv_folds_short": [
+        "fold_id",
+        "segment",
+        "train_start",
+        "train_end",
+        "test_start",
+        "test_end",
+    ],
+    "cv_folds_long": [
+        "fold_id",
+        "segment",
+        "train_start",
+        "train_end",
+        "test_start",
+        "test_end",
+    ],
+    "pred_short_oos": [
+        "date",
+        "ticker",
+        "y_true",
+        "y_pred",
+        "fold_id",
+        "phase",
+        "horizon",
+    ],
+    "pred_long_oos": [
+        "date",
+        "ticker",
+        "y_true",
+        "y_pred",
+        "fold_id",
+        "phase",
+        "horizon",
+    ],
     "model_metrics": ["horizon", "phase", "rmse"],
     "rebalance_scores": ["date", "ticker", "phase"],
     "rebalance_scores_summary": ["date", "phase", "n_tickers"],
@@ -78,45 +104,57 @@ REQUIRED_COLS_BY_OUTPUT = {
     "bt_drawdown_events": ["phase", "peak_date", "trough_date", "drawdown"],
 }
 
+
 # =========================
 # 진행도 관리
 # =========================
 class RunStatus:
-    def __init__(self, run_tag: str, root: Path, config_path: Path, baseline_source: str):
+    def __init__(
+        self, run_tag: str, root: Path, config_path: Path, baseline_source: str
+    ):
         self.run_tag = run_tag
         self.root = root
         self.config_path = config_path
         self.baseline_source = baseline_source
         self.started_at = datetime.now().isoformat()
         self.current_stage = None
-        self.stage_status: Dict[str, Dict[str, Any]] = {}
+        self.stage_status: dict[str, dict[str, Any]] = {}
         self.last_update = None
         self.last_cmd = None
         self.last_exit_code = None
         self.last_log_file = None
-        self.validation_summary: List[Dict[str, Any]] = []
-        self.file_pointers: List[str] = []
+        self.validation_summary: list[dict[str, Any]] = []
+        self.file_pointers: list[str] = []
 
         self.logs_dir = root / "logs" / run_tag
         self.reports_dir = root / "reports" / run_tag
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         self.reports_dir.mkdir(parents=True, exist_ok=True)
 
-    def update_stage(self, stage: str, status: str, start_time: Optional[datetime] = None,
-                     end_time: Optional[datetime] = None, exit_code: Optional[int] = None,
-                     log_file: Optional[str] = None, cmd: Optional[str] = None):
+    def update_stage(
+        self,
+        stage: str,
+        status: str,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+        exit_code: Optional[int] = None,
+        log_file: Optional[str] = None,
+        cmd: Optional[str] = None,
+    ):
         """단계 상태 업데이트"""
         if stage not in self.stage_status:
             self.stage_status[stage] = {}
 
-        self.stage_status[stage].update({
-            "status": status,  # "PENDING", "RUNNING", "DONE", "FAIL"
-            "start_time": start_time.isoformat() if start_time else None,
-            "end_time": end_time.isoformat() if end_time else None,
-            "exit_code": exit_code,
-            "log_file": log_file,
-            "cmd": cmd,
-        })
+        self.stage_status[stage].update(
+            {
+                "status": status,  # "PENDING", "RUNNING", "DONE", "FAIL"
+                "start_time": start_time.isoformat() if start_time else None,
+                "end_time": end_time.isoformat() if end_time else None,
+                "exit_code": exit_code,
+                "log_file": log_file,
+                "cmd": cmd,
+            }
+        )
 
         self.current_stage = stage
         self.last_update = datetime.now().isoformat()
@@ -127,15 +165,19 @@ class RunStatus:
         if cmd:
             self.last_cmd = cmd
 
-    def add_validation(self, stage: str, output_name: str, status: str, checks: str, notes: str = ""):
+    def add_validation(
+        self, stage: str, output_name: str, status: str, checks: str, notes: str = ""
+    ):
         """검증 결과 추가"""
-        self.validation_summary.append({
-            "stage": stage,
-            "output": output_name,
-            "status": status,  # "PASS", "WARN", "FAIL"
-            "checks": checks,
-            "notes": notes,
-        })
+        self.validation_summary.append(
+            {
+                "stage": stage,
+                "output": output_name,
+                "status": status,  # "PASS", "WARN", "FAIL"
+                "checks": checks,
+                "notes": notes,
+            }
+        )
 
     def add_file_pointer(self, path: str):
         """파일 포인터 추가"""
@@ -160,7 +202,9 @@ class RunStatus:
         for stage in STAGES:
             status_info = self.stage_status.get(stage, {})
             status = status_info.get("status", "PENDING")
-            checkbox = "[x]" if status == "DONE" else "[ ]" if status == "FAIL" else "[ ]"
+            checkbox = (
+                "[x]" if status == "DONE" else "[ ]" if status == "FAIL" else "[ ]"
+            )
             lines.append(f"- {checkbox} {stage} ... ({status})")
             if status_info.get("start_time"):
                 lines.append(f"  - 시작: {status_info['start_time']}")
@@ -171,27 +215,33 @@ class RunStatus:
             if status_info.get("log_file"):
                 lines.append(f"  - 로그: {status_info['log_file']}")
 
-        lines.extend([
-            "",
-            "## Latest Status (auto-updated)",
-            f"- current_stage: {self.current_stage or 'N/A'}",
-            f"- last_update: {self.last_update or 'N/A'}",
-            f"- last_cmd: {self.last_cmd or 'N/A'}",
-            f"- last_exit_code: {self.last_exit_code if self.last_exit_code is not None else 'N/A'}",
-            f"- last_log_file: {self.last_log_file or 'N/A'}",
-            "",
-            "## Validation Summary",
-            "| stage | output | status | key_checks | notes |",
-            "|---|---|---|---|---|",
-        ])
+        lines.extend(
+            [
+                "",
+                "## Latest Status (auto-updated)",
+                f"- current_stage: {self.current_stage or 'N/A'}",
+                f"- last_update: {self.last_update or 'N/A'}",
+                f"- last_cmd: {self.last_cmd or 'N/A'}",
+                f"- last_exit_code: {self.last_exit_code if self.last_exit_code is not None else 'N/A'}",
+                f"- last_log_file: {self.last_log_file or 'N/A'}",
+                "",
+                "## Validation Summary",
+                "| stage | output | status | key_checks | notes |",
+                "|---|---|---|---|---|",
+            ]
+        )
 
         for v in self.validation_summary:
-            lines.append(f"| {v['stage']} | {v['output']} | {v['status']} | {v['checks']} | {v['notes']} |")
+            lines.append(
+                f"| {v['stage']} | {v['output']} | {v['status']} | {v['checks']} | {v['notes']} |"
+            )
 
-        lines.extend([
-            "",
-            "## File Pointers (found)",
-        ])
+        lines.extend(
+            [
+                "",
+                "## File Pointers (found)",
+            ]
+        )
 
         for fp in self.file_pointers:
             lines.append(f"- {fp} (exists)")
@@ -217,13 +267,17 @@ class RunStatus:
             "validation_summary": self.validation_summary,
             "file_pointers": self.file_pointers,
         }
-        path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        path.write_text(
+            json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+
 
 # =========================
 # 검증 함수
 # =========================
-def validate_stage_output(stage: str, output_name: str, interim_dir: Path,
-                         status: RunStatus) -> Tuple[str, str, str]:
+def validate_stage_output(
+    stage: str, output_name: str, interim_dir: Path, status: RunStatus
+) -> tuple[str, str, str]:
     """
     단계별 산출물 검증
     Returns: (status, checks, notes)
@@ -279,11 +333,13 @@ def validate_stage_output(stage: str, output_name: str, interim_dir: Path,
     except Exception as e:
         return "FAIL", "로드 실패", str(e)
 
+
 # =========================
 # 단계 실행
 # =========================
-def run_stage(stage: str, config_path: Path, root: Path, status: RunStatus,
-              force: bool = False) -> Tuple[bool, Optional[str]]:
+def run_stage(
+    stage: str, config_path: Path, root: Path, status: RunStatus, force: bool = False
+) -> tuple[bool, Optional[str]]:
     """
     단계 실행
     Returns: (success, log_file_path)
@@ -299,20 +355,25 @@ def run_stage(stage: str, config_path: Path, root: Path, status: RunStatus,
     cmd_parts = [
         sys.executable,
         str(root / "src" / "run_all.py"),
-        "--config", str(config_path),
-        "--stage", stage,
-        "--run-tag", status.run_tag,
+        "--config",
+        str(config_path),
+        "--stage",
+        stage,
+        "--run-tag",
+        status.run_tag,
     ]
 
     if force:
         cmd_parts.append("--force")
 
     # strict-params는 L7에서만 적용
-    if stage == "L7" and hasattr(status, 'strict_params') and status.strict_params:
+    if stage == "L7" and hasattr(status, "strict_params") and status.strict_params:
         cmd_parts.append("--strict-params")
 
     cmd = " ".join(cmd_parts)
-    status.update_stage(stage, "RUNNING", start_time=start_time, cmd=cmd, log_file=str(log_file))
+    status.update_stage(
+        stage, "RUNNING", start_time=start_time, cmd=cmd, log_file=str(log_file)
+    )
     status.save_markdown(root / "RUN_STATUS.md")
     status.save_json(status.logs_dir / "run_status.json")
 
@@ -331,22 +392,44 @@ def run_stage(stage: str, config_path: Path, root: Path, status: RunStatus,
         exit_code = result.returncode
 
         if exit_code == 0:
-            status.update_stage(stage, "DONE", start_time=start_time, end_time=end_time,
-                              exit_code=exit_code, log_file=str(log_file), cmd=cmd)
+            status.update_stage(
+                stage,
+                "DONE",
+                start_time=start_time,
+                end_time=end_time,
+                exit_code=exit_code,
+                log_file=str(log_file),
+                cmd=cmd,
+            )
             logger.info(f"{'='*20} END {stage} (OK) {'='*20}")
             return True, str(log_file)
         else:
-            status.update_stage(stage, "FAIL", start_time=start_time, end_time=end_time,
-                              exit_code=exit_code, log_file=str(log_file), cmd=cmd)
+            status.update_stage(
+                stage,
+                "FAIL",
+                start_time=start_time,
+                end_time=end_time,
+                exit_code=exit_code,
+                log_file=str(log_file),
+                cmd=cmd,
+            )
             logger.error(f"{'='*20} END {stage} (FAIL, exit_code={exit_code}) {'='*20}")
             return False, str(log_file)
 
     except Exception as e:
         end_time = datetime.now()
-        status.update_stage(stage, "FAIL", start_time=start_time, end_time=end_time,
-                          exit_code=-1, log_file=str(log_file), cmd=cmd)
+        status.update_stage(
+            stage,
+            "FAIL",
+            start_time=start_time,
+            end_time=end_time,
+            exit_code=-1,
+            log_file=str(log_file),
+            cmd=cmd,
+        )
         logger.error(f"{'='*20} END {stage} (EXCEPTION: {e}) {'='*20}")
         return False, str(log_file)
+
 
 # =========================
 # 메인 실행
@@ -355,16 +438,24 @@ def main():
     parser = argparse.ArgumentParser(description="Baseline Full Pipeline Runner")
     parser.add_argument("--config", type=str, default="configs/config.yaml")
     parser.add_argument("--run-tag", type=str, default=None)
-    parser.add_argument("--baseline-tag", type=str, default="baseline_prerefresh_20251219_143636",
-                       help="Baseline tag for Delta report comparison")
-    parser.add_argument("--baseline-source", type=str,
-                       default="data/snapshots/baseline_after_L7BCD")
+    parser.add_argument(
+        "--baseline-tag",
+        type=str,
+        default="baseline_prerefresh_20251219_143636",
+        help="Baseline tag for Delta report comparison",
+    )
+    parser.add_argument(
+        "--baseline-source", type=str, default="data/snapshots/baseline_after_L7BCD"
+    )
     parser.add_argument("--from", dest="from_stage", type=str, default=None)
     parser.add_argument("--to", dest="to_stage", type=str, default=None)
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
-    parser.add_argument("--strict-params", action="store_true",
-                       help="Fail pipeline if config parameters don't match actual usage")
+    parser.add_argument(
+        "--strict-params",
+        action="store_true",
+        help="Fail pipeline if config parameters don't match actual usage",
+    )
     args = parser.parse_args()
 
     root = Path(__file__).resolve().parents[2]
@@ -413,7 +504,7 @@ def main():
     if args.from_stage and args.to_stage:
         start_idx = STAGES.index(args.from_stage.upper())
         end_idx = STAGES.index(args.to_stage.upper())
-        target_stages = STAGES[start_idx:end_idx + 1]
+        target_stages = STAGES[start_idx : end_idx + 1]
 
     for stage in target_stages:
         # 단계 실행
@@ -488,6 +579,7 @@ def main():
 
     logger.info("=== PIPELINE COMPLETED SUCCESSFULLY ===")
 
+
 def generate_summary_report(status: RunStatus, root: Path, interim_dir: Path):
     """최종 요약 리포트 생성"""
     report_path = status.reports_dir / "SUMMARY.md"
@@ -506,15 +598,19 @@ def generate_summary_report(status: RunStatus, root: Path, interim_dir: Path):
 
     for stage in STAGES:
         info = status.stage_status.get(stage, {})
-        lines.append(f"| {stage} | {info.get('status', 'N/A')} | "
-                    f"{info.get('start_time', 'N/A')} | "
-                    f"{info.get('end_time', 'N/A')} | "
-                    f"{info.get('exit_code', 'N/A')} |")
+        lines.append(
+            f"| {stage} | {info.get('status', 'N/A')} | "
+            f"{info.get('start_time', 'N/A')} | "
+            f"{info.get('end_time', 'N/A')} | "
+            f"{info.get('exit_code', 'N/A')} |"
+        )
 
-    lines.extend([
-        "",
-        "## Key Artifacts",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Key Artifacts",
+        ]
+    )
 
     for fp in status.file_pointers:
         if "NOT FOUND" not in fp:
@@ -522,6 +618,7 @@ def generate_summary_report(status: RunStatus, root: Path, interim_dir: Path):
 
     report_path.write_text("\n".join(lines), encoding="utf-8")
     logger.info(f"Summary report saved: {report_path}")
+
 
 def generate_validation_table(status: RunStatus, root: Path):
     """검증 테이블 리포트 생성"""
@@ -535,11 +632,14 @@ def generate_validation_table(status: RunStatus, root: Path):
     ]
 
     for v in status.validation_summary:
-        lines.append(f"| {v['stage']} | {v['output']} | {v['status']} | "
-                    f"{v['checks']} | {v['notes']} |")
+        lines.append(
+            f"| {v['stage']} | {v['output']} | {v['status']} | "
+            f"{v['checks']} | {v['notes']} |"
+        )
 
     report_path.write_text("\n".join(lines), encoding="utf-8")
     logger.info(f"Validation table saved: {report_path}")
+
 
 def generate_kpi_table(status: RunStatus, root: Path, config_path: str):
     """KPI 테이블 생성"""
@@ -553,9 +653,12 @@ def generate_kpi_table(status: RunStatus, root: Path, config_path: str):
     cmd = [
         sys.executable,
         str(kpi_script),
-        "--tag", status.run_tag,
-        "--config", config_path,
-        "--format", "both",
+        "--tag",
+        status.run_tag,
+        "--config",
+        config_path,
+        "--format",
+        "both",
     ]
 
     try:
@@ -571,7 +674,10 @@ def generate_kpi_table(status: RunStatus, root: Path, config_path: str):
     except Exception as e:
         logger.error(f"KPI table generation error: {e}")
 
-def generate_manifest(status: RunStatus, root: Path, config_path: str, interim_dir: Path):
+
+def generate_manifest(
+    status: RunStatus, root: Path, config_path: str, interim_dir: Path
+):
     """Manifest 생성"""
     import subprocess
 
@@ -583,9 +689,12 @@ def generate_manifest(status: RunStatus, root: Path, config_path: str, interim_d
     cmd = [
         sys.executable,
         str(manifest_script),
-        "--run-tag", status.run_tag,
-        "--config", config_path,
-        "--interim-dir", str(interim_dir),
+        "--run-tag",
+        status.run_tag,
+        "--config",
+        config_path,
+        "--interim-dir",
+        str(interim_dir),
     ]
 
     try:
@@ -596,6 +705,7 @@ def generate_manifest(status: RunStatus, root: Path, config_path: str, interim_d
             logger.error(f"Manifest generation failed: {result.stderr}")
     except Exception as e:
         logger.error(f"Manifest generation error: {e}")
+
 
 def generate_delta_report(status: RunStatus, root: Path, baseline_tag: str):
     """Delta 보고서 생성 (베이스라인과 비교)"""
@@ -609,8 +719,10 @@ def generate_delta_report(status: RunStatus, root: Path, baseline_tag: str):
     cmd = [
         sys.executable,
         str(delta_script),
-        "--baseline-tag", baseline_tag,
-        "--current-tag", status.run_tag,
+        "--baseline-tag",
+        baseline_tag,
+        "--current-tag",
+        status.run_tag,
     ]
 
     try:
@@ -621,6 +733,7 @@ def generate_delta_report(status: RunStatus, root: Path, baseline_tag: str):
             logger.error(f"Delta report generation failed: {result.stderr}")
     except Exception as e:
         logger.error(f"Delta report generation error: {e}")
+
 
 def generate_audit_report(status: RunStatus, root: Path):
     """Audit 리포트 생성"""
@@ -634,7 +747,8 @@ def generate_audit_report(status: RunStatus, root: Path):
     cmd = [
         sys.executable,
         str(audit_script),
-        "--run-tag", status.run_tag,
+        "--run-tag",
+        status.run_tag,
     ]
 
     try:
@@ -645,6 +759,7 @@ def generate_audit_report(status: RunStatus, root: Path):
             logger.error(f"Audit report generation failed: {result.stderr}")
     except Exception as e:
         logger.error(f"Audit report generation error: {e}")
+
 
 if __name__ == "__main__":
     main()

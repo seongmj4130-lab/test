@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/verify_additional_root_cause.py
 """
 추가 확정 검증 3개
@@ -9,25 +8,26 @@
 """
 import sys
 from pathlib import Path
-from typing import Dict, List
 
 import pandas as pd
 import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
+
 def load_config(config_path: Path) -> dict:
     """Config 파일 로드"""
-    with open(config_path, 'r', encoding='utf-8') as f:
+    with open(config_path, encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
-def verify_avg_n_tickers_by_phase(run_tags: List[str], base_interim_dir: Path) -> Dict:
+
+def verify_avg_n_tickers_by_phase(run_tags: list[str], base_interim_dir: Path) -> dict:
     """
     검증 1: avg_n_tickers를 Phase(dev/holdout)로 분리해서 다시 계산
     """
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("추가 검증 1: avg_n_tickers를 Phase별로 분리 계산")
-    print("="*80)
+    print("=" * 80)
 
     results = {}
 
@@ -71,7 +71,9 @@ def verify_avg_n_tickers_by_phase(run_tags: List[str], base_interim_dir: Path) -
                         if len(phase_metrics) > 0:
                             if "avg_n_tickers" in phase_metrics.columns:
                                 metrics_by_phase[phase] = {
-                                    "avg_n_tickers_from_metrics": phase_metrics["avg_n_tickers"].iloc[0],
+                                    "avg_n_tickers_from_metrics": phase_metrics[
+                                        "avg_n_tickers"
+                                    ].iloc[0],
                                 }
 
                 results[run_tag] = {
@@ -84,19 +86,25 @@ def verify_avg_n_tickers_by_phase(run_tags: List[str], base_interim_dir: Path) -
                     if phase in phase_results:
                         pos_data = phase_results[phase]
                         print(f"  [{phase.upper()}]")
-                        print(f"    avg_n_tickers (positions): {pos_data['avg_n_tickers']:.2f}")
-                        print(f"    min: {pos_data['min']}, max: {pos_data['max']}, median: {pos_data['median']:.2f}")
+                        print(
+                            f"    avg_n_tickers (positions): {pos_data['avg_n_tickers']:.2f}"
+                        )
+                        print(
+                            f"    min: {pos_data['min']}, max: {pos_data['max']}, median: {pos_data['median']:.2f}"
+                        )
                         print(f"    n_rebalances: {pos_data['n_rebalances']}")
 
                         if phase in metrics_by_phase:
-                            print(f"    avg_n_tickers (metrics): {metrics_by_phase[phase].get('avg_n_tickers_from_metrics', 'N/A')}")
+                            print(
+                                f"    avg_n_tickers (metrics): {metrics_by_phase[phase].get('avg_n_tickers_from_metrics', 'N/A')}"
+                            )
             else:
                 # phase 컬럼이 없으면 전체 평균만
                 date_counts = positions_df.groupby("date")["ticker"].count()
                 avg_n_tickers = date_counts.mean()
                 results[run_tag] = {
                     "avg_n_tickers": avg_n_tickers,
-                    "note": "phase 컬럼 없음"
+                    "note": "phase 컬럼 없음",
                 }
                 print(f"\n[{run_tag}] phase 컬럼 없음")
                 print(f"  avg_n_tickers: {avg_n_tickers:.2f}")
@@ -105,17 +113,19 @@ def verify_avg_n_tickers_by_phase(run_tags: List[str], base_interim_dir: Path) -
             results[run_tag] = {"error": str(e)}
             print(f"\n[{run_tag}] ERROR: {e}")
             import traceback
+
             traceback.print_exc()
 
     return results
 
-def verify_positions_distribution(run_tags: List[str], base_interim_dir: Path) -> Dict:
+
+def verify_positions_distribution(run_tags: list[str], base_interim_dir: Path) -> dict:
     """
     검증 2: Stage0~6의 bt_positions에서 '리밸런싱당 보유 종목 수' 분포를 출력
     """
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("추가 검증 2: 리밸런싱당 보유 종목 수 분포")
-    print("="*80)
+    print("=" * 80)
 
     results = {}
 
@@ -163,12 +173,16 @@ def verify_positions_distribution(run_tags: List[str], base_interim_dir: Path) -
                 print(f"  중앙값: {stats['median']:.2f}")
                 print(f"  표준편차: {stats['std']:.2f}")
                 print(f"  범위: {stats['min']} ~ {stats['max']}")
-                print(f"  5%: {stats['p5']:.2f}, 25%: {stats['p25']:.2f}, 75%: {stats['p75']:.2f}, 95%: {stats['p95']:.2f}")
+                print(
+                    f"  5%: {stats['p5']:.2f}, 25%: {stats['p25']:.2f}, 75%: {stats['p75']:.2f}, 95%: {stats['p95']:.2f}"
+                )
                 print(f"  리밸런싱 수: {stats['n_rebalances']}")
-                print(f"  0종목: {zero_count}일, <5종목: {low_count}일, >=15종목: {high_count}일")
+                print(
+                    f"  0종목: {zero_count}일, <5종목: {low_count}일, >=15종목: {high_count}일"
+                )
 
                 # 분포 히스토그램
-                print(f"\n  종목 수 분포:")
+                print("\n  종목 수 분포:")
                 dist = date_counts.value_counts().sort_index()
                 for count, freq in dist.items():
                     pct = freq / len(date_counts) * 100
@@ -178,21 +192,21 @@ def verify_positions_distribution(run_tags: List[str], base_interim_dir: Path) -
             results[run_tag] = {"error": str(e)}
             print(f"\n[{run_tag}] ERROR: {e}")
             import traceback
+
             traceback.print_exc()
 
     return results
 
+
 def verify_stage7_metric_source(
-    stage7_tag: str,
-    base_interim_dir: Path,
-    manifest_df: pd.DataFrame
-) -> Dict:
+    stage7_tag: str, base_interim_dir: Path, manifest_df: pd.DataFrame
+) -> dict:
     """
     검증 3: Stage7 stage_evolution 값의 "출처 컬럼(metric_source)"를 강제 기록
     """
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("추가 검증 3: Stage7 metric_source 확인")
-    print("="*80)
+    print("=" * 80)
 
     results = {
         "stage7_tag": stage7_tag,
@@ -219,15 +233,14 @@ def verify_stage7_metric_source(
 
     if results["has_bt_metrics"]:
         results["metric_source"] = "bt_metrics.parquet"
-        print(f"  [PASS] Stage7에 백테스트 산출물 존재")
+        print("  [PASS] Stage7에 백테스트 산출물 존재")
     else:
         # Stage7에 백테스트 산출물이 없으면, 어디서 가져왔는지 확인
         results["metric_source"] = "NA(no backtest)"
 
         # Stage6 run_tag 찾기
         stage6_rows = manifest_df[
-            (manifest_df["stage_no"] == 6) &
-            (manifest_df["track"] == "pipeline")
+            (manifest_df["stage_no"] == 6) & (manifest_df["track"] == "pipeline")
         ]
 
         if len(stage6_rows) > 0:
@@ -238,11 +251,17 @@ def verify_stage7_metric_source(
                 # Stage6의 지표와 Stage7의 지표 비교
                 try:
                     stage6_metrics = pd.read_parquet(stage6_bt_metrics)
-                    stage7_row = manifest_df[manifest_df["run_tag"] == stage7_tag].iloc[0]
+                    stage7_row = manifest_df[manifest_df["run_tag"] == stage7_tag].iloc[
+                        0
+                    ]
 
                     # 주요 지표 비교
-                    if "holdout_sharpe" in stage7_row and pd.notna(stage7_row["holdout_sharpe"]):
-                        stage6_holdout = stage6_metrics[stage6_metrics["phase"] == "holdout"]
+                    if "holdout_sharpe" in stage7_row and pd.notna(
+                        stage7_row["holdout_sharpe"]
+                    ):
+                        stage6_holdout = stage6_metrics[
+                            stage6_metrics["phase"] == "holdout"
+                        ]
                         if len(stage6_holdout) > 0:
                             stage6_sharpe = stage6_holdout["net_sharpe"].iloc[0]
                             stage7_sharpe = stage7_row["holdout_sharpe"]
@@ -250,31 +269,34 @@ def verify_stage7_metric_source(
                             if abs(stage6_sharpe - stage7_sharpe) < 0.0001:
                                 results["carried_from"] = stage6_tag
                                 results["metric_source"] = f"carried_from:{stage6_tag}"
-                                print(f"  [확인] Stage7 지표가 Stage6와 일치")
+                                print("  [확인] Stage7 지표가 Stage6와 일치")
                                 print(f"    Stage6 Sharpe: {stage6_sharpe:.4f}")
                                 print(f"    Stage7 Sharpe: {stage7_sharpe:.4f}")
                                 print(f"    metric_source: {results['metric_source']}")
                             else:
-                                print(f"  [WARNING] Stage7 지표가 Stage6와 다름")
+                                print("  [WARNING] Stage7 지표가 Stage6와 다름")
                                 print(f"    Stage6 Sharpe: {stage6_sharpe:.4f}")
                                 print(f"    Stage7 Sharpe: {stage7_sharpe:.4f}")
                 except Exception as e:
                     print(f"  [ERROR] 비교 실패: {e}")
 
-        print(f"  [결론] Stage7에 백테스트 산출물 없음")
+        print("  [결론] Stage7에 백테스트 산출물 없음")
         print(f"    metric_source: {results['metric_source']}")
         if results["carried_from"]:
             print(f"    carried_from: {results['carried_from']}")
 
     return results
 
-def generate_stage_positions_summary(run_tags: List[str], base_interim_dir: Path) -> pd.DataFrame:
+
+def generate_stage_positions_summary(
+    run_tags: list[str], base_interim_dir: Path
+) -> pd.DataFrame:
     """
     Stage0~6 각각의 bt_positions에서 date별 보유 종목 수(n_names) 요약표 생성
     """
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("추가 검증 4: Stage별 date별 보유 종목 수 요약표")
-    print("="*80)
+    print("=" * 80)
 
     summary_rows = []
 
@@ -295,36 +317,42 @@ def generate_stage_positions_summary(run_tags: List[str], base_interim_dir: Path
                     for phase in ["dev", "holdout"]:
                         phase_df = df[df["phase"] == phase]
                         if len(phase_df) > 0:
-                            phase_date_counts = phase_df.groupby("date")["ticker"].count()
+                            phase_date_counts = phase_df.groupby("date")[
+                                "ticker"
+                            ].count()
 
-                            summary_rows.append({
-                                "run_tag": run_tag,
-                                "phase": phase,
-                                "n_rebalances": len(phase_date_counts),
-                                "mean": phase_date_counts.mean(),
-                                "median": phase_date_counts.median(),
-                                "min": phase_date_counts.min(),
-                                "max": phase_date_counts.max(),
-                                "p5": phase_date_counts.quantile(0.05),
-                                "p95": phase_date_counts.quantile(0.95),
-                                "zero_count": (phase_date_counts == 0).sum(),
-                                "low_count": (phase_date_counts < 5).sum(),
-                            })
+                            summary_rows.append(
+                                {
+                                    "run_tag": run_tag,
+                                    "phase": phase,
+                                    "n_rebalances": len(phase_date_counts),
+                                    "mean": phase_date_counts.mean(),
+                                    "median": phase_date_counts.median(),
+                                    "min": phase_date_counts.min(),
+                                    "max": phase_date_counts.max(),
+                                    "p5": phase_date_counts.quantile(0.05),
+                                    "p95": phase_date_counts.quantile(0.95),
+                                    "zero_count": (phase_date_counts == 0).sum(),
+                                    "low_count": (phase_date_counts < 5).sum(),
+                                }
+                            )
                 else:
                     # phase 없으면 전체
-                    summary_rows.append({
-                        "run_tag": run_tag,
-                        "phase": "all",
-                        "n_rebalances": len(date_counts),
-                        "mean": date_counts.mean(),
-                        "median": date_counts.median(),
-                        "min": date_counts.min(),
-                        "max": date_counts.max(),
-                        "p5": date_counts.quantile(0.05),
-                        "p95": date_counts.quantile(0.95),
-                        "zero_count": (date_counts == 0).sum(),
-                        "low_count": (date_counts < 5).sum(),
-                    })
+                    summary_rows.append(
+                        {
+                            "run_tag": run_tag,
+                            "phase": "all",
+                            "n_rebalances": len(date_counts),
+                            "mean": date_counts.mean(),
+                            "median": date_counts.median(),
+                            "min": date_counts.min(),
+                            "max": date_counts.max(),
+                            "p5": date_counts.quantile(0.05),
+                            "p95": date_counts.quantile(0.95),
+                            "zero_count": (date_counts == 0).sum(),
+                            "low_count": (date_counts < 5).sum(),
+                        }
+                    )
 
         except Exception as e:
             print(f"[{run_tag}] ERROR: {e}")
@@ -336,6 +364,7 @@ def generate_stage_positions_summary(run_tags: List[str], base_interim_dir: Path
         print(summary_df.to_string(index=False))
 
     return summary_df
+
 
 def main():
     config_path = PROJECT_ROOT / "configs" / "config.yaml"
@@ -366,23 +395,22 @@ def main():
 
     # Pipeline 트랙의 run_tag만 필터링 (백테스트가 있는 Stage)
     pipeline_tags = manifest_df[
-        (manifest_df["track"] == "pipeline") &
-        (manifest_df["stage_no"] >= 0) &
-        (manifest_df["stage_no"] <= 6)
+        (manifest_df["track"] == "pipeline")
+        & (manifest_df["stage_no"] >= 0)
+        & (manifest_df["stage_no"] <= 6)
     ]["run_tag"].tolist()
 
     # Ranking 트랙의 Stage7도 포함
     ranking_stage7 = manifest_df[
-        (manifest_df["track"] == "ranking") &
-        (manifest_df["stage_no"] == 7)
+        (manifest_df["track"] == "ranking") & (manifest_df["stage_no"] == 7)
     ]["run_tag"].tolist()
 
     all_tags = sorted(set(pipeline_tags + ranking_stage7))
     stage7_tag = ranking_stage7[-1] if ranking_stage7 else None
 
-    print("="*80)
+    print("=" * 80)
     print("추가 확정 검증 3개")
-    print("="*80)
+    print("=" * 80)
     print(f"\n분석 대상 run_tag ({len(all_tags)}개):")
     for tag in all_tags:
         print(f"  - {tag}")
@@ -391,11 +419,15 @@ def main():
     phase_results = verify_avg_n_tickers_by_phase(pipeline_tags, base_interim_dir)
 
     # 검증 2: 리밸런싱당 보유 종목 수 분포
-    distribution_results = verify_positions_distribution(pipeline_tags, base_interim_dir)
+    distribution_results = verify_positions_distribution(
+        pipeline_tags, base_interim_dir
+    )
 
     # 검증 3: Stage7 metric_source
     if stage7_tag:
-        stage7_results = verify_stage7_metric_source(stage7_tag, base_interim_dir, manifest_df)
+        stage7_results = verify_stage7_metric_source(
+            stage7_tag, base_interim_dir, manifest_df
+        )
     else:
         print("\n[SKIP] Stage7 run_tag 없음")
         stage7_results = {}
@@ -412,44 +444,44 @@ def main():
     for run_tag, data in phase_results.items():
         if "from_positions" in data:
             for phase, phase_data in data["from_positions"].items():
-                phase_summary.append({
-                    "run_tag": run_tag,
-                    "phase": phase,
-                    **phase_data
-                })
+                phase_summary.append({"run_tag": run_tag, "phase": phase, **phase_data})
 
     if phase_summary:
         phase_df = pd.DataFrame(phase_summary)
         phase_output = output_dir / "avg_n_tickers_by_phase.csv"
-        phase_df.to_csv(phase_output, index=False, encoding='utf-8-sig')
+        phase_df.to_csv(phase_output, index=False, encoding="utf-8-sig")
         print(f"\n[저장] Phase별 avg_n_tickers: {phase_output}")
 
     # 분포 결과 저장
     if distribution_results:
-        dist_df = pd.DataFrame([
-            {"run_tag": k, **v} for k, v in distribution_results.items()
-            if "error" not in v
-        ])
+        dist_df = pd.DataFrame(
+            [
+                {"run_tag": k, **v}
+                for k, v in distribution_results.items()
+                if "error" not in v
+            ]
+        )
         dist_output = output_dir / "positions_distribution.csv"
-        dist_df.to_csv(dist_output, index=False, encoding='utf-8-sig')
+        dist_df.to_csv(dist_output, index=False, encoding="utf-8-sig")
         print(f"[저장] 종목 수 분포: {dist_output}")
 
     # 요약표 저장
     if len(summary_df) > 0:
         summary_output = output_dir / "stage_positions_summary.csv"
-        summary_df.to_csv(summary_output, index=False, encoding='utf-8-sig')
+        summary_df.to_csv(summary_output, index=False, encoding="utf-8-sig")
         print(f"[저장] Stage별 요약표: {summary_output}")
 
     # Stage7 metric_source 저장
     if stage7_results:
         stage7_df = pd.DataFrame([stage7_results])
         stage7_output = output_dir / "stage7_metric_source.csv"
-        stage7_df.to_csv(stage7_output, index=False, encoding='utf-8-sig')
+        stage7_df.to_csv(stage7_output, index=False, encoding="utf-8-sig")
         print(f"[저장] Stage7 metric_source: {stage7_output}")
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("추가 검증 완료")
-    print("="*80)
+    print("=" * 80)
+
 
 if __name__ == "__main__":
     main()

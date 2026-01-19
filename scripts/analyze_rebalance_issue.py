@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 rebalance_interval 변경 시 지표가 동일한 이유 분석
 """
-import numpy as np
-import pandas as pd
 
 print("=" * 80)
 print("문제 분석: rebalance_interval 변경 시 지표가 동일한 경우")
@@ -12,7 +9,9 @@ print("=" * 80)
 print("\n1. Forward Return의 특성:")
 print("   - true_short = 리밸런싱 날짜로부터 20일 후의 수익률")
 print("   - true_long = 리밸런싱 날짜로부터 120일 후의 수익률")
-print("   - 이것은 '미래 수익률'이므로, 리밸런싱 날짜가 달라지면 다른 수익률을 사용합니다")
+print(
+    "   - 이것은 '미래 수익률'이므로, 리밸런싱 날짜가 달라지면 다른 수익률을 사용합니다"
+)
 
 print("\n2. 리밸런싱 빈도가 줄어들면:")
 print("   - 리밸런싱 날짜 수가 줄어듭니다 (예: 252일 → 12일)")

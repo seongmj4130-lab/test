@@ -10,7 +10,7 @@ import yaml
 
 def main():
     print("📈 HOLDOUT 기간 시장 특성 분석 결과")
-    print("="*60)
+    print("=" * 60)
 
     print("시장 환경 요약 (2023.01-2024.12):")
     print("  • 총 기간: 24개월")
@@ -37,36 +37,38 @@ def main():
     print("\n✅ HOLDOUT 기간 특성 분석 완료!")
     print("🎯 시장 환경 적응 전략 적용됨")
 
+
 def update_holdout_config():
     """HOLDOUT 특성 설정 업데이트"""
-    config_path = 'configs/config.yaml'
+    config_path = "configs/config.yaml"
 
     try:
         if Path(config_path).exists():
-            with open(config_path, 'r', encoding='utf-8') as f:
+            with open(config_path, encoding="utf-8") as f:
                 config = yaml.safe_load(f)
         else:
             config = {}
 
         # HOLDOUT 특성 추가
-        config['holdout_insights'] = {
-            'market_regime': 'balanced_bull_bear',
-            'bull_months': 10,
-            'bear_months': 13,
-            'strategy_adaptation': {
-                'bull_phase': 'momentum_focused',
-                'bear_phase': 'quality_defensive',
-                'volatile_phase': 'risk_reduction'
-            }
+        config["holdout_insights"] = {
+            "market_regime": "balanced_bull_bear",
+            "bull_months": 10,
+            "bear_months": 13,
+            "strategy_adaptation": {
+                "bull_phase": "momentum_focused",
+                "bear_phase": "quality_defensive",
+                "volatile_phase": "risk_reduction",
+            },
         }
 
-        with open(config_path, 'w', encoding='utf-8') as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             yaml.dump(config, f, default_flow_style=False, allow_unicode=True, indent=2)
 
         print("✅ HOLDOUT 특성이 설정에 반영되었습니다.")
 
     except Exception as e:
         print(f"❌ 설정 업데이트 실패: {e}")
+
 
 if __name__ == "__main__":
     main()

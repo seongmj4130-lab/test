@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 [개선안 20번] 신호 모드 비교(모델 vs 단일랭킹 vs 듀얼호라이즌) 자동 리포트
 
@@ -21,7 +20,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import pandas as pd
 
@@ -54,7 +53,11 @@ def _safe_read_parquet(path: Path) -> Optional[pd.DataFrame]:
 def _get_l7_cfg(cfg: dict) -> BacktestConfig:
     l7 = (cfg.get("l7", {}) if isinstance(cfg, dict) else {}) or {}
     reg = (l7.get("regime", {}) or {}) if isinstance(l7.get("regime", {}), dict) else {}
-    div = (l7.get("diversify", {}) or {}) if isinstance(l7.get("diversify", {}), dict) else {}
+    div = (
+        (l7.get("diversify", {}) or {})
+        if isinstance(l7.get("diversify", {}), dict)
+        else {}
+    )
     return BacktestConfig(
         holding_days=int(l7.get("holding_days", 20)),
         top_k=int(l7.get("top_k", 20)),
@@ -84,8 +87,10 @@ def _get_l7_cfg(cfg: dict) -> BacktestConfig:
     )
 
 
-def _compute_market_regime_if_needed(cfg: dict, rebalance_scores: pd.DataFrame) -> Tuple[Optional[pd.DataFrame], List[str]]:
-    warns: List[str] = []
+def _compute_market_regime_if_needed(
+    cfg: dict, rebalance_scores: pd.DataFrame
+) -> tuple[Optional[pd.DataFrame], list[str]]:
+    warns: list[str] = []
     l7 = (cfg.get("l7", {}) if isinstance(cfg, dict) else {}) or {}
     reg = (l7.get("regime", {}) or {}) if isinstance(l7.get("regime", {}), dict) else {}
     if not bool(reg.get("enabled", False)):
@@ -103,7 +108,9 @@ def _compute_market_regime_if_needed(cfg: dict, rebalance_scores: pd.DataFrame) 
         )
         return mr, warns
     except Exception as e:
-        warns.append(f"[dual_eval] market_regime build failed -> skip regime: {type(e).__name__}: {e}")
+        warns.append(
+            f"[dual_eval] market_regime build failed -> skip regime: {type(e).__name__}: {e}"
+        )
         return None, warns
 
 
@@ -112,36 +119,52 @@ def _run_one(
     cfg: dict,
     mode_name: str,
     rebalance_scores: pd.DataFrame,
-) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, List[str]]:
-    warns: List[str] = []
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, list[str]]:
+    warns: list[str] = []
     bt_cfg = _get_l7_cfg(cfg)
 
     market_regime, w = _compute_market_regime_if_needed(cfg, rebalance_scores)
     warns.extend(w)
 
     # L7 backtest
-    bt_positions, bt_returns, bt_equity_curve, bt_metrics, quality, w2, *_ = run_backtest(
+    (
+        bt_positions,
+        bt_returns,
+        bt_equity_curve,
+        bt_metrics,
+        quality,
+        w2,
+        *_,
+    ) = run_backtest(
         rebalance_scores=rebalance_scores,
         cfg=bt_cfg,
-        config_cost_bps=float((cfg.get("l7", {}) or {}).get("cost_bps", bt_cfg.cost_bps)),
+        config_cost_bps=float(
+            (cfg.get("l7", {}) or {}).get("cost_bps", bt_cfg.cost_bps)
+        ),
         market_regime=market_regime,
     )
     warns.extend(w2 or [])
 
     # L7C benchmark (multi)
-    out_bench, w3 = run_l7c_benchmark(cfg, {"rebalance_scores": rebalance_scores, "bt_returns": bt_returns}, force=True)
+    out_bench, w3 = run_l7c_benchmark(
+        cfg,
+        {"rebalance_scores": rebalance_scores, "bt_returns": bt_returns},
+        force=True,
+    )
     warns.extend(w3 or [])
 
     bt_metrics = bt_metrics.copy()
     bt_metrics["mode"] = mode_name
-    bt_benchmark_compare_multi = out_bench.get("bt_benchmark_compare_multi", pd.DataFrame()).copy()
+    bt_benchmark_compare_multi = out_bench.get(
+        "bt_benchmark_compare_multi", pd.DataFrame()
+    ).copy()
     if not bt_benchmark_compare_multi.empty:
         bt_benchmark_compare_multi["mode"] = mode_name
 
     return bt_metrics, bt_benchmark_compare_multi, bt_returns, warns
 
 
-def _to_md_table(df: pd.DataFrame, cols: List[str]) -> str:
+def _to_md_table(df: pd.DataFrame, cols: list[str]) -> str:
     if df is None or df.empty:
         return "_(empty)_\n"
     x = df.copy()
@@ -164,10 +187,20 @@ def _to_md_table(df: pd.DataFrame, cols: List[str]) -> str:
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Compare signal modes (model vs ranking vs dual horizon)")
+    ap = argparse.ArgumentParser(
+        description="Compare signal modes (model vs ranking vs dual horizon)"
+    )
     ap.add_argument("--config", type=str, default="configs/config.yaml")
-    ap.add_argument("--model-rebalance", type=str, default="data/interim/option_a_only_20d/rebalance_scores.parquet")
-    ap.add_argument("--ranking-single-rebalance", type=str, default="data/interim/stage15_ranking_full_20251223_073900/rebalance_scores.parquet")
+    ap.add_argument(
+        "--model-rebalance",
+        type=str,
+        default="data/interim/option_a_only_20d/rebalance_scores.parquet",
+    )
+    ap.add_argument(
+        "--ranking-single-rebalance",
+        type=str,
+        default="data/interim/stage15_ranking_full_20251223_073900/rebalance_scores.parquet",
+    )
     ap.add_argument("--out", type=str, default="reports/dual_horizon_comparison.md")
     args = ap.parse_args()
 
@@ -180,13 +213,21 @@ def main():
     artifacts = {
         "dataset_daily": _safe_read_parquet(interim / "dataset_daily.parquet"),
         "cv_folds_short": _safe_read_parquet(interim / "cv_folds_short.parquet"),
-        "universe_k200_membership_monthly": _safe_read_parquet(interim / "universe_k200_membership_monthly.parquet"),
-        "ranking_short_daily": _safe_read_parquet(interim / "ranking_short_daily.parquet"),
-        "ranking_long_daily": _safe_read_parquet(interim / "ranking_long_daily.parquet"),
+        "universe_k200_membership_monthly": _safe_read_parquet(
+            interim / "universe_k200_membership_monthly.parquet"
+        ),
+        "ranking_short_daily": _safe_read_parquet(
+            interim / "ranking_short_daily.parquet"
+        ),
+        "ranking_long_daily": _safe_read_parquet(
+            interim / "ranking_long_daily.parquet"
+        ),
     }
     missing = [k for k, v in artifacts.items() if v is None or len(v) == 0]
     if missing:
-        raise SystemExit(f"[FAIL] missing required interim artifacts for dual horizon: {missing}")
+        raise SystemExit(
+            f"[FAIL] missing required interim artifacts for dual horizon: {missing}"
+        )
 
     # Build dual horizon rebalance_scores in-memory via L6R
     dual_outputs, dual_warns = run_L6R_ranking_scoring(cfg, artifacts, force=True)
@@ -194,23 +235,31 @@ def main():
 
     # Load model + single ranking rebalance_scores
     rebalance_model = _safe_read_parquet((root / args.model_rebalance).resolve())
-    rebalance_single = _safe_read_parquet((root / args.ranking_single_rebalance).resolve())
+    rebalance_single = _safe_read_parquet(
+        (root / args.ranking_single_rebalance).resolve()
+    )
     if rebalance_model is None or rebalance_model.empty:
-        raise SystemExit(f"[FAIL] model rebalance_scores not found: {args.model_rebalance}")
+        raise SystemExit(
+            f"[FAIL] model rebalance_scores not found: {args.model_rebalance}"
+        )
     if rebalance_single is None or rebalance_single.empty:
-        raise SystemExit(f"[FAIL] ranking_single rebalance_scores not found: {args.ranking_single_rebalance}")
+        raise SystemExit(
+            f"[FAIL] ranking_single rebalance_scores not found: {args.ranking_single_rebalance}"
+        )
 
     # Run each mode
     all_metrics = []
     all_bench = []
-    warns_all: Dict[str, List[str]] = {"dual_build": dual_warns or []}
+    warns_all: dict[str, list[str]] = {"dual_build": dual_warns or []}
 
     for name, rs in [
         ("model", rebalance_model),
         ("ranking_single", rebalance_single),
         ("ranking_dual", rebalance_dual),
     ]:
-        bt_metrics, bench_multi, _, warns = _run_one(cfg=cfg, mode_name=name, rebalance_scores=rs)
+        bt_metrics, bench_multi, _, warns = _run_one(
+            cfg=cfg, mode_name=name, rebalance_scores=rs
+        )
         all_metrics.append(bt_metrics)
         if bench_multi is not None and not bench_multi.empty:
             all_bench.append(bench_multi)
@@ -226,14 +275,28 @@ def main():
 
     md = []
     md.append("# 듀얼 호라이즌 비교 리포트 (자동 생성)\n")
-    md.append(f"- 생성일: {pd.Timestamp.now(tz='Asia/Seoul').strftime('%Y-%m-%d %H:%M:%S %Z')}\n")
+    md.append(
+        f"- 생성일: {pd.Timestamp.now(tz='Asia/Seoul').strftime('%Y-%m-%d %H:%M:%S %Z')}\n"
+    )
     md.append("\n## 1) 비교 대상\n")
     md.append(f"- model: `{args.model_rebalance}`\n")
     md.append(f"- ranking_single: `{args.ranking_single_rebalance}`\n")
-    md.append("- ranking_dual: `data/interim/ranking_short_daily.parquet + ranking_long_daily.parquet` → L6R(in-memory)\n")
+    md.append(
+        "- ranking_dual: `data/interim/ranking_short_daily.parquet + ranking_long_daily.parquet` → L6R(in-memory)\n"
+    )
 
     md.append("\n## 2) L7 성과 요약(모드×phase)\n\n")
-    cols = ["mode", "phase", "net_sharpe", "net_mdd", "net_cagr", "net_total_return", "net_hit_ratio", "n_rebalances", "avg_turnover_oneway"]
+    cols = [
+        "mode",
+        "phase",
+        "net_sharpe",
+        "net_mdd",
+        "net_cagr",
+        "net_total_return",
+        "net_hit_ratio",
+        "n_rebalances",
+        "avg_turnover_oneway",
+    ]
     md.append(_to_md_table(bt_metrics_all, cols))
     md.append("\n")
 
@@ -241,15 +304,28 @@ def main():
     if bench_all is None or bench_all.empty:
         md.append("_(벤치마크 비교 결과 없음)_\n")
     else:
-        cols2 = ["mode", "bench_type", "phase", "information_ratio", "tracking_error_ann", "corr_vs_benchmark", "beta_vs_benchmark", "n_rebalances"]
+        cols2 = [
+            "mode",
+            "bench_type",
+            "phase",
+            "information_ratio",
+            "tracking_error_ann",
+            "corr_vs_benchmark",
+            "beta_vs_benchmark",
+            "n_rebalances",
+        ]
         md.append(_to_md_table(bench_all, cols2))
         md.append("\n")
 
     md.append("\n## 4) α(단기/장기 결합) 튜닝 제안\n\n")
     md.append(f"- 현재 `l6r.alpha_short`: `{alpha_short}`\n")
     md.append(f"- 현재 `l6r.regime_alpha`: `{regime_alpha}`\n")
-    md.append("- 추천 그리드(초기): `alpha_short ∈ {0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8}`\n")
-    md.append("- 평가 기준: Holdout 기준 Net Sharpe + MDD 동시 개선(동일 cost_bps/holding_days 유지)\n")
+    md.append(
+        "- 추천 그리드(초기): `alpha_short ∈ {0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8}`\n"
+    )
+    md.append(
+        "- 평가 기준: Holdout 기준 Net Sharpe + MDD 동시 개선(동일 cost_bps/holding_days 유지)\n"
+    )
 
     md.append("\n## 5) 경고/메모(상위 5개)\n\n")
     for k, ws in warns_all.items():

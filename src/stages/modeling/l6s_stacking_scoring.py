@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 [개선안 24번] L6S: 스태킹 메타모델로 리밸런싱 스코어(score_ens) 생성
 
@@ -18,7 +17,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -32,9 +30,10 @@ class StackingConfig:
     """
     [개선안 24번] 스태킹 설정
     """
+
     meta_model: str = "ridge"  # currently only ridge
     ridge_alpha: float = 1.0
-    feature_cols: Tuple[str, ...] = ("ridge", "rf", "xgb", "ranking_dual")
+    feature_cols: tuple[str, ...] = ("ridge", "rf", "xgb", "ranking_dual")
     phase_train: str = "dev"
     out_score_col: str = "score_ens"
     target_col: str = "true_short"
@@ -50,14 +49,14 @@ def _ensure_key(df: pd.DataFrame) -> pd.DataFrame:
 
 def build_stacked_rebalance_scores(
     *,
-    base_frames: Dict[str, pd.DataFrame],
+    base_frames: dict[str, pd.DataFrame],
     target_frame: pd.DataFrame,
     cfg: StackingConfig,
-) -> Tuple[pd.DataFrame, dict, List[str]]:
+) -> tuple[pd.DataFrame, dict, list[str]]:
     """
     [개선안 24번] 베이스 신호들을 병합하고, dev OOS로 메타모델 학습 후 score_ens 생성
     """
-    warns: List[str] = []
+    warns: list[str] = []
 
     if not base_frames:
         raise ValueError("base_frames is empty")
@@ -89,20 +88,26 @@ def build_stacked_rebalance_scores(
     # feature matrix
     feat_cols = [c for c in cfg.feature_cols if c in out.columns]
     if len(feat_cols) < 2:
-        raise ValueError(f"too few stacking features. got={feat_cols}. expected={cfg.feature_cols}")
+        raise ValueError(
+            f"too few stacking features. got={feat_cols}. expected={cfg.feature_cols}"
+        )
 
     X_train = dtrain[feat_cols].to_numpy(dtype=np.float32, copy=False)
-    y_train = pd.to_numeric(dtrain[cfg.target_col], errors="coerce").to_numpy(dtype=np.float32, copy=False)
+    y_train = pd.to_numeric(dtrain[cfg.target_col], errors="coerce").to_numpy(
+        dtype=np.float32, copy=False
+    )
     X_all = out[feat_cols].to_numpy(dtype=np.float32, copy=False)
 
     # meta model
     if cfg.meta_model != "ridge":
         raise ValueError(f"unsupported meta_model: {cfg.meta_model}")
 
-    pipe = Pipeline([
-        ("imputer", SimpleImputer(strategy="median")),
-        ("model", Ridge(alpha=float(cfg.ridge_alpha))),
-    ])
+    pipe = Pipeline(
+        [
+            ("imputer", SimpleImputer(strategy="median")),
+            ("model", Ridge(alpha=float(cfg.ridge_alpha))),
+        ]
+    )
     pipe.fit(X_train, y_train)
     pred = pipe.predict(X_all).astype(np.float32)
 

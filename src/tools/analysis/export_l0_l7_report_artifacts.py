@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/analysis/export_l0_l7_report_artifacts.py
 from __future__ import annotations
 
@@ -43,6 +42,7 @@ ARTIFACTS_L0_L7 = [
     "bt_metrics",
 ]
 
+
 # ----------------------------
 # 1) 유틸
 # ----------------------------
@@ -52,6 +52,7 @@ def _set_pandas_print_options():
     pd.set_option("display.max_columns", None)
     pd.set_option("display.width", None)
     pd.set_option("display.max_colwidth", None)
+
 
 def _load_artifact(interim_dir: Path, name: str) -> pd.DataFrame:
     """
@@ -68,7 +69,10 @@ def _load_artifact(interim_dir: Path, name: str) -> pd.DataFrame:
         # 날짜 컬럼 자동 파싱은 프로젝트마다 다르므로 최소 로드만 수행
         return pd.read_csv(p_csv)
 
-    raise FileNotFoundError(f"[MISS] artifact not found: {name} (expected {p_parquet} or {p_csv})")
+    raise FileNotFoundError(
+        f"[MISS] artifact not found: {name} (expected {p_parquet} or {p_csv})"
+    )
+
 
 def _transform_to_nx1(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -90,6 +94,7 @@ def _transform_to_nx1(df: pd.DataFrame) -> pd.DataFrame:
 
     return series_nx1.to_frame(name="row_data")
 
+
 def _save_both(df: pd.DataFrame, out_base: Path):
     """
     out_base가 '.../artifact_name' 형태라고 가정.
@@ -109,6 +114,7 @@ def _save_both(df: pd.DataFrame, out_base: Path):
 
     return p_parquet, p_csv
 
+
 def _dump_full_to_txt(df: pd.DataFrame, txt_path: Path, chunk_rows: int = 2000):
     """
     "생략 없이 출력" 요구를 충족하기 위해
@@ -118,7 +124,9 @@ def _dump_full_to_txt(df: pd.DataFrame, txt_path: Path, chunk_rows: int = 2000):
     n = int(df.shape[0])
 
     with txt_path.open("w", encoding="utf-8") as f:
-        f.write(f"[FULL DUMP - Nx1 Format]\nshape={df.shape}\ncolumns={list(df.columns)}\n\n")
+        f.write(
+            f"[FULL DUMP - Nx1 Format]\nshape={df.shape}\ncolumns={list(df.columns)}\n\n"
+        )
         if n == 0:
             f.write("(empty)\n")
             return
@@ -132,6 +140,7 @@ def _dump_full_to_txt(df: pd.DataFrame, txt_path: Path, chunk_rows: int = 2000):
             f.write(part.to_string(index=False, header=False))
             f.write("\n")
 
+
 # ----------------------------
 # 2) 메인
 # ----------------------------
@@ -140,7 +149,9 @@ def main():
     parser.add_argument("--base", type=str, default=str(DEFAULT_BASE))
     parser.add_argument("--interim", type=str, default=str(DEFAULT_INTERIM))
     parser.add_argument("--outdir", type=str, default=str(DEFAULT_OUTDIR))
-    parser.add_argument("--dump-txt", action="store_true", help="각 artifact를 txt로 '생략 없이' 덤프")
+    parser.add_argument(
+        "--dump-txt", action="store_true", help="각 artifact를 txt로 '생략 없이' 덤프"
+    )
     parser.add_argument("--dump-chunk-rows", type=int, default=2000)
     args = parser.parse_args()
 
@@ -186,7 +197,9 @@ def main():
             # 4. (옵션) TXT 덤프
             if args.dump_txt:
                 txt_path = out_dir / "_full_print" / f"{name}.txt"
-                _dump_full_to_txt(df_nx1, txt_path, chunk_rows=int(args.dump_chunk_rows))
+                _dump_full_to_txt(
+                    df_nx1, txt_path, chunk_rows=int(args.dump_chunk_rows)
+                )
                 print(f"  fulltxt        : {txt_path}")
 
             print()
@@ -206,6 +219,7 @@ def main():
     # 실패가 있으면 exit code 1
     if fail:
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 
 
@@ -10,7 +9,9 @@ def clarify_returns_type():
 
     # 최근 통일 파라미터 백테스트 결과 (Holdout 기간 CAGR)
     try:
-        recent_results = pd.read_csv('C:\\Users\\seong\\OneDrive\\Desktop\\bootcamp\\03_code\\artifacts\\reports\\backtest_4models_comparison.csv')
+        recent_results = pd.read_csv(
+            "C:\\Users\\seong\\OneDrive\\Desktop\\bootcamp\\03_code\\artifacts\\reports\\backtest_4models_comparison.csv"
+        )
         print("✅ 최근 백테스트 결과 로드됨 (통일 파라미터)")
     except:
         print("❌ 최근 백테스트 결과 파일 없음")
@@ -18,7 +19,7 @@ def clarify_returns_type():
 
     # 총수익률 기반 결과 (전체 기간)
     try:
-        total_return_results = pd.read_csv('results/final_total_return_ranking.csv')
+        total_return_results = pd.read_csv("results/final_total_return_ranking.csv")
         print("✅ 총수익률 결과 로드됨")
         print()
     except:
@@ -27,22 +28,27 @@ def clarify_returns_type():
 
     # 보고서 데이터 (ppt_report.md 기반)
     report_data = {
-        'BT120 앙상블': {'cagr': 0.134, 'mdd': -0.044},
-        'BT20 앙상블': {'cagr': 0.104, 'mdd': -0.067},
-        'BT120 장기': {'cagr': 0.087, 'mdd': -0.052},
-        'BT120 앙상블_보수적': {'cagr': 0.070, 'mdd': -0.054}
+        "BT120 앙상블": {"cagr": 0.134, "mdd": -0.044},
+        "BT20 앙상블": {"cagr": 0.104, "mdd": -0.067},
+        "BT120 장기": {"cagr": 0.087, "mdd": -0.052},
+        "BT120 앙상블_보수적": {"cagr": 0.070, "mdd": -0.054},
     }
 
     print("🔍 수익률 타입별 비교")
     print("-" * 50)
 
-    strategies = ['bt120_ens', 'bt20_ens', 'bt120_long', 'bt20_short']
+    strategies = ["bt120_ens", "bt20_ens", "bt120_long", "bt20_short"]
 
     for strategy in strategies:
-        if strategy in recent_results['strategy'].values:
-            row = recent_results[recent_results['strategy'] == strategy].iloc[0]
+        if strategy in recent_results["strategy"].values:
+            row = recent_results[recent_results["strategy"] == strategy].iloc[0]
 
-            strategy_name = strategy.replace('bt20_ens', 'BT20 앙상블').replace('bt20_short', 'BT20 단기').replace('bt120_ens', 'BT120 앙상블').replace('bt120_long', 'BT120 장기')
+            strategy_name = (
+                strategy.replace("bt20_ens", "BT20 앙상블")
+                .replace("bt20_short", "BT20 단기")
+                .replace("bt120_ens", "BT120 앙상블")
+                .replace("bt120_long", "BT120 장기")
+            )
 
             print(f"📈 {strategy_name}")
             print(".2%")
@@ -102,6 +108,7 @@ def clarify_returns_type():
 
     print()
     print("🚀 결론: CAGR와 총수익률 모두 고려하여 투자 결정!")
+
 
 if __name__ == "__main__":
     clarify_returns_type()

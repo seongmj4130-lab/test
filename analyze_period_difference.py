@@ -1,7 +1,3 @@
-import numpy as np
-import pandas as pd
-
-
 def analyze_period_difference():
     """기존 vs 신규 결과의 기간 차이 분석"""
 
@@ -50,7 +46,7 @@ def analyze_period_difference():
     examples = [
         {"name": "신규 BT120 장기", "total_return": 0.127, "period_days": 23},
         {"name": "가정 정상 케이스", "total_return": 0.127, "period_days": 252},
-        {"name": "가정 장기 케이스", "total_return": 0.127, "period_days": 1008}
+        {"name": "가정 장기 케이스", "total_return": 0.127, "period_days": 1008},
     ]
 
     for ex in examples:
@@ -75,6 +71,7 @@ def analyze_period_difference():
     print("3. 긴 기간 (3년 이상): CAGR 우선")
     print("4. 백테스트: Holdout 기간 성과로 검증")
     print()
+
 
 if __name__ == "__main__":
     analyze_period_difference()

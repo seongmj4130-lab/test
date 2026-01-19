@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 
 
@@ -13,28 +12,87 @@ def analyze_holding_days_issue():
     print("-" * 50)
 
     results_data = [
-        {'strategy': 'bt20_ens', 'holding_days': 20, 'sharpe': 0.656, 'cagr': 0.092, 'mdd': -0.058},
-        {'strategy': 'bt20_ens', 'holding_days': 40, 'sharpe': 0.531, 'cagr': 0.104, 'mdd': -0.067},
-        {'strategy': 'bt20_ens', 'holding_days': 60, 'sharpe': 0.433, 'cagr': 0.104, 'mdd': -0.067},
-        {'strategy': 'bt20_ens', 'holding_days': 80, 'sharpe': 0.375, 'cagr': 0.104, 'mdd': -0.067},
-        {'strategy': 'bt20_ens', 'holding_days': 100, 'sharpe': 0.336, 'cagr': 0.104, 'mdd': -0.067},
-
-        {'strategy': 'bt120_ens', 'holding_days': 20, 'sharpe': 0.695, 'cagr': 0.087, 'mdd': -0.052},
-        {'strategy': 'bt120_ens', 'holding_days': 40, 'sharpe': 0.420, 'cagr': 0.070, 'mdd': -0.054},
-        {'strategy': 'bt120_ens', 'holding_days': 60, 'sharpe': 0.343, 'cagr': 0.070, 'mdd': -0.054},
-        {'strategy': 'bt120_ens', 'holding_days': 80, 'sharpe': 0.297, 'cagr': 0.070, 'mdd': -0.054},
-        {'strategy': 'bt120_ens', 'holding_days': 100, 'sharpe': 0.266, 'cagr': 0.070, 'mdd': -0.054},
+        {
+            "strategy": "bt20_ens",
+            "holding_days": 20,
+            "sharpe": 0.656,
+            "cagr": 0.092,
+            "mdd": -0.058,
+        },
+        {
+            "strategy": "bt20_ens",
+            "holding_days": 40,
+            "sharpe": 0.531,
+            "cagr": 0.104,
+            "mdd": -0.067,
+        },
+        {
+            "strategy": "bt20_ens",
+            "holding_days": 60,
+            "sharpe": 0.433,
+            "cagr": 0.104,
+            "mdd": -0.067,
+        },
+        {
+            "strategy": "bt20_ens",
+            "holding_days": 80,
+            "sharpe": 0.375,
+            "cagr": 0.104,
+            "mdd": -0.067,
+        },
+        {
+            "strategy": "bt20_ens",
+            "holding_days": 100,
+            "sharpe": 0.336,
+            "cagr": 0.104,
+            "mdd": -0.067,
+        },
+        {
+            "strategy": "bt120_ens",
+            "holding_days": 20,
+            "sharpe": 0.695,
+            "cagr": 0.087,
+            "mdd": -0.052,
+        },
+        {
+            "strategy": "bt120_ens",
+            "holding_days": 40,
+            "sharpe": 0.420,
+            "cagr": 0.070,
+            "mdd": -0.054,
+        },
+        {
+            "strategy": "bt120_ens",
+            "holding_days": 60,
+            "sharpe": 0.343,
+            "cagr": 0.070,
+            "mdd": -0.054,
+        },
+        {
+            "strategy": "bt120_ens",
+            "holding_days": 80,
+            "sharpe": 0.297,
+            "cagr": 0.070,
+            "mdd": -0.054,
+        },
+        {
+            "strategy": "bt120_ens",
+            "holding_days": 100,
+            "sharpe": 0.266,
+            "cagr": 0.070,
+            "mdd": -0.054,
+        },
     ]
 
     df = pd.DataFrame(results_data)
 
     print("BT20 앙상블:")
-    bt20_data = df[df['strategy'] == 'bt20_ens']
+    bt20_data = df[df["strategy"] == "bt20_ens"]
     for _, row in bt20_data.iterrows():
         print(".3f")
 
     print("\nBT120 앙상블:")
-    bt120_data = df[df['strategy'] == 'bt120_ens']
+    bt120_data = df[df["strategy"] == "bt120_ens"]
     for _, row in bt120_data.iterrows():
         print(".3f")
 
@@ -87,9 +145,12 @@ def analyze_holding_days_issue():
     print("20일 forward return을 모든 경우에 사용하기 때문입니다.")
 
     # 데이터 저장
-    df.to_csv('results/holding_days_issue_analysis.csv', index=False, encoding='utf-8-sig')
+    df.to_csv(
+        "results/holding_days_issue_analysis.csv", index=False, encoding="utf-8-sig"
+    )
     print("\n💾 분석 결과 저장: results/holding_days_issue_analysis.csv")
     print("\n✅ 분석 완료!")
+
 
 if __name__ == "__main__":
     analyze_holding_days_issue()

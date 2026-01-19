@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/analyze_stage_evolution.py
 """
 Stage0~12 변화값 분석 스크립트
@@ -9,6 +8,7 @@ from pathlib import Path
 import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
 
 def analyze_stage_evolution():
     """Stage0~12 변화값 분석"""
@@ -51,25 +51,34 @@ def analyze_stage_evolution():
 
     # 숫자 컬럼을 숫자 타입으로 변환
     numeric_cols = [
-        "holdout_sharpe", "holdout_mdd", "holdout_cagr", "holdout_total_return",
-        "net_sharpe", "net_mdd", "net_total_return",
-        "information_ratio", "tracking_error_ann", "avg_turnover_oneway"
+        "holdout_sharpe",
+        "holdout_mdd",
+        "holdout_cagr",
+        "holdout_total_return",
+        "net_sharpe",
+        "net_mdd",
+        "net_total_return",
+        "information_ratio",
+        "tracking_error_ann",
+        "avg_turnover_oneway",
     ]
 
     for col in numeric_cols:
         if col in analysis_df.columns:
-            analysis_df[col] = pd.to_numeric(analysis_df[col], errors='coerce')
+            analysis_df[col] = pd.to_numeric(analysis_df[col], errors="coerce")
 
-    print("="*80)
+    print("=" * 80)
     print("Stage0~12 변화값 분석")
-    print("="*80)
+    print("=" * 80)
     print(f"\n총 Stage 수: {len(analysis_df)}개")
-    print(f"Stage 범위: {analysis_df['stage_no'].min()} ~ {analysis_df['stage_no'].max()}")
+    print(
+        f"Stage 범위: {analysis_df['stage_no'].min()} ~ {analysis_df['stage_no'].max()}"
+    )
 
     # Stage별 주요 지표 출력
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Stage별 주요 지표")
-    print("="*80)
+    print("=" * 80)
 
     for idx, row in analysis_df.iterrows():
         stage_no = row["stage_no"]
@@ -95,9 +104,9 @@ def analyze_stage_evolution():
             print(f"  Avg Turnover: {float(row['avg_turnover_oneway']):.2f}%")
 
     # 변화량 계산 (이전 Stage 대비)
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Stage별 변화량 (이전 Stage 대비)")
-    print("="*80)
+    print("=" * 80)
 
     change_summary = []
 
@@ -140,23 +149,37 @@ def analyze_stage_evolution():
 
     # 변화량 요약 출력
     for change in change_summary:
-        print(f"\n[Stage {change['from_stage']} → {change['to_stage']}] {change['change_title']}")
+        print(
+            f"\n[Stage {change['from_stage']} → {change['to_stage']}] {change['change_title']}"
+        )
 
         if "holdout_sharpe_diff" in change:
-            print(f"  Holdout Sharpe: {change['holdout_sharpe_diff']:+.4f} ({change.get('holdout_sharpe_pct', 0):+.2f}%)")
+            print(
+                f"  Holdout Sharpe: {change['holdout_sharpe_diff']:+.4f} ({change.get('holdout_sharpe_pct', 0):+.2f}%)"
+            )
         if "holdout_mdd_diff" in change:
-            print(f"  Holdout MDD: {change['holdout_mdd_diff']:+.2f}%p ({change.get('holdout_mdd_pct', 0):+.2f}%)")
+            print(
+                f"  Holdout MDD: {change['holdout_mdd_diff']:+.2f}%p ({change.get('holdout_mdd_pct', 0):+.2f}%)"
+            )
         if "holdout_cagr_diff" in change:
-            print(f"  Holdout CAGR: {change['holdout_cagr_diff']:+.2f}%p ({change.get('holdout_cagr_pct', 0):+.2f}%)")
+            print(
+                f"  Holdout CAGR: {change['holdout_cagr_diff']:+.2f}%p ({change.get('holdout_cagr_pct', 0):+.2f}%)"
+            )
         if "information_ratio_diff" in change:
-            print(f"  Information Ratio: {change['information_ratio_diff']:+.4f} ({change.get('information_ratio_pct', 0):+.2f}%)")
+            print(
+                f"  Information Ratio: {change['information_ratio_diff']:+.4f} ({change.get('information_ratio_pct', 0):+.2f}%)"
+            )
 
     # 최종 요약
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("전체 기간 변화 요약 (Baseline → Stage12)")
-    print("="*80)
+    print("=" * 80)
 
-    baseline_row = analysis_df[analysis_df["stage_no"] == -1].iloc[0] if len(analysis_df[analysis_df["stage_no"] == -1]) > 0 else None
+    baseline_row = (
+        analysis_df[analysis_df["stage_no"] == -1].iloc[0]
+        if len(analysis_df[analysis_df["stage_no"] == -1]) > 0
+        else None
+    )
     final_row = analysis_df.iloc[-1]
 
     if baseline_row is not None:
@@ -169,10 +192,14 @@ def analyze_stage_evolution():
 
                 if pd.notna(baseline_val) and pd.notna(final_val):
                     diff = final_val - baseline_val
-                    pct_change = (diff / abs(baseline_val) * 100) if baseline_val != 0 else 0
+                    pct_change = (
+                        (diff / abs(baseline_val) * 100) if baseline_val != 0 else 0
+                    )
 
                     metric_name = metric.replace("_", " ").title()
-                    print(f"  {metric_name}: {baseline_val:.4f} → {final_val:.4f} ({diff:+.4f}, {pct_change:+.2f}%)")
+                    print(
+                        f"  {metric_name}: {baseline_val:.4f} → {final_val:.4f} ({diff:+.4f}, {pct_change:+.2f}%)"
+                    )
 
     # CSV로 저장
     output_path = PROJECT_ROOT / "reports" / "analysis" / "stage_evolution_analysis.csv"
@@ -180,15 +207,18 @@ def analyze_stage_evolution():
 
     # 분석 결과를 DataFrame으로 변환
     evolution_df = analysis_df.copy()
-    evolution_df.to_csv(output_path, index=False, encoding='utf-8-sig')
+    evolution_df.to_csv(output_path, index=False, encoding="utf-8-sig")
     print(f"\n[저장] 분석 결과: {output_path}")
 
     # 변화량 요약도 저장
     if change_summary:
         change_df = pd.DataFrame(change_summary)
-        change_output_path = PROJECT_ROOT / "reports" / "analysis" / "stage_evolution_changes.csv"
-        change_df.to_csv(change_output_path, index=False, encoding='utf-8-sig')
+        change_output_path = (
+            PROJECT_ROOT / "reports" / "analysis" / "stage_evolution_changes.csv"
+        )
+        change_df.to_csv(change_output_path, index=False, encoding="utf-8-sig")
         print(f"[저장] 변화량 요약: {change_output_path}")
+
 
 if __name__ == "__main__":
     analyze_stage_evolution()

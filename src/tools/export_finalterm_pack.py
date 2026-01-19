@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 [개선안 21번] finalterm 최종 보고서 패키지 생성기
 
@@ -23,7 +22,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import pandas as pd
 
@@ -36,7 +34,9 @@ def _read_yaml(path: Path) -> dict:
     try:
         import yaml
     except Exception as e:
-        raise ImportError("PyYAML이 필요합니다. `pip install pyyaml` 후 재실행하세요.") from e
+        raise ImportError(
+            "PyYAML이 필요합니다. `pip install pyyaml` 후 재실행하세요."
+        ) from e
     return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
 
 

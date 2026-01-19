@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/components/ranking/__init__.py
 from .score_engine import (
     _pick_feature_cols,

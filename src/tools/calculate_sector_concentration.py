@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/calculate_sector_concentration.py
 """
 [Stage8] Top20 섹터 농도 계산 스크립트
@@ -8,11 +7,8 @@
 """
 import argparse
 import sys
-from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional, Tuple
 
-import numpy as np
 import pandas as pd
 
 
@@ -33,9 +29,10 @@ def calculate_hhi(weights: pd.Series) -> float:
     weights_norm = weights / weights.sum() if weights.sum() > 0 else weights
 
     # HHI = sum(weight^2)
-    hhi = (weights_norm ** 2).sum()
+    hhi = (weights_norm**2).sum()
 
     return float(hhi)
+
 
 def calculate_max_sector_share(weights: pd.Series) -> float:
     """
@@ -54,6 +51,7 @@ def calculate_max_sector_share(weights: pd.Series) -> float:
     weights_norm = weights / weights.sum() if weights.sum() > 0 else weights
 
     return float(weights_norm.max())
+
 
 def calculate_sector_concentration(
     ranking_daily: pd.DataFrame,
@@ -87,7 +85,11 @@ def calculate_sector_concentration(
             continue
 
         # 섹터별 가중치 계산 (균등 가중치)
-        sector_weights = top_k_df[sector_col].value_counts() if sector_col in top_k_df.columns else pd.Series()
+        sector_weights = (
+            top_k_df[sector_col].value_counts()
+            if sector_col in top_k_df.columns
+            else pd.Series()
+        )
 
         if len(sector_weights) == 0:
             # 섹터 정보가 없으면 스킵
@@ -100,19 +102,32 @@ def calculate_sector_concentration(
         max_sector_share = calculate_max_sector_share(sector_weights)
 
         # 섹터 분포 (문자열)
-        sector_dist = ", ".join([f"{sector}:{count}" for sector, count in sector_weights.items()])
+        sector_dist = ", ".join(
+            [f"{sector}:{count}" for sector, count in sector_weights.items()]
+        )
 
-        results.append({
-            date_col: date,
-            "top_k": top_k,
-            "n_sectors": len(sector_weights),
-            "hhi": hhi,
-            "max_sector_share": max_sector_share,
-            "sector_distribution": sector_dist,
-        })
+        results.append(
+            {
+                date_col: date,
+                "top_k": top_k,
+                "n_sectors": len(sector_weights),
+                "hhi": hhi,
+                "max_sector_share": max_sector_share,
+                "sector_distribution": sector_dist,
+            }
+        )
 
     if not results:
-        return pd.DataFrame(columns=[date_col, "top_k", "n_sectors", "hhi", "max_sector_share", "sector_distribution"])
+        return pd.DataFrame(
+            columns=[
+                date_col,
+                "top_k",
+                "n_sectors",
+                "hhi",
+                "max_sector_share",
+                "sector_distribution",
+            ]
+        )
 
     df = pd.DataFrame(results)
     df[date_col] = pd.to_datetime(df[date_col])
@@ -120,11 +135,12 @@ def calculate_sector_concentration(
 
     return df
 
+
 def compare_with_baseline(
     current_df: pd.DataFrame,
     baseline_df: pd.DataFrame,
     date_col: str = "date",
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     Baseline 대비 비교
 
@@ -148,50 +164,38 @@ def compare_with_baseline(
         results["hhi_improved"] = current_hhi_mean <= baseline_hhi_mean  # 낮을수록 좋음
 
     # 평균 Max Sector Share 비교
-    if "max_sector_share" in current_df.columns and "max_sector_share" in baseline_df.columns:
+    if (
+        "max_sector_share" in current_df.columns
+        and "max_sector_share" in baseline_df.columns
+    ):
         current_max_mean = current_df["max_sector_share"].mean()
         baseline_max_mean = baseline_df["max_sector_share"].mean()
         results["max_sector_share_mean_current"] = current_max_mean
         results["max_sector_share_mean_baseline"] = baseline_max_mean
         results["max_sector_share_mean_delta"] = current_max_mean - baseline_max_mean
-        results["max_sector_share_improved"] = current_max_mean <= baseline_max_mean  # 낮을수록 좋음
+        results["max_sector_share_improved"] = (
+            current_max_mean <= baseline_max_mean
+        )  # 낮을수록 좋음
 
     return results
 
+
 def main():
-    parser = argparse.ArgumentParser(
-        description="[Stage8] Top20 섹터 농도 계산"
-    )
+    parser = argparse.ArgumentParser(description="[Stage8] Top20 섹터 농도 계산")
     parser.add_argument(
-        "--config",
-        type=str,
-        default="configs/config.yaml",
-        help="Config 파일 경로"
+        "--config", type=str, default="configs/config.yaml", help="Config 파일 경로"
     )
-    parser.add_argument(
-        "--run-tag",
-        type=str,
-        required=True,
-        help="현재 실행 태그"
-    )
+    parser.add_argument("--run-tag", type=str, required=True, help="현재 실행 태그")
     parser.add_argument(
         "--baseline-tag",
         type=str,
         default="stage6_sector_relative_feature_balance_20251220_194928",
-        help="Baseline 태그 (비교 대상)"
+        help="Baseline 태그 (비교 대상)",
     )
     parser.add_argument(
-        "--top-k",
-        type=int,
-        default=20,
-        help="상위 K개 종목 (기본: 20)"
+        "--top-k", type=int, default=20, help="상위 K개 종목 (기본: 20)"
     )
-    parser.add_argument(
-        "--root",
-        type=str,
-        default=None,
-        help="프로젝트 루트 디렉토리"
-    )
+    parser.add_argument("--root", type=str, default=None, help="프로젝트 루트 디렉토리")
     args = parser.parse_args()
 
     # 루트 경로 결정
@@ -208,7 +212,7 @@ def main():
     reports_ranking_dir = root / "reports" / "ranking"
     reports_ranking_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"\n[Stage8] 섹터 농도 계산")
+    print("\n[Stage8] 섹터 농도 계산")
     print(f"Run Tag: {args.run_tag}")
     print(f"Baseline Tag: {args.baseline_tag}")
     print(f"Top K: {args.top_k}")
@@ -233,7 +237,9 @@ def main():
     # sector_name 확인
     sector_col = "sector_name"
     if sector_col not in ranking_daily.columns:
-        print(f"[WARN] {sector_col} 컬럼이 없습니다. dataset_daily에서 가져오기 시도...")
+        print(
+            f"[WARN] {sector_col} 컬럼이 없습니다. dataset_daily에서 가져오기 시도..."
+        )
 
         # dataset_daily 또는 panel_merged_daily에서 sector_name 가져오기
         # 여러 경로 시도
@@ -247,15 +253,19 @@ def main():
         # baseline 태그 폴더에서도 찾기
         baseline_interim_dir = base_interim_dir / args.baseline_tag
         if baseline_interim_dir.exists():
-            candidate_paths.extend([
-                baseline_interim_dir / "panel_merged_daily.parquet",
-                baseline_interim_dir / "dataset_daily.parquet",
-            ])
+            candidate_paths.extend(
+                [
+                    baseline_interim_dir / "panel_merged_daily.parquet",
+                    baseline_interim_dir / "dataset_daily.parquet",
+                ]
+            )
 
         # 재귀적으로 찾기
         all_panel_files = list(base_interim_dir.rglob("panel_merged_daily.parquet"))
         if all_panel_files:
-            candidate_paths.append(max(all_panel_files, key=lambda p: p.stat().st_mtime))
+            candidate_paths.append(
+                max(all_panel_files, key=lambda p: p.stat().st_mtime)
+            )
 
         source_df = None
         source_path = None
@@ -271,8 +281,12 @@ def main():
                     continue
 
         if source_df is not None and source_path:
-            sector_info = source_df[["date", "ticker", sector_col]].drop_duplicates(["date", "ticker"])
-            ranking_daily = ranking_daily.merge(sector_info, on=["date", "ticker"], how="left")
+            sector_info = source_df[["date", "ticker", sector_col]].drop_duplicates(
+                ["date", "ticker"]
+            )
+            ranking_daily = ranking_daily.merge(
+                sector_info, on=["date", "ticker"], how="left"
+            )
             print(f"[OK] {sector_col} 병합 완료 (source: {source_path})")
         else:
             print(f"[ERROR] {sector_col}을 찾을 수 없습니다.")
@@ -280,7 +294,7 @@ def main():
             sys.exit(1)
 
     # 섹터 농도 계산
-    print(f"\n[2/3] 섹터 농도 계산 중...")
+    print("\n[2/3] 섹터 농도 계산 중...")
     concentration_df = calculate_sector_concentration(
         ranking_daily,
         top_k=args.top_k,
@@ -300,8 +314,10 @@ def main():
     print(f"[OK] 섹터 농도 저장: {output_path}")
 
     # Baseline 비교
-    print(f"\n[3/3] Baseline 대비 비교 중...")
-    baseline_ranking_path = base_interim_dir / args.baseline_tag / "ranking_daily.parquet"
+    print("\n[3/3] Baseline 대비 비교 중...")
+    baseline_ranking_path = (
+        base_interim_dir / args.baseline_tag / "ranking_daily.parquet"
+    )
 
     comparison_results = {}
     if baseline_ranking_path.exists():
@@ -325,19 +341,33 @@ def main():
             )
 
             print("\n=== Baseline 대비 비교 결과 ===")
-            print(f"HHI 평균:")
+            print("HHI 평균:")
             print(f"  Current: {comparison_results.get('hhi_mean_current', 'N/A'):.4f}")
-            print(f"  Baseline: {comparison_results.get('hhi_mean_baseline', 'N/A'):.4f}")
+            print(
+                f"  Baseline: {comparison_results.get('hhi_mean_baseline', 'N/A'):.4f}"
+            )
             print(f"  Delta: {comparison_results.get('hhi_mean_delta', 'N/A'):.4f}")
-            print(f"  개선 여부: {'[개선]' if comparison_results.get('hhi_improved', False) else '[악화]'}")
+            print(
+                f"  개선 여부: {'[개선]' if comparison_results.get('hhi_improved', False) else '[악화]'}"
+            )
 
-            print(f"\nMax Sector Share 평균:")
-            print(f"  Current: {comparison_results.get('max_sector_share_mean_current', 'N/A'):.4f}")
-            print(f"  Baseline: {comparison_results.get('max_sector_share_mean_baseline', 'N/A'):.4f}")
-            print(f"  Delta: {comparison_results.get('max_sector_share_mean_delta', 'N/A'):.4f}")
-            print(f"  개선 여부: {'[개선]' if comparison_results.get('max_sector_share_improved', False) else '[악화]'}")
+            print("\nMax Sector Share 평균:")
+            print(
+                f"  Current: {comparison_results.get('max_sector_share_mean_current', 'N/A'):.4f}"
+            )
+            print(
+                f"  Baseline: {comparison_results.get('max_sector_share_mean_baseline', 'N/A'):.4f}"
+            )
+            print(
+                f"  Delta: {comparison_results.get('max_sector_share_mean_delta', 'N/A'):.4f}"
+            )
+            print(
+                f"  개선 여부: {'[개선]' if comparison_results.get('max_sector_share_improved', False) else '[악화]'}"
+            )
         else:
-            print("[WARN] Baseline ranking_daily에 sector_name이 없어 비교를 건너뜁니다.")
+            print(
+                "[WARN] Baseline ranking_daily에 sector_name이 없어 비교를 건너뜁니다."
+            )
     else:
         print(f"[WARN] Baseline ranking_daily 파일이 없습니다: {baseline_ranking_path}")
 
@@ -348,8 +378,9 @@ def main():
     print(f"평균 Max Sector Share: {concentration_df['max_sector_share'].mean():.4f}")
     print(f"평균 섹터 수: {concentration_df['n_sectors'].mean():.1f}")
 
-    print(f"\n[OK] 섹터 농도 계산 완료")
+    print("\n[OK] 섹터 농도 계산 완료")
     print(f"출력 파일: {output_path}")
+
 
 if __name__ == "__main__":
     main()

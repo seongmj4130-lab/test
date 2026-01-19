@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 rebalance_interval 적용 전후 결과 비교
 """
@@ -36,7 +35,9 @@ print("=" * 80)
 for model_name in ["bt20_short", "bt20_ens", "bt120_long", "bt120_ens"]:
     # rebalance_interval별로 다른 캐시 파일 확인
     for interval in [1, 20, 120]:
-        scores_path = data_dir / f"rebalance_scores_from_ranking_interval_{interval}.parquet"
+        scores_path = (
+            data_dir / f"rebalance_scores_from_ranking_interval_{interval}.parquet"
+        )
         if scores_path.exists():
             df = pd.read_parquet(scores_path)
             print(f"\n{model_name} (rebalance_interval={interval}):")
@@ -65,8 +66,12 @@ for model_name in ["bt20_short", "bt20_ens", "bt120_long", "bt120_ens"]:
         if returns_path.exists():
             returns_df = pd.read_parquet(returns_path)
             print(f"\n  리밸런싱 날짜 수: {returns_df['date'].nunique():,}개")
-            print(f"  Dev: {returns_df[returns_df['phase']=='dev']['date'].nunique():,}개")
-            print(f"  Holdout: {returns_df[returns_df['phase']=='holdout']['date'].nunique():,}개")
+            print(
+                f"  Dev: {returns_df[returns_df['phase']=='dev']['date'].nunique():,}개"
+            )
+            print(
+                f"  Holdout: {returns_df[returns_df['phase']=='holdout']['date'].nunique():,}개"
+            )
 
 print("\n" + "=" * 80)
 print("요약")

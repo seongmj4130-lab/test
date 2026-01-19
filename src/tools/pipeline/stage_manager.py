@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/pipeline/stage_manager.py
 """
 [코드 매니저] Stage 실행 통합 스크립트
@@ -11,12 +10,15 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional
 
 # 고정 설정
 PROJECT_ROOT = Path(r"C:\Users\seong\OneDrive\Desktop\bootcamp\03_code")
-BASELINE_TAG = "stage6_sector_relative_feature_balance_20251220_194928"  # 2차 사이클 기준
+BASELINE_TAG = (
+    "stage6_sector_relative_feature_balance_20251220_194928"  # 2차 사이클 기준
+)
 HISTORICAL_BASELINE_TAG = "baseline_prerefresh_20251219_143636"  # 참조용
+
 
 def generate_run_tag(stage_name: str) -> str:
     """
@@ -26,12 +28,10 @@ def generate_run_tag(stage_name: str) -> str:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     return f"{stage_name}_{timestamp}"
 
+
 def run_command(
-    cmd: List[str],
-    cwd: Path,
-    description: str,
-    check_returncode: bool = True
-) -> Tuple[int, str, str]:
+    cmd: list[str], cwd: Path, description: str, check_returncode: bool = True
+) -> tuple[int, str, str]:
     """
     명령어 실행 및 결과 반환
 
@@ -50,8 +50,8 @@ def run_command(
             cwd=str(cwd),
             capture_output=True,
             text=True,
-            encoding='utf-8',
-            errors='replace'
+            encoding="utf-8",
+            errors="replace",
         )
 
         if result.stdout:
@@ -69,6 +69,7 @@ def run_command(
         print(f"\n[ERROR] [{description}] Exception: {e}")
         return 1, "", str(e)
 
+
 def verify_artifact_exists(file_path: Path, description: str) -> bool:
     """산출물 파일 존재 확인"""
     if file_path.exists():
@@ -79,11 +80,10 @@ def verify_artifact_exists(file_path: Path, description: str) -> bool:
         print(f"[MISSING] {description}: NOT FOUND - {file_path}")
         return False
 
+
 def verify_interim_artifacts(
-    run_tag: str,
-    stage: Optional[int],
-    base_interim_dir: Path
-) -> Tuple[bool, List[str]]:
+    run_tag: str, stage: Optional[int], base_interim_dir: Path
+) -> tuple[bool, list[str]]:
     """
     Stage별 필수 산출물 존재 확인
 
@@ -129,6 +129,7 @@ def verify_interim_artifacts(
 
     return len(missing) == 0, missing
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="[코드 매니저] Stage 실행 통합 스크립트"
@@ -137,63 +138,46 @@ def main():
         "--stage-name",
         type=str,
         required=True,
-        help="Stage 이름 (예: stage7_rank_engine, stage0_rebuild_tagged)"
+        help="Stage 이름 (예: stage7_rank_engine, stage0_rebuild_tagged)",
     )
     parser.add_argument(
-        "--config",
-        type=str,
-        default="configs/config.yaml",
-        help="Config 파일 경로"
+        "--config", type=str, default="configs/config.yaml", help="Config 파일 경로"
     )
     parser.add_argument(
-        "--from-stage",
-        type=str,
-        default="L0",
-        help="시작 Stage (기본: L0)"
+        "--from-stage", type=str, default="L0", help="시작 Stage (기본: L0)"
     )
     parser.add_argument(
-        "--to-stage",
-        type=str,
-        default="L7D",
-        help="종료 Stage (기본: L7D)"
+        "--to-stage", type=str, default="L7D", help="종료 Stage (기본: L7D)"
     )
     parser.add_argument(
         "--stage",
         type=str,
         default=None,
-        help="단일 Stage 실행 (--from-stage, --to-stage 무시)"
+        help="단일 Stage 실행 (--from-stage, --to-stage 무시)",
     )
     parser.add_argument(
         "--force-rebuild",
         action="store_true",
         default=True,
-        help="강제 Rebuild: 기존 산출물 무시하고 새로 생성 (L2 제외, 기본: True)"
+        help="강제 Rebuild: 기존 산출물 무시하고 새로 생성 (L2 제외, 기본: True)",
     )
     parser.add_argument(
         "--baseline-tag",
         type=str,
         default=BASELINE_TAG,
-        help=f"Baseline 태그 (기본: {BASELINE_TAG})"
+        help=f"Baseline 태그 (기본: {BASELINE_TAG})",
     )
     parser.add_argument(
         "--skip-pipeline",
         action="store_true",
-        help="파이프라인 실행 건너뛰기 (리포트만 생성)"
+        help="파이프라인 실행 건너뛰기 (리포트만 생성)",
+    )
+    parser.add_argument("--skip-kpi", action="store_true", help="KPI 생성 건너뛰기")
+    parser.add_argument(
+        "--skip-delta", action="store_true", help="Delta 리포트 생성 건너뛰기"
     )
     parser.add_argument(
-        "--skip-kpi",
-        action="store_true",
-        help="KPI 생성 건너뛰기"
-    )
-    parser.add_argument(
-        "--skip-delta",
-        action="store_true",
-        help="Delta 리포트 생성 건너뛰기"
-    )
-    parser.add_argument(
-        "--skip-check",
-        action="store_true",
-        help="체크리스트 리포트 생성 건너뛰기"
+        "--skip-check", action="store_true", help="체크리스트 리포트 생성 건너뛰기"
     )
     args = parser.parse_args()
 
@@ -201,15 +185,15 @@ def main():
     run_tag = generate_run_tag(args.stage_name)
     baseline_tag = args.baseline_tag
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("[코드 매니저] Stage 실행 통합 스크립트")
-    print("="*60)
+    print("=" * 60)
     print(f"프로젝트 루트: {PROJECT_ROOT}")
     print(f"Run Tag: {run_tag}")
     print(f"Baseline Tag: {baseline_tag}")
     print(f"Config: {args.config}")
     print(f"Force Rebuild: {args.force_rebuild}")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     if not PROJECT_ROOT.exists():
         print(f"❌ 프로젝트 루트가 존재하지 않습니다: {PROJECT_ROOT}")
@@ -232,22 +216,27 @@ def main():
         pipeline_cmd = [
             sys.executable,
             str(PROJECT_ROOT / "src" / "run_all.py"),
-            "--config", args.config,
-            "--run-tag", run_tag,
-            "--baseline-tag", baseline_tag,
+            "--config",
+            args.config,
+            "--run-tag",
+            run_tag,
+            "--baseline-tag",
+            baseline_tag,
             "--force-rebuild",  # 항상 force-rebuild (skip_if_exists 무시)
         ]
 
         if args.stage:
             pipeline_cmd.extend(["--stage", args.stage.upper()])
         else:
-            pipeline_cmd.extend(["--from", args.from_stage.upper(), "--to", args.to_stage.upper()])
+            pipeline_cmd.extend(
+                ["--from", args.from_stage.upper(), "--to", args.to_stage.upper()]
+            )
 
         returncode, stdout, stderr = run_command(
             pipeline_cmd,
             cwd=PROJECT_ROOT,
             description="Stage 파이프라인 실행",
-            check_returncode=True
+            check_returncode=True,
         )
 
         if returncode != 0:
@@ -267,13 +256,11 @@ def main():
 
         print("\n[1/5] 산출물 존재 확인 중...")
         all_exist, missing = verify_interim_artifacts(
-            run_tag,
-            stage_num,
-            base_interim_dir
+            run_tag, stage_num, base_interim_dir
         )
 
         if not all_exist:
-            print(f"\n⚠️  일부 산출물이 누락되었습니다:")
+            print("\n⚠️  일부 산출물이 누락되었습니다:")
             for m in missing:
                 print(f"   - {m}")
             print("\n⚠️  계속 진행하지만, KPI/Delta 리포트 생성이 실패할 수 있습니다.")
@@ -291,15 +278,17 @@ def main():
         kpi_cmd = [
             sys.executable,
             str(PROJECT_ROOT / "src" / "tools" / "export_kpi_table.py"),
-            "--config", args.config,
-            "--tag", run_tag,
+            "--config",
+            args.config,
+            "--tag",
+            run_tag,
         ]
 
         returncode, stdout, stderr = run_command(
             kpi_cmd,
             cwd=PROJECT_ROOT,
             description="KPI 테이블 생성",
-            check_returncode=True
+            check_returncode=True,
         )
 
         if returncode != 0:
@@ -327,7 +316,9 @@ def main():
         print("\n[3/5] Δ 리포트 생성 중...")
 
         # Baseline KPI 확인
-        baseline_kpi_csv = PROJECT_ROOT / "reports" / "kpi" / f"kpi_table__{baseline_tag}.csv"
+        baseline_kpi_csv = (
+            PROJECT_ROOT / "reports" / "kpi" / f"kpi_table__{baseline_tag}.csv"
+        )
 
         if not baseline_kpi_csv.exists():
             print(f"\n⚠️  Baseline KPI가 없습니다: {baseline_kpi_csv}")
@@ -336,34 +327,38 @@ def main():
             baseline_kpi_cmd = [
                 sys.executable,
                 str(PROJECT_ROOT / "src" / "tools" / "export_kpi_table.py"),
-                "--config", args.config,
-                "--tag", baseline_tag,
+                "--config",
+                args.config,
+                "--tag",
+                baseline_tag,
             ]
 
             returncode, _, _ = run_command(
                 baseline_kpi_cmd,
                 cwd=PROJECT_ROOT,
                 description="Baseline KPI 생성",
-                check_returncode=False  # 실패해도 계속 진행
+                check_returncode=False,  # 실패해도 계속 진행
             )
 
             if returncode != 0:
-                print(f"⚠️  Baseline KPI 생성 실패. Delta 리포트 생성을 건너뜁니다.")
+                print("⚠️  Baseline KPI 생성 실패. Delta 리포트 생성을 건너뜁니다.")
                 baseline_tag = None
 
         if baseline_tag:
             delta_cmd = [
                 sys.executable,
                 str(PROJECT_ROOT / "src" / "tools" / "export_delta_report.py"),
-                "--baseline-tag", baseline_tag,
-                "--run-tag", run_tag,
+                "--baseline-tag",
+                baseline_tag,
+                "--run-tag",
+                run_tag,
             ]
 
             returncode, stdout, stderr = run_command(
                 delta_cmd,
                 cwd=PROJECT_ROOT,
                 description="Δ 리포트 생성",
-                check_returncode=True
+                check_returncode=True,
             )
 
             if returncode != 0:
@@ -371,8 +366,18 @@ def main():
                 sys.exit(returncode)
 
             # Delta 파일 존재 확인
-            delta_csv = PROJECT_ROOT / "reports" / "delta" / f"delta_kpi__{baseline_tag}__vs__{run_tag}.csv"
-            delta_md = PROJECT_ROOT / "reports" / "delta" / f"delta_report__{baseline_tag}__vs__{run_tag}.md"
+            delta_csv = (
+                PROJECT_ROOT
+                / "reports"
+                / "delta"
+                / f"delta_kpi__{baseline_tag}__vs__{run_tag}.csv"
+            )
+            delta_md = (
+                PROJECT_ROOT
+                / "reports"
+                / "delta"
+                / f"delta_report__{baseline_tag}__vs__{run_tag}.md"
+            )
 
             if not verify_artifact_exists(delta_csv, "Delta CSV"):
                 print("❌ Delta CSV 파일이 생성되지 않았습니다.")
@@ -405,21 +410,30 @@ def main():
         sector_concentration_cmd = [
             sys.executable,
             str(PROJECT_ROOT / "src" / "tools" / "calculate_sector_concentration.py"),
-            "--config", args.config,
-            "--run-tag", run_tag,
-            "--baseline-tag", baseline_tag,
-            "--top-k", "20",
+            "--config",
+            args.config,
+            "--run-tag",
+            run_tag,
+            "--baseline-tag",
+            baseline_tag,
+            "--top-k",
+            "20",
         ]
 
         returncode, stdout, stderr = run_command(
             sector_concentration_cmd,
             cwd=PROJECT_ROOT,
             description="[Stage8] 섹터 농도 계산",
-            check_returncode=False  # 실패해도 계속 진행
+            check_returncode=False,  # 실패해도 계속 진행
         )
 
         if returncode == 0:
-            sector_concentration_csv = PROJECT_ROOT / "reports" / "ranking" / f"sector_concentration__{run_tag}.csv"
+            sector_concentration_csv = (
+                PROJECT_ROOT
+                / "reports"
+                / "ranking"
+                / f"sector_concentration__{run_tag}.csv"
+            )
             verify_artifact_exists(sector_concentration_csv, "[Stage8] 섹터 농도 CSV")
         else:
             print("⚠️  섹터 농도 계산 실패 (계속 진행)")
@@ -434,24 +448,33 @@ def main():
             check_cmd = [
                 sys.executable,
                 str(PROJECT_ROOT / "src" / "tools" / "check_stage_completion.py"),
-                "--config", args.config,
-                "--run-tag", run_tag,
-                "--stage", str(stage_num),
-                "--baseline-tag", baseline_tag,
+                "--config",
+                args.config,
+                "--run-tag",
+                run_tag,
+                "--stage",
+                str(stage_num),
+                "--baseline-tag",
+                baseline_tag,
             ]
 
             returncode, stdout, stderr = run_command(
                 check_cmd,
                 cwd=PROJECT_ROOT,
                 description="Stage 체크리스트 리포트 생성",
-                check_returncode=False  # 실패해도 계속 진행
+                check_returncode=False,  # 실패해도 계속 진행
             )
 
             if returncode == 0:
-                check_report = PROJECT_ROOT / "reports" / "stages" / f"check__stage{stage_num}__{run_tag}.md"
+                check_report = (
+                    PROJECT_ROOT
+                    / "reports"
+                    / "stages"
+                    / f"check__stage{stage_num}__{run_tag}.md"
+                )
                 verify_artifact_exists(check_report, "체크리스트 리포트")
             else:
-                print(f"⚠️  체크리스트 리포트 생성 실패 (계속 진행)")
+                print("⚠️  체크리스트 리포트 생성 실패 (계속 진행)")
         else:
             print("⚠️  Stage 번호를 추출할 수 없어 체크리스트 리포트 생성을 건너뜁니다.")
     else:
@@ -460,9 +483,9 @@ def main():
     # ============================================================
     # 6) 최종 요약 출력
     # ============================================================
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("[6/6] 최종 요약")
-    print("="*60)
+    print("=" * 60)
 
     outputs = []
 
@@ -471,10 +494,12 @@ def main():
     if interim_dir.exists():
         parquet_files = list(interim_dir.glob("*.parquet"))
         csv_files = list(interim_dir.glob("*.csv"))
-        outputs.append((
-            "산출물 (interim)",
-            f"{interim_dir} ({len(parquet_files)} parquet, {len(csv_files)} csv)"
-        ))
+        outputs.append(
+            (
+                "산출물 (interim)",
+                f"{interim_dir} ({len(parquet_files)} parquet, {len(csv_files)} csv)",
+            )
+        )
 
     # KPI 리포트
     kpi_csv = PROJECT_ROOT / "reports" / "kpi" / f"kpi_table__{run_tag}.csv"
@@ -485,8 +510,18 @@ def main():
         outputs.append(("KPI MD", str(kpi_md)))
 
     # Delta 리포트
-    delta_csv = PROJECT_ROOT / "reports" / "delta" / f"delta_kpi__{baseline_tag}__vs__{run_tag}.csv"
-    delta_md = PROJECT_ROOT / "reports" / "delta" / f"delta_report__{baseline_tag}__vs__{run_tag}.md"
+    delta_csv = (
+        PROJECT_ROOT
+        / "reports"
+        / "delta"
+        / f"delta_kpi__{baseline_tag}__vs__{run_tag}.csv"
+    )
+    delta_md = (
+        PROJECT_ROOT
+        / "reports"
+        / "delta"
+        / f"delta_report__{baseline_tag}__vs__{run_tag}.md"
+    )
     if delta_csv.exists():
         outputs.append(("Delta CSV", str(delta_csv)))
     if delta_md.exists():
@@ -494,19 +529,34 @@ def main():
 
     # 체크리스트 리포트
     if stage_num is not None:
-        check_report = PROJECT_ROOT / "reports" / "stages" / f"check__stage{stage_num}__{run_tag}.md"
+        check_report = (
+            PROJECT_ROOT
+            / "reports"
+            / "stages"
+            / f"check__stage{stage_num}__{run_tag}.md"
+        )
         if check_report.exists():
             outputs.append(("체크리스트 리포트", str(check_report)))
 
     # [Stage8] 섹터 농도 리포트
     if stage_num == 8:
-        sector_concentration_csv = PROJECT_ROOT / "reports" / "ranking" / f"sector_concentration__{run_tag}.csv"
+        sector_concentration_csv = (
+            PROJECT_ROOT
+            / "reports"
+            / "ranking"
+            / f"sector_concentration__{run_tag}.csv"
+        )
         if sector_concentration_csv.exists():
             outputs.append(("[Stage8] 섹터 농도 CSV", str(sector_concentration_csv)))
 
     # [Stage8] 섹터 농도 리포트
     if stage_num == 8:
-        sector_concentration_csv = PROJECT_ROOT / "reports" / "ranking" / f"sector_concentration__{run_tag}.csv"
+        sector_concentration_csv = (
+            PROJECT_ROOT
+            / "reports"
+            / "ranking"
+            / f"sector_concentration__{run_tag}.csv"
+        )
         if sector_concentration_csv.exists():
             outputs.append(("[Stage8] 섹터 농도 CSV", str(sector_concentration_csv)))
 
@@ -515,13 +565,14 @@ def main():
         print(f"{i}) {desc}:")
         print(f"   {path}")
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("✅ 모든 단계 완료")
-    print("="*60)
+    print("=" * 60)
     print(f"\nRun Tag: {run_tag}")
     print(f"Baseline Tag: {baseline_tag}")
     print(f"\n생성된 파일 수: {len(outputs)}개")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
+
 
 if __name__ == "__main__":
     main()

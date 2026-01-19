@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/data/l0_universe.py
 from __future__ import annotations
 
@@ -8,18 +7,23 @@ import pandas as pd
 def _require_pykrx():
     try:
         from pykrx import stock
+
         return stock
     except Exception as e:
-        raise ImportError("pykrx가 필요합니다. `pip install pykrx` 후 재실행하세요.") from e
+        raise ImportError(
+            "pykrx가 필요합니다. `pip install pykrx` 후 재실행하세요."
+        ) from e
+
 
 def _to_yyyymmdd(s: str) -> str:
     return pd.to_datetime(s).strftime("%Y%m%d")
+
 
 def build_k200_membership_month_end(
     *,
     start_date: str,
     end_date: str,
-    index_code: str = "1028",     # KOSPI200
+    index_code: str = "1028",  # KOSPI200
     anchor_ticker: str = "005930",
     strict: bool = True,
 ) -> pd.DataFrame:
@@ -60,7 +64,9 @@ def build_k200_membership_month_end(
             tickers = stock.get_index_portfolio_deposit_file(index_code, ymd)
 
         if tickers is None or len(tickers) == 0:
-            raise RuntimeError(f"KOSPI200 구성종목 조회 실패: index={index_code}, date={ymd}")
+            raise RuntimeError(
+                f"KOSPI200 구성종목 조회 실패: index={index_code}, date={ymd}"
+            )
 
         for t in tickers:
             records.append(
@@ -71,7 +77,12 @@ def build_k200_membership_month_end(
                 }
             )
 
-    df = pd.DataFrame(records).drop_duplicates(["date", "ticker"]).sort_values(["date", "ticker"]).reset_index(drop=True)
+    df = (
+        pd.DataFrame(records)
+        .drop_duplicates(["date", "ticker"])
+        .sort_values(["date", "ticker"])
+        .reset_index(drop=True)
+    )
 
     # ---------- QC ----------
     counts = df.groupby("ym")["ticker"].nunique().sort_index()
@@ -81,11 +92,16 @@ def build_k200_membership_month_end(
 
     if strict:
         if missing:
-            raise ValueError(f"[L0 universe] missing months in membership table: {missing[:10]} (total={len(missing)})")
+            raise ValueError(
+                f"[L0 universe] missing months in membership table: {missing[:10]} (total={len(missing)})"
+            )
         if len(bad) > 0:
-            raise ValueError(f"[L0 universe] abnormal #tickers for months:\n{bad.to_string()}")
+            raise ValueError(
+                f"[L0 universe] abnormal #tickers for months:\n{bad.to_string()}"
+            )
 
     return df
+
 
 # END OF FILE: l0_universe.py
 ################################################################################

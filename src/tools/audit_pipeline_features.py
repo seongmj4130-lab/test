@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/audit_pipeline_features.py
 """
 파이프라인 기능 적용 여부 자동 감사 스크립트
@@ -6,18 +5,18 @@
 """
 import argparse
 import json
-import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 import yaml
 
 
-def search_in_file(file_path: Path, keywords: List[str], case_sensitive: bool = False) -> List[Tuple[int, str]]:
+def search_in_file(
+    file_path: Path, keywords: list[str], case_sensitive: bool = False
+) -> list[tuple[int, str]]:
     """파일에서 키워드 검색"""
     matches = []
     try:
-        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+        with open(file_path, encoding="utf-8", errors="ignore") as f:
             for line_num, line in enumerate(f, 1):
                 line_lower = line if case_sensitive else line.lower()
                 for keyword in keywords:
@@ -29,9 +28,18 @@ def search_in_file(file_path: Path, keywords: List[str], case_sensitive: bool = 
         pass
     return matches
 
-def search_in_directory(root: Path, patterns: List[str], keywords: List[str], exclude_dirs: List[str] = None) -> Dict[str, List[Tuple[int, str]]]:
+
+def search_in_directory(
+    root: Path, patterns: list[str], keywords: list[str], exclude_dirs: list[str] = None
+) -> dict[str, list[tuple[int, str]]]:
     """디렉토리에서 패턴과 키워드로 검색"""
-    exclude_dirs = exclude_dirs or ["__pycache__", ".git", "node_modules", ".venv", "venv"]
+    exclude_dirs = exclude_dirs or [
+        "__pycache__",
+        ".git",
+        "node_modules",
+        ".venv",
+        "venv",
+    ]
     results = {}
 
     for pattern in patterns:
@@ -47,7 +55,8 @@ def search_in_directory(root: Path, patterns: List[str], keywords: List[str], ex
 
     return results
 
-def audit_dynamic_k200_universe(root: Path) -> Tuple[bool, Dict]:
+
+def audit_dynamic_k200_universe(root: Path) -> tuple[bool, dict]:
     """동적 K200 유니버스 사용 여부"""
     keywords = [
         "universe_k200_membership_monthly",
@@ -63,10 +72,12 @@ def audit_dynamic_k200_universe(root: Path) -> Tuple[bool, Dict]:
     config_evidence = []
     if config_path.exists():
         try:
-            with open(config_path, 'r', encoding='utf-8') as f:
+            with open(config_path, encoding="utf-8") as f:
                 cfg = yaml.safe_load(f) or {}
                 if cfg.get("params", {}).get("filter_k200_members_only") is not None:
-                    config_evidence.append(f"config.yaml: filter_k200_members_only = {cfg['params']['filter_k200_members_only']}")
+                    config_evidence.append(
+                        f"config.yaml: filter_k200_members_only = {cfg['params']['filter_k200_members_only']}"
+                    )
         except Exception:
             pass
 
@@ -79,7 +90,8 @@ def audit_dynamic_k200_universe(root: Path) -> Tuple[bool, Dict]:
 
     return found, evidence
 
-def audit_regime_switching(root: Path) -> Tuple[bool, Dict]:
+
+def audit_regime_switching(root: Path) -> tuple[bool, dict]:
     """레짐 스위칭 사용 여부"""
     keywords = [
         "regime",
@@ -100,7 +112,8 @@ def audit_regime_switching(root: Path) -> Tuple[bool, Dict]:
 
     return found, evidence
 
-def audit_sector_relative_debt_ratio(root: Path) -> Tuple[bool, Dict]:
+
+def audit_sector_relative_debt_ratio(root: Path) -> tuple[bool, dict]:
     """섹터 상대 부채비율 사용 여부"""
     keywords = [
         "sector_relative",
@@ -120,7 +133,8 @@ def audit_sector_relative_debt_ratio(root: Path) -> Tuple[bool, Dict]:
 
     return found, evidence
 
-def audit_feature_explainability_report(root: Path) -> Tuple[bool, Dict]:
+
+def audit_feature_explainability_report(root: Path) -> tuple[bool, dict]:
     """피처 설명가능성 리포트 생성 여부"""
     keywords = [
         "explainability",
@@ -156,7 +170,8 @@ def audit_feature_explainability_report(root: Path) -> Tuple[bool, Dict]:
 
     return found, evidence
 
-def audit_kfold_cv(root: Path) -> Tuple[bool, Dict]:
+
+def audit_kfold_cv(root: Path) -> tuple[bool, dict]:
     """Time-series aware K-Fold CV 사용 여부"""
     keywords = [
         "walkforward",
@@ -175,13 +190,17 @@ def audit_kfold_cv(root: Path) -> Tuple[bool, Dict]:
     config_evidence = []
     if config_path.exists():
         try:
-            with open(config_path, 'r', encoding='utf-8') as f:
+            with open(config_path, encoding="utf-8") as f:
                 cfg = yaml.safe_load(f) or {}
                 l4 = cfg.get("l4", {})
                 if l4.get("embargo_days") is not None:
-                    config_evidence.append(f"config.yaml: l4.embargo_days = {l4['embargo_days']}")
+                    config_evidence.append(
+                        f"config.yaml: l4.embargo_days = {l4['embargo_days']}"
+                    )
                 if l4.get("step_days") is not None:
-                    config_evidence.append(f"config.yaml: l4.step_days = {l4['step_days']}")
+                    config_evidence.append(
+                        f"config.yaml: l4.step_days = {l4['step_days']}"
+                    )
         except Exception:
             pass
 
@@ -194,7 +213,8 @@ def audit_kfold_cv(root: Path) -> Tuple[bool, Dict]:
 
     return found, evidence
 
-def audit_diversification_constraints(root: Path) -> Tuple[bool, Dict]:
+
+def audit_diversification_constraints(root: Path) -> tuple[bool, dict]:
     """다각화 제약조건 사용 여부 (섹터 cap, size cap 등)"""
     keywords = [
         "sector_cap",
@@ -217,7 +237,8 @@ def audit_diversification_constraints(root: Path) -> Tuple[bool, Dict]:
 
     return found, evidence
 
-def audit_factor_count_balancing(root: Path) -> Tuple[bool, Dict]:
+
+def audit_factor_count_balancing(root: Path) -> tuple[bool, dict]:
     """팩터 개수 균형 사용 여부"""
     keywords = [
         "factor_balancing",
@@ -234,12 +255,17 @@ def audit_factor_count_balancing(root: Path) -> Tuple[bool, Dict]:
     config_evidence = []
     if config_path.exists():
         try:
-            with open(config_path, 'r', encoding='utf-8') as f:
+            with open(config_path, encoding="utf-8") as f:
                 cfg = yaml.safe_load(f) or {}
                 l6 = cfg.get("l6", {})
-                if l6.get("weight_short") is not None and l6.get("weight_long") is not None:
+                if (
+                    l6.get("weight_short") is not None
+                    and l6.get("weight_long") is not None
+                ):
                     if abs(l6.get("weight_short", 0) - l6.get("weight_long", 0)) < 0.1:
-                        config_evidence.append(f"config.yaml: l6.weight_short = {l6['weight_short']}, weight_long = {l6['weight_long']} (balanced)")
+                        config_evidence.append(
+                            f"config.yaml: l6.weight_short = {l6['weight_short']}, weight_long = {l6['weight_long']} (balanced)"
+                        )
         except Exception:
             pass
 
@@ -252,11 +278,14 @@ def audit_factor_count_balancing(root: Path) -> Tuple[bool, Dict]:
 
     return found, evidence
 
+
 def main():
     parser = argparse.ArgumentParser(description="Audit pipeline features usage")
     parser.add_argument("--root", type=str, default=None, help="Project root directory")
     parser.add_argument("--run-tag", type=str, required=True, help="Run tag")
-    parser.add_argument("--out-dir", type=str, default="reports/audit", help="Output directory")
+    parser.add_argument(
+        "--out-dir", type=str, default="reports/audit", help="Output directory"
+    )
     args = parser.parse_args()
 
     # 루트 경로 결정
@@ -275,7 +304,9 @@ def main():
         "dynamic_k200_universe_used": audit_dynamic_k200_universe(root),
         "regime_switching_used": audit_regime_switching(root),
         "sector_relative_debt_ratio_used": audit_sector_relative_debt_ratio(root),
-        "feature_explainability_report_generated": audit_feature_explainability_report(root),
+        "feature_explainability_report_generated": audit_feature_explainability_report(
+            root
+        ),
         "kfold_cv_used": audit_kfold_cv(root),
         "diversification_constraints_used": audit_diversification_constraints(root),
         "factor_count_balancing_used": audit_factor_count_balancing(root),
@@ -291,7 +322,7 @@ def main():
 
     # JSON 저장
     json_path = out_dir / f"audit__{args.run_tag}.json"
-    with open(json_path, 'w', encoding='utf-8') as f:
+    with open(json_path, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
 
     # Markdown 저장
@@ -309,11 +340,13 @@ def main():
         status = "✅ Yes" if result["used"] else "❌ No"
         md_lines.append(f"| {feature_name} | {status} |")
 
-    md_lines.extend([
-        "",
-        "## Details",
-        "",
-    ])
+    md_lines.extend(
+        [
+            "",
+            "## Details",
+            "",
+        ]
+    )
 
     for feature_name, result in results.items():
         md_lines.append(f"### {feature_name}")
@@ -352,6 +385,7 @@ def main():
         print(f"{status} {feature_name}: {result['used']}")
 
     return json_path, md_path
+
 
 if __name__ == "__main__":
     main()

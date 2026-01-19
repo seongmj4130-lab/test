@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 UI 인터페이스 모듈
 
@@ -10,13 +9,13 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 import pandas as pd
 
 from src.data_collection.pipeline import DataCollectionPipeline
 from src.utils.config import get_path, load_config
-from src.utils.io import artifact_exists, load_artifact
+from src.utils.io import artifact_exists
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +34,9 @@ def get_universe(
     Returns:
         DataFrame: date, ym, ticker 컬럼 포함
     """
-    pipeline = DataCollectionPipeline(config_path=config_path, force_rebuild=force_rebuild)
+    pipeline = DataCollectionPipeline(
+        config_path=config_path, force_rebuild=force_rebuild
+    )
     return pipeline.run_l0()
 
 
@@ -53,7 +54,9 @@ def get_ohlcv(
     Returns:
         DataFrame: date, ticker, open, high, low, close, volume, value 및 기술적 지표 컬럼 포함
     """
-    pipeline = DataCollectionPipeline(config_path=config_path, force_rebuild=force_rebuild)
+    pipeline = DataCollectionPipeline(
+        config_path=config_path, force_rebuild=force_rebuild
+    )
     return pipeline.run_l1()
 
 
@@ -71,14 +74,16 @@ def get_panel(
     Returns:
         DataFrame: 병합된 패널 데이터
     """
-    pipeline = DataCollectionPipeline(config_path=config_path, force_rebuild=force_rebuild)
+    pipeline = DataCollectionPipeline(
+        config_path=config_path, force_rebuild=force_rebuild
+    )
     return pipeline.run_l3()
 
 
 def get_dataset(
     config_path: str = "configs/config.yaml",
     force_rebuild: bool = False,
-) -> Dict[str, any]:
+) -> dict[str, any]:
     """
     데이터셋 조회 (UI용)
 
@@ -93,13 +98,15 @@ def get_dataset(
             "cv_folds_long": list,
         }
     """
-    pipeline = DataCollectionPipeline(config_path=config_path, force_rebuild=force_rebuild)
+    pipeline = DataCollectionPipeline(
+        config_path=config_path, force_rebuild=force_rebuild
+    )
     return pipeline.run_l4()
 
 
 def check_data_availability(
     config_path: str = "configs/config.yaml",
-) -> Dict[str, bool]:
+) -> dict[str, bool]:
     """
     데이터 가용성 확인 (UI용)
 
@@ -133,9 +140,9 @@ def check_data_availability(
 
 def collect_data_for_ui(
     config_path: str = "configs/config.yaml",
-    stages: Optional[List[str]] = None,
+    stages: Optional[list[str]] = None,
     force_rebuild: bool = False,
-) -> Dict[str, any]:
+) -> dict[str, any]:
     """
     UI에서 사용할 데이터 수집 (편의 함수)
 

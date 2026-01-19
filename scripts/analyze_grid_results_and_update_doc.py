@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Grid Search 결과 분석 및 문서 업데이트
 
@@ -20,67 +19,72 @@ def analyze_grid_results():
 
     # 단기 랭킹 결과
     short_file = results_dir / "track_a_group_weights_grid_search_20260108_135117.csv"
-    short_weights_file = configs_dir / "feature_groups_short_optimized_grid_20260108_135117.yaml"
+    short_weights_file = (
+        configs_dir / "feature_groups_short_optimized_grid_20260108_135117.yaml"
+    )
 
     # 장기 랭킹 결과
     long_file = results_dir / "track_a_group_weights_grid_search_20260108_145118.csv"
-    long_weights_file = configs_dir / "feature_groups_long_optimized_grid_20260108_145118.yaml"
+    long_weights_file = (
+        configs_dir / "feature_groups_long_optimized_grid_20260108_145118.yaml"
+    )
 
     results = {}
 
     # 단기 랭킹 분석
     if short_file.exists():
         short_df = pd.read_csv(short_file)
-        short_best = short_df.loc[short_df['objective_score'].idxmax()]
+        short_best = short_df.loc[short_df["objective_score"].idxmax()]
 
-        with open(short_weights_file, 'r', encoding='utf-8') as f:
+        with open(short_weights_file, encoding="utf-8") as f:
             short_config = yaml.safe_load(f)
 
-        results['short'] = {
-            'file': str(short_file),
-            'weights_file': str(short_weights_file),
-            'n_combinations': len(short_df),
-            'best_combination_id': int(short_best['combination_id']),
-            'objective_score': float(short_best['objective_score']),
-            'hit_ratio': float(short_best['hit_ratio']),
-            'ic_mean': float(short_best['ic_mean']),
-            'icir': float(short_best['icir']),
-            'weights': {
-                'technical': float(short_best['technical']),
-                'value': float(short_best['value']),
-                'profitability': float(short_best['profitability']),
-                'news': float(short_best['news']),
+        results["short"] = {
+            "file": str(short_file),
+            "weights_file": str(short_weights_file),
+            "n_combinations": len(short_df),
+            "best_combination_id": int(short_best["combination_id"]),
+            "objective_score": float(short_best["objective_score"]),
+            "hit_ratio": float(short_best["hit_ratio"]),
+            "ic_mean": float(short_best["ic_mean"]),
+            "icir": float(short_best["icir"]),
+            "weights": {
+                "technical": float(short_best["technical"]),
+                "value": float(short_best["value"]),
+                "profitability": float(short_best["profitability"]),
+                "news": float(short_best["news"]),
             },
-            'config': short_config,
+            "config": short_config,
         }
 
     # 장기 랭킹 분석
     if long_file.exists():
         long_df = pd.read_csv(long_file)
-        long_best = long_df.loc[long_df['objective_score'].idxmax()]
+        long_best = long_df.loc[long_df["objective_score"].idxmax()]
 
-        with open(long_weights_file, 'r', encoding='utf-8') as f:
+        with open(long_weights_file, encoding="utf-8") as f:
             long_config = yaml.safe_load(f)
 
-        results['long'] = {
-            'file': str(long_file),
-            'weights_file': str(long_weights_file),
-            'n_combinations': len(long_df),
-            'best_combination_id': int(long_best['combination_id']),
-            'objective_score': float(long_best['objective_score']),
-            'hit_ratio': float(long_best['hit_ratio']),
-            'ic_mean': float(long_best['ic_mean']),
-            'icir': float(long_best['icir']),
-            'weights': {
-                'technical': float(long_best['technical']),
-                'value': float(long_best['value']),
-                'profitability': float(long_best['profitability']),
-                'news': float(long_best['news']) if 'news' in long_best.index else 0.0,
+        results["long"] = {
+            "file": str(long_file),
+            "weights_file": str(long_weights_file),
+            "n_combinations": len(long_df),
+            "best_combination_id": int(long_best["combination_id"]),
+            "objective_score": float(long_best["objective_score"]),
+            "hit_ratio": float(long_best["hit_ratio"]),
+            "ic_mean": float(long_best["ic_mean"]),
+            "icir": float(long_best["icir"]),
+            "weights": {
+                "technical": float(long_best["technical"]),
+                "value": float(long_best["value"]),
+                "profitability": float(long_best["profitability"]),
+                "news": float(long_best["news"]) if "news" in long_best.index else 0.0,
             },
-            'config': long_config,
+            "config": long_config,
         }
 
     return results
+
 
 def generate_doc_update(results):
     """문서 업데이트 내용 생성"""
@@ -177,6 +181,7 @@ def generate_doc_update(results):
 
     return doc_content
 
+
 def main():
     """메인 함수"""
     print("=" * 80)
@@ -199,7 +204,7 @@ def main():
         print(f"❌ 문서 파일을 찾을 수 없습니다: {doc_file}")
         return
 
-    with open(doc_file, 'r', encoding='utf-8') as f:
+    with open(doc_file, encoding="utf-8") as f:
         doc_content = f.read()
 
     # Phase 2 섹션 찾기 및 업데이트
@@ -208,7 +213,7 @@ def main():
 
     if marker in doc_content:
         # 기존 Phase 2 결과 섹션 찾기
-        lines = doc_content.split('\n')
+        lines = doc_content.split("\n")
         insert_idx = None
 
         for i, line in enumerate(lines):
@@ -226,26 +231,37 @@ def main():
                     break
 
             if start_idx is not None:
-                new_lines = lines[:start_idx] + doc_update.strip().split('\n') + [''] + lines[insert_idx:]
-                doc_content = '\n'.join(new_lines)
+                new_lines = (
+                    lines[:start_idx]
+                    + doc_update.strip().split("\n")
+                    + [""]
+                    + lines[insert_idx:]
+                )
+                doc_content = "\n".join(new_lines)
             else:
                 # 마커를 찾지 못한 경우, 2.3 섹션 앞에 추가
-                new_lines = lines[:insert_idx] + doc_update.strip().split('\n') + [''] + lines[insert_idx:]
-                doc_content = '\n'.join(new_lines)
+                new_lines = (
+                    lines[:insert_idx]
+                    + doc_update.strip().split("\n")
+                    + [""]
+                    + lines[insert_idx:]
+                )
+                doc_content = "\n".join(new_lines)
         else:
             # 2.3 섹션을 찾지 못한 경우, 문서 끝에 추가
-            doc_content += '\n\n' + doc_update
+            doc_content += "\n\n" + doc_update
     else:
         # 마커를 찾지 못한 경우, 문서 끝에 추가
-        doc_content += '\n\n' + doc_update
+        doc_content += "\n\n" + doc_update
 
     # 문서 저장
-    with open(doc_file, 'w', encoding='utf-8') as f:
+    with open(doc_file, "w", encoding="utf-8") as f:
         f.write(doc_content)
 
     print(f"✅ 문서 업데이트 완료: {doc_file}")
     print("\n생성된 업데이트 내용:")
     print(doc_update)
+
 
 if __name__ == "__main__":
     main()

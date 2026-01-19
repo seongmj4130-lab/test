@@ -137,4 +137,3 @@ def build_rebalance_scores_from_ranking(
 1. **이중 필터링 방지**: L6R과 L7 모두에서 `rebalance_interval`을 적용하면 안 됨
 2. **Phase 매핑**: 일별 데이터 사용 시 `cv_folds_short`에서 phase를 올바르게 매핑해야 함
 3. **성능**: 일별 데이터 사용 시 메모리 사용량 증가 가능
-

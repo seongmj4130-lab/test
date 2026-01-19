@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 앙상블 가중치 최적화 스크립트 (고속화 버전)
 
@@ -12,9 +11,8 @@ import warnings
 from datetime import datetime
 from itertools import product
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
-warnings.filterwarnings('ignore')
+warnings.filterwarnings("ignore")
 
 import numpy as np
 import pandas as pd
@@ -30,7 +28,9 @@ from src.utils.io import load_artifact
 
 
 # 평가 지표 계산 함수들
-def calculate_hit_ratio(scores: pd.Series, returns: pd.Series, top_k: int = 20) -> float:
+def calculate_hit_ratio(
+    scores: pd.Series, returns: pd.Series, top_k: int = 20
+) -> float:
     """Hit Ratio: 상위 top_k개 종목의 승률"""
     if len(scores) == 0 or len(returns) == 0:
         return np.nan
@@ -39,6 +39,7 @@ def calculate_hit_ratio(scores: pd.Series, returns: pd.Series, top_k: int = 20) 
     hit_ratio = (top_k_returns > 0).mean()
     return float(hit_ratio) if not np.isnan(hit_ratio) else np.nan
 
+
 def calculate_ic(scores: pd.Series, returns: pd.Series) -> float:
     """IC (Information Coefficient): Pearson 상관계수"""
     if len(scores) == 0 or len(returns) == 0:
@@ -46,8 +47,8 @@ def calculate_ic(scores: pd.Series, returns: pd.Series) -> float:
     valid_idx = scores.notna() & returns.notna()
     if valid_idx.sum() < 2:
         return np.nan
-    s = pd.to_numeric(scores[valid_idx], errors='coerce')
-    r = pd.to_numeric(returns[valid_idx], errors='coerce')
+    s = pd.to_numeric(scores[valid_idx], errors="coerce")
+    r = pd.to_numeric(returns[valid_idx], errors="coerce")
     final_valid = s.notna() & r.notna()
     if final_valid.sum() < 2:
         return np.nan
@@ -57,6 +58,7 @@ def calculate_ic(scores: pd.Series, returns: pd.Series) -> float:
         return np.nan
     corr = s.corr(r)
     return float(corr) if not np.isnan(corr) else np.nan
+
 
 def calculate_icir(ic_series: pd.Series) -> float:
     """ICIR: IC의 안정성 (mean / std)"""
@@ -72,36 +74,36 @@ def calculate_icir(ic_series: pd.Series) -> float:
     icir = ic_mean / ic_std
     return float(icir) if not np.isnan(icir) else np.nan
 
+
 def calculate_forward_returns(panel_data: pd.DataFrame, horizon: str) -> pd.DataFrame:
     """미래 수익률 계산"""
     df = panel_data.copy()
-    periods = 20 if horizon == 'short' else 120
+    periods = 20 if horizon == "short" else 120
 
     # 종목별로 그룹화하여 미래 수익률 계산
     def calc_fwd_ret(group):
-        prices = group['close'].pct_change(periods).shift(-periods)
+        prices = group["close"].pct_change(periods).shift(-periods)
         return prices
 
-    df[f'ret_fwd_{periods}d'] = df.groupby('ticker').apply(calc_fwd_ret).reset_index(level=0, drop=True)
+    df[f"ret_fwd_{periods}d"] = (
+        df.groupby("ticker").apply(calc_fwd_ret).reset_index(level=0, drop=True)
+    )
 
     return df
 
 
 def calculate_objective_score(
-    hit_ratio: float,
-    ic_mean: float,
-    icir: float,
-    horizon: str = 'short'
+    hit_ratio: float, ic_mean: float, icir: float, horizon: str = "short"
 ) -> float:
     """
     목적함수 계산 (단기/장기별 가중치 적용)
     """
-    if horizon == 'short':
+    if horizon == "short":
         # 단기: Hit Ratio 40% + IC Mean 30% + ICIR 30%
-        weights = {'hit': 0.4, 'ic': 0.3, 'icir': 0.3}
+        weights = {"hit": 0.4, "ic": 0.3, "icir": 0.3}
     else:
         # 장기: IC Mean 50% + ICIR 30% + Hit Ratio 20%
-        weights = {'hit': 0.2, 'ic': 0.5, 'icir': 0.3}
+        weights = {"hit": 0.2, "ic": 0.5, "icir": 0.3}
 
     # NaN 처리
     hit_ratio = hit_ratio if not np.isnan(hit_ratio) else 0.0
@@ -109,16 +111,16 @@ def calculate_objective_score(
     icir = icir if not np.isnan(icir) else 0.0
 
     objective = (
-        weights['hit'] * hit_ratio +
-        weights['ic'] * max(0, ic_mean) +  # IC는 양수만 고려
-        weights['icir'] * max(0, icir)    # ICIR도 양수만 고려
+        weights["hit"] * hit_ratio
+        + weights["ic"] * max(0, ic_mean)
+        + weights["icir"] * max(0, icir)  # IC는 양수만 고려  # ICIR도 양수만 고려
     )
 
     return float(objective)
 
+
 def generate_ensemble_ranking_fast(
-    model_rankings: Dict[str, pd.DataFrame],
-    weights: Dict[str, float]
+    model_rankings: dict[str, pd.DataFrame], weights: dict[str, float]
 ) -> pd.DataFrame:
     """
     앙상블 랭킹 생성 (고속 벡터화 버전)
@@ -143,61 +145,68 @@ def generate_ensemble_ranking_fast(
     for model_name, weight in normalized_weights.items():
         if model_name in model_rankings and weight > 0:
             df = model_rankings[model_name].copy()
-            df['weighted_score'] = df['score'] * weight
-            weighted_scores.append(df[['date', 'ticker', 'weighted_score']])
+            df["weighted_score"] = df["score"] * weight
+            weighted_scores.append(df[["date", "ticker", "weighted_score"]])
 
     if not weighted_scores:
-        return pd.DataFrame(columns=['date', 'ticker', 'score_ensemble'])
+        return pd.DataFrame(columns=["date", "ticker", "score_ensemble"])
 
     # 병합 및 합산
-    ensemble_df = weighted_scores[0].rename(columns={'weighted_score': 'score_ensemble'})
+    ensemble_df = weighted_scores[0].rename(
+        columns={"weighted_score": "score_ensemble"}
+    )
     for df in weighted_scores[1:]:
         ensemble_df = ensemble_df.merge(
-            df, on=['date', 'ticker'], how='outer', suffixes=('', '_temp')
+            df, on=["date", "ticker"], how="outer", suffixes=("", "_temp")
         )
-        ensemble_df['score_ensemble'] = ensemble_df['score_ensemble'].fillna(0) + ensemble_df['weighted_score'].fillna(0)
-        ensemble_df = ensemble_df.drop(columns=['weighted_score'])
+        ensemble_df["score_ensemble"] = ensemble_df["score_ensemble"].fillna(
+            0
+        ) + ensemble_df["weighted_score"].fillna(0)
+        ensemble_df = ensemble_df.drop(columns=["weighted_score"])
 
-    ensemble_df['score_ensemble'] = ensemble_df['score_ensemble'].fillna(0.5)
+    ensemble_df["score_ensemble"] = ensemble_df["score_ensemble"].fillna(0.5)
 
     return ensemble_df
+
 
 def evaluate_ensemble(
     ensemble_ranking: pd.DataFrame,
     panel_data: pd.DataFrame,
     cv_folds: pd.DataFrame,
-    horizon: str = 'short'
-) -> Dict[str, float]:
+    horizon: str = "short",
+) -> dict[str, float]:
     """앙상블 성과 평가"""
-    target_col = 'ret_fwd_20d' if horizon == 'short' else 'ret_fwd_120d'
+    target_col = "ret_fwd_20d" if horizon == "short" else "ret_fwd_120d"
 
     # Dev/Holdout 구간 분리
-    if 'segment' in cv_folds.columns:
-        dev_folds = cv_folds[cv_folds['segment'] == 'dev']
-        holdout_folds = cv_folds[cv_folds['segment'] == 'holdout']
+    if "segment" in cv_folds.columns:
+        dev_folds = cv_folds[cv_folds["segment"] == "dev"]
+        holdout_folds = cv_folds[cv_folds["segment"] == "holdout"]
     else:
-        dev_folds = cv_folds[~cv_folds['fold_id'].str.startswith('holdout')]
-        holdout_folds = cv_folds[cv_folds['fold_id'].str.startswith('holdout')]
+        dev_folds = cv_folds[~cv_folds["fold_id"].str.startswith("holdout")]
+        holdout_folds = cv_folds[cv_folds["fold_id"].str.startswith("holdout")]
 
-    dev_dates = dev_folds['test_end'].unique()
-    holdout_dates = holdout_folds['test_end'].unique()
+    dev_dates = dev_folds["test_end"].unique()
+    holdout_dates = holdout_folds["test_end"].unique()
 
     # 평가 함수
     def evaluate_dates(dates):
         ics, hits = [], []
         for date in dates:
-            date_data = panel_data[panel_data['date'] == date]
-            ranking_data = ensemble_ranking[ensemble_ranking['date'] == date]
+            date_data = panel_data[panel_data["date"] == date]
+            ranking_data = ensemble_ranking[ensemble_ranking["date"] == date]
 
             if len(ranking_data) < 20:
                 continue
 
-            merged = date_data.merge(ranking_data, on=['date', 'ticker'], how='inner')
+            merged = date_data.merge(ranking_data, on=["date", "ticker"], how="inner")
             if len(merged) < 20:
                 continue
 
-            ic = calculate_ic(merged['score_ensemble'], merged[target_col])
-            hit = calculate_hit_ratio(merged['score_ensemble'], merged[target_col], top_k=20)
+            ic = calculate_ic(merged["score_ensemble"], merged[target_col])
+            hit = calculate_hit_ratio(
+                merged["score_ensemble"], merged[target_col], top_k=20
+            )
 
             if not np.isnan(ic):
                 ics.append(ic)
@@ -215,57 +224,71 @@ def evaluate_ensemble(
     # Holdout 평가
     holdout_ics, holdout_hits = evaluate_dates(holdout_dates)
     holdout_ic_mean = np.mean(holdout_ics) if len(holdout_ics) > 0 else np.nan
-    holdout_icir = calculate_icir(pd.Series(holdout_ics)) if len(holdout_ics) > 0 else np.nan
+    holdout_icir = (
+        calculate_icir(pd.Series(holdout_ics)) if len(holdout_ics) > 0 else np.nan
+    )
     holdout_hit_ratio = np.mean(holdout_hits) if len(holdout_hits) > 0 else np.nan
 
     # 목적함수
-    dev_objective = calculate_objective_score(dev_hit_ratio, dev_ic_mean, dev_icir, horizon)
-    holdout_objective = calculate_objective_score(holdout_hit_ratio, holdout_ic_mean, holdout_icir, horizon)
+    dev_objective = calculate_objective_score(
+        dev_hit_ratio, dev_ic_mean, dev_icir, horizon
+    )
+    holdout_objective = calculate_objective_score(
+        holdout_hit_ratio, holdout_ic_mean, holdout_icir, horizon
+    )
 
     return {
-        'dev_ic_mean': dev_ic_mean,
-        'dev_icir': dev_icir,
-        'dev_hit_ratio': dev_hit_ratio,
-        'dev_objective': dev_objective,
-        'holdout_ic_mean': holdout_ic_mean,
-        'holdout_icir': holdout_icir,
-        'holdout_hit_ratio': holdout_hit_ratio,
-        'holdout_objective': holdout_objective,
-        'ic_diff': holdout_ic_mean - dev_ic_mean if not (np.isnan(holdout_ic_mean) or np.isnan(dev_ic_mean)) else np.nan,
-        'objective_diff': holdout_objective - dev_objective if not (np.isnan(holdout_objective) or np.isnan(dev_objective)) else np.nan
+        "dev_ic_mean": dev_ic_mean,
+        "dev_icir": dev_icir,
+        "dev_hit_ratio": dev_hit_ratio,
+        "dev_objective": dev_objective,
+        "holdout_ic_mean": holdout_ic_mean,
+        "holdout_icir": holdout_icir,
+        "holdout_hit_ratio": holdout_hit_ratio,
+        "holdout_objective": holdout_objective,
+        "ic_diff": (
+            holdout_ic_mean - dev_ic_mean
+            if not (np.isnan(holdout_ic_mean) or np.isnan(dev_ic_mean))
+            else np.nan
+        ),
+        "objective_diff": (
+            holdout_objective - dev_objective
+            if not (np.isnan(holdout_objective) or np.isnan(dev_objective))
+            else np.nan
+        ),
     }
 
+
 def generate_model_rankings(
-    panel_data: pd.DataFrame,
-    horizon: str = 'short'
-) -> Dict[str, pd.DataFrame]:
+    panel_data: pd.DataFrame, horizon: str = "short"
+) -> dict[str, pd.DataFrame]:
     """
     각 모델별 랭킹 점수 생성
     """
-    cfg = load_config('configs/config.yaml')
-    base_dir = Path(cfg['paths']['base_dir'])
-    configs_dir = base_dir / 'configs'
+    cfg = load_config("configs/config.yaml")
+    base_dir = Path(cfg["paths"]["base_dir"])
+    configs_dir = base_dir / "configs"
 
     # 모델 설정 파일들
     model_configs = {
-        'grid': None,  # 최신 파일 찾기
-        'ridge': None,
-        'xgboost': None,
-        'rf': configs_dir / f'feature_weights_{horizon}_rf_20260108_204232.yaml'
+        "grid": None,  # 최신 파일 찾기
+        "ridge": None,
+        "xgboost": None,
+        "rf": configs_dir / f"feature_weights_{horizon}_rf_20260108_204232.yaml",
     }
 
     # Grid Search 최신 파일 찾기
-    grid_pattern = f'feature_groups_{horizon}_optimized_grid_*.yaml'
+    grid_pattern = f"feature_groups_{horizon}_optimized_grid_*.yaml"
     grid_files = list(configs_dir.glob(grid_pattern))
     if grid_files:
-        model_configs['grid'] = max(grid_files, key=lambda x: x.stat().st_mtime)
+        model_configs["grid"] = max(grid_files, key=lambda x: x.stat().st_mtime)
         print(f"  Grid Search 최신 파일: {model_configs['grid'].name}")
     else:
         print("  Grid Search 파일을 찾을 수 없음")
 
     # 최신 파일 찾기
-    for key in ['ridge', 'xgboost']:
-        pattern = f'feature_weights_{horizon}_{key}_*.yaml'
+    for key in ["ridge", "xgboost"]:
+        pattern = f"feature_weights_{horizon}_{key}_*.yaml"
         files = list(configs_dir.glob(pattern))
         print(f"  {key.upper()} 파일 검색 패턴: {pattern}")
         print(f"  발견된 파일 수: {len(files)}")
@@ -279,31 +302,37 @@ def generate_model_rankings(
     rankings = {}
 
     # Grid Search 랭킹
-    if model_configs['grid'].exists():
+    if model_configs["grid"].exists():
         try:
-            rankings['grid'] = build_score_total(
+            rankings["grid"] = build_score_total(
                 panel_data,
-                feature_groups_config=model_configs['grid'],
-                normalization_method='percentile',
-                date_col='date'
+                feature_groups_config=model_configs["grid"],
+                normalization_method="percentile",
+                date_col="date",
             )
-            rankings['grid'] = rankings['grid'][['date', 'ticker', 'score_total']].rename(columns={'score_total': 'score'})
+            rankings["grid"] = rankings["grid"][
+                ["date", "ticker", "score_total"]
+            ].rename(columns={"score_total": "score"})
             print(f"  Grid Search 랭킹 생성: {len(rankings['grid'])}개")
         except Exception as e:
             print(f"  ⚠️ Grid Search 랭킹 생성 실패: {e}")
 
     # ML 모델들 랭킹 직접 생성
-    for model_name in ['ridge', 'xgboost', 'rf']:
+    for model_name in ["ridge", "xgboost", "rf"]:
         if model_configs[model_name] and model_configs[model_name].exists():
             try:
                 # 피처 가중치 로드
-                with open(model_configs[model_name], 'r', encoding='utf-8') as f:
+                with open(model_configs[model_name], encoding="utf-8") as f:
                     weights_config = yaml.safe_load(f)
 
                 # 랭킹 생성
-                ranking_df = generate_ml_model_ranking(panel_data, weights_config, horizon)
+                ranking_df = generate_ml_model_ranking(
+                    panel_data, weights_config, horizon
+                )
                 rankings[model_name] = ranking_df
-                print(f"  {model_name.upper()} 랭킹 생성: {len(rankings[model_name])}개")
+                print(
+                    f"  {model_name.upper()} 랭킹 생성: {len(rankings[model_name])}개"
+                )
             except Exception as e:
                 print(f"  ⚠️ {model_name.upper()} 랭킹 생성 실패: {e}")
 
@@ -315,23 +344,42 @@ def generate_model_rankings(
         print("❌ rankings 딕셔너리가 비어있습니다")
         return None
 
-def generate_ml_model_ranking(panel_data: pd.DataFrame, weights_config: dict, horizon: str) -> pd.DataFrame:
+
+def generate_ml_model_ranking(
+    panel_data: pd.DataFrame, weights_config: dict, horizon: str
+) -> pd.DataFrame:
     """
     ML 모델 랭킹 생성
     """
     # 필요한 피처 선택 (OHLCV 포함)
-    all_cols = [col for col in panel_data.columns
-                if col not in ['date', 'ticker', 'ret_fwd_20d', 'ret_fwd_120d', 'split', 'phase', 'segment', 'fold_id', 'in_universe', 'ym', 'corp_code']
-                and panel_data[col].dtype in [np.float64, np.float32, np.int64, np.int32]]
+    all_cols = [
+        col
+        for col in panel_data.columns
+        if col
+        not in [
+            "date",
+            "ticker",
+            "ret_fwd_20d",
+            "ret_fwd_120d",
+            "split",
+            "phase",
+            "segment",
+            "fold_id",
+            "in_universe",
+            "ym",
+            "corp_code",
+        ]
+        and panel_data[col].dtype in [np.float64, np.float32, np.int64, np.int32]
+    ]
 
     if not all_cols:
         raise ValueError("사용 가능한 피처가 없습니다")
 
     # 가중치 추출
-    if 'weights' in weights_config:
-        weights = weights_config['weights']
-    elif 'feature_weights' in weights_config:
-        weights = weights_config['feature_weights']
+    if "weights" in weights_config:
+        weights = weights_config["weights"]
+    elif "feature_weights" in weights_config:
+        weights = weights_config["feature_weights"]
     else:
         # config에서 직접 가중치 찾기
         weights = {}
@@ -356,19 +404,22 @@ def generate_ml_model_ranking(panel_data: pd.DataFrame, weights_config: dict, ho
         raise ValueError("유효한 피처가 없습니다")
 
     # 결과 DataFrame 생성
-    result_df = panel_data[['date', 'ticker']].copy()
-    result_df['score'] = scores
+    result_df = panel_data[["date", "ticker"]].copy()
+    result_df["score"] = scores
 
     # 정규화 (랭킹 목적)
-    result_df['score'] = (result_df['score'] - result_df['score'].mean()) / result_df['score'].std()
+    result_df["score"] = (result_df["score"] - result_df["score"].mean()) / result_df[
+        "score"
+    ].std()
 
     return result_df
 
+
 def optimize_ensemble_weights(
-    horizon: str = 'short',
+    horizon: str = "short",
     weight_step: float = 0.1,
     max_weight: float = 1.0,
-    max_combinations: int = 200
+    max_combinations: int = 200,
 ) -> pd.DataFrame:
     """
     앙상블 가중치 최적화 (Grid Search)
@@ -382,22 +433,24 @@ def optimize_ensemble_weights(
     Returns:
         최적화 결과 DataFrame
     """
-    print("="*100)
-    print(f"🚀 앙상블 가중치 최적화 ({horizon.upper()} 전략) - {max_combinations}개 조합")
-    print("="*100)
+    print("=" * 100)
+    print(
+        f"🚀 앙상블 가중치 최적화 ({horizon.upper()} 전략) - {max_combinations}개 조합"
+    )
+    print("=" * 100)
 
     # 데이터 로드
-    cfg = load_config('configs/config.yaml')
-    base_dir = Path(cfg['paths']['base_dir'])
-    interim_dir = base_dir / 'data' / 'interim'
+    cfg = load_config("configs/config.yaml")
+    base_dir = Path(cfg["paths"]["base_dir"])
+    interim_dir = base_dir / "data" / "interim"
 
-    panel_data = load_artifact(interim_dir / 'panel_merged_daily')
-    cv_folds = load_artifact(interim_dir / f'cv_folds_{horizon}')
+    panel_data = load_artifact(interim_dir / "panel_merged_daily")
+    cv_folds = load_artifact(interim_dir / f"cv_folds_{horizon}")
 
     print(f"📊 데이터: 패널 {len(panel_data):,}행, CV folds {len(cv_folds)}개")
 
     # 미래 수익률 계산 (없는 경우)
-    target_col = 'ret_fwd_20d' if horizon == 'short' else 'ret_fwd_120d'
+    target_col = "ret_fwd_20d" if horizon == "short" else "ret_fwd_120d"
     if target_col not in panel_data.columns:
         print(f"⚠️ {target_col} 컬럼이 없어 계산 중...")
         panel_data = calculate_forward_returns(panel_data, horizon)
@@ -427,18 +480,23 @@ def optimize_ensemble_weights(
 
     # 중복 제거
     combinations = list(set(combinations))
-    print(f"총 {len(combinations):,}개 조합 생성 → {min(max_combinations, len(combinations))}개 평가")
+    print(
+        f"총 {len(combinations):,}개 조합 생성 → {min(max_combinations, len(combinations))}개 평가"
+    )
 
     # 평가 실행
     print("\n[3/3] 앙상블 평가 중...")
-    print("="*100)
+    print("=" * 100)
 
     results = []
     import time
+
     start_time = time.time()
 
     # tqdm 진행률 바
-    pbar = tqdm(total=min(max_combinations, len(combinations)), desc="평가 진행", ncols=100)
+    pbar = tqdm(
+        total=min(max_combinations, len(combinations)), desc="평가 진행", ncols=100
+    )
 
     for i, weights_tuple in enumerate(combinations[:max_combinations]):
         iteration_start = time.time()
@@ -457,26 +515,33 @@ def optimize_ensemble_weights(
             metrics = evaluate_ensemble(ensemble_ranking, panel_data, cv_folds, horizon)
 
             result = {
-                'horizon': horizon,
-                **{f'weight_{model}': weight for model, weight in weights.items()},
-                **metrics
+                "horizon": horizon,
+                **{f"weight_{model}": weight for model, weight in weights.items()},
+                **metrics,
             }
             results.append(result)
 
             # 진행률 업데이트
-            holdout_obj = metrics.get('holdout_objective', 0)
-            pbar.set_postfix({
-                'HoldoutObj': f"{holdout_obj:.4f}",
-                'IC': f"{metrics.get('holdout_ic_mean', 0):.4f}",
-                '시간/조합': f"{time.time() - iteration_start:.1f}s"
-            })
+            holdout_obj = metrics.get("holdout_objective", 0)
+            pbar.set_postfix(
+                {
+                    "HoldoutObj": f"{holdout_obj:.4f}",
+                    "IC": f"{metrics.get('holdout_ic_mean', 0):.4f}",
+                    "시간/조합": f"{time.time() - iteration_start:.1f}s",
+                }
+            )
             pbar.update(1)
 
             # 중간 저장 (매 50번마다)
             if (i + 1) % 50 == 0 and results:
                 temp_df = pd.DataFrame(results)
-                temp_file = base_dir / 'artifacts' / 'reports' / f'ensemble_optimization_{horizon}_intermediate_{i+1:04d}.csv'
-                temp_df.to_csv(temp_file, index=False, encoding='utf-8-sig')
+                temp_file = (
+                    base_dir
+                    / "artifacts"
+                    / "reports"
+                    / f"ensemble_optimization_{horizon}_intermediate_{i+1:04d}.csv"
+                )
+                temp_df.to_csv(temp_file, index=False, encoding="utf-8-sig")
                 tqdm.write(f"💾 중간 저장: {temp_file.name}")
 
         except Exception as e:
@@ -497,14 +562,14 @@ def optimize_ensemble_weights(
         return pd.DataFrame()
 
     # 최적 결과 선택
-    best_result = results_df.loc[results_df['holdout_objective'].idxmax()]
+    best_result = results_df.loc[results_df["holdout_objective"].idxmax()]
 
-    print("\n" + "="*100)
+    print("\n" + "=" * 100)
     print("🏆 최적 앙상블 가중치:")
-    print("="*100)
+    print("=" * 100)
     for col in results_df.columns:
-        if col.startswith('weight_'):
-            model_name = col.replace('weight_', '').upper()
+        if col.startswith("weight_"):
+            model_name = col.replace("weight_", "").upper()
             weight = best_result[col]
             print(f"  {model_name:12s}: {weight:.3f}")
 
@@ -516,52 +581,70 @@ def optimize_ensemble_weights(
     print(f"  IC Diff      : {best_result['ic_diff']:.4f}")
 
     # 결과 저장
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    output_file = base_dir / 'artifacts' / 'reports' / f'ensemble_optimization_{horizon}_{timestamp}.csv'
-    results_df.to_csv(output_file, index=False, encoding='utf-8-sig')
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_file = (
+        base_dir
+        / "artifacts"
+        / "reports"
+        / f"ensemble_optimization_{horizon}_{timestamp}.csv"
+    )
+    results_df.to_csv(output_file, index=False, encoding="utf-8-sig")
     print(f"\n✅ 결과 저장: {output_file}")
 
     return results_df
+
 
 def main():
     """메인 함수"""
     import argparse
 
-    parser = argparse.ArgumentParser(description='앙상블 가중치 최적화')
-    parser.add_argument('--horizon', choices=['short', 'long', 'both'], default='short',
-                       help='전략 유형 (기본: short)')
-    parser.add_argument('--weight-step', type=float, default=0.1,
-                       help='가중치 간격 (기본: 0.1)')
-    parser.add_argument('--max-weight', type=float, default=1.0,
-                       help='최대 가중치 (기본: 1.0)')
-    parser.add_argument('--combinations', type=int, default=200,
-                       help='최대 평가 조합 수 (기본: 200)')
+    parser = argparse.ArgumentParser(description="앙상블 가중치 최적화")
+    parser.add_argument(
+        "--horizon",
+        choices=["short", "long", "both"],
+        default="short",
+        help="전략 유형 (기본: short)",
+    )
+    parser.add_argument(
+        "--weight-step", type=float, default=0.1, help="가중치 간격 (기본: 0.1)"
+    )
+    parser.add_argument(
+        "--max-weight", type=float, default=1.0, help="최대 가중치 (기본: 1.0)"
+    )
+    parser.add_argument(
+        "--combinations", type=int, default=200, help="최대 평가 조합 수 (기본: 200)"
+    )
 
     args = parser.parse_args()
 
     # 단기 전략
-    if args.horizon in ['short', 'both']:
-        optimize_ensemble_weights('short', args.weight_step, args.max_weight, args.combinations)
+    if args.horizon in ["short", "both"]:
+        optimize_ensemble_weights(
+            "short", args.weight_step, args.max_weight, args.combinations
+        )
 
     # 장기 전략
-    if args.horizon in ['long', 'both']:
-        optimize_ensemble_weights('long', args.weight_step, args.max_weight, args.combinations)
+    if args.horizon in ["long", "both"]:
+        optimize_ensemble_weights(
+            "long", args.weight_step, args.max_weight, args.combinations
+        )
 
-def test_specific_weights(horizon: str, weight_sets: List[Dict[str, float]]):
+
+def test_specific_weights(horizon: str, weight_sets: list[dict[str, float]]):
     """특정 가중치 조합 테스트 (과적합 개선용)"""
     print(f"\n{'='*80}")
     print(f"🧪 특정 가중치 조합 테스트 ({horizon.upper()} 전략)")
     print(f"{'='*80}")
 
     # 데이터 로드
-    cfg = load_config('configs/config.yaml')
-    base_dir = Path(cfg['paths']['base_dir'])
-    interim_dir = base_dir / 'data' / 'interim'
+    cfg = load_config("configs/config.yaml")
+    base_dir = Path(cfg["paths"]["base_dir"])
+    interim_dir = base_dir / "data" / "interim"
     results = []
 
     print("\n[1/3] 데이터 로드 중...")
-    panel_data = load_artifact(interim_dir / 'panel_merged_daily')
-    cv_folds = load_artifact(interim_dir / f'cv_folds_{horizon}')
+    panel_data = load_artifact(interim_dir / "panel_merged_daily")
+    cv_folds = load_artifact(interim_dir / f"cv_folds_{horizon}")
 
     if panel_data is None or cv_folds is None:
         print("❌ 데이터 로드 실패")
@@ -570,7 +653,7 @@ def test_specific_weights(horizon: str, weight_sets: List[Dict[str, float]]):
     print(f"📊 데이터: 패널 {len(panel_data):,d}행, CV folds {len(cv_folds)}개")
 
     # 미래 수익률 계산 (없는 경우)
-    target_col = 'ret_fwd_20d' if horizon == 'short' else 'ret_fwd_120d'
+    target_col = "ret_fwd_20d" if horizon == "short" else "ret_fwd_120d"
     if target_col not in panel_data.columns:
         print(f"⚠️ {target_col} 컬럼이 없어 계산 중...")
         panel_data = calculate_forward_returns(panel_data, horizon)
@@ -599,10 +682,10 @@ def test_specific_weights(horizon: str, weight_sets: List[Dict[str, float]]):
             metrics = evaluate_ensemble(ensemble_ranking, panel_data, cv_folds, horizon)
 
             result = {
-                'horizon': horizon,
-                'test_set': f'improved_{i+1}',
-                **{f'weight_{model}': weight for model, weight in weights.items()},
-                **metrics
+                "horizon": horizon,
+                "test_set": f"improved_{i+1}",
+                **{f"weight_{model}": weight for model, weight in weights.items()},
+                **metrics,
             }
             results.append(result)
 
@@ -626,8 +709,8 @@ def test_specific_weights(horizon: str, weight_sets: List[Dict[str, float]]):
     for idx, row in results_df.iterrows():
         print(f"\n테스트 세트 {row['test_set']}:")
         for col in results_df.columns:
-            if col.startswith('weight_'):
-                model_name = col.replace('weight_', '').upper()
+            if col.startswith("weight_"):
+                model_name = col.replace("weight_", "").upper()
                 weight = row[col]
                 print(f"  {model_name:12s}: {weight:.3f}")
         print(f"  Holdout Obj  : {row['holdout_objective']:.4f}")
@@ -637,59 +720,103 @@ def test_specific_weights(horizon: str, weight_sets: List[Dict[str, float]]):
         print(f"  IC Diff      : {row['ic_diff']:.4f}")
 
     # 결과 저장
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    output_file = base_dir / 'artifacts' / 'reports' / f'ensemble_improved_weights_{horizon}_{timestamp}.csv'
-    results_df.to_csv(output_file, index=False, encoding='utf-8-sig')
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_file = (
+        base_dir
+        / "artifacts"
+        / "reports"
+        / f"ensemble_improved_weights_{horizon}_{timestamp}.csv"
+    )
+    results_df.to_csv(output_file, index=False, encoding="utf-8-sig")
     print(f"\n✅ 결과 저장: {output_file}")
 
     return results_df
+
 
 def main():
     """메인 함수"""
     import argparse
 
-    parser = argparse.ArgumentParser(description='앙상블 가중치 최적화')
-    parser.add_argument('--horizon', choices=['short', 'long', 'both'], default='short',
-                       help='전략 유형 (기본: short)')
-    parser.add_argument('--weight-step', type=float, default=0.1,
-                       help='가중치 간격 (기본: 0.1)')
-    parser.add_argument('--max-weight', type=float, default=1.0,
-                       help='최대 가중치 (기본: 1.0)')
-    parser.add_argument('--combinations', type=int, default=200,
-                       help='최대 평가 조합 수 (기본: 200)')
-    parser.add_argument('--test-improved', action='store_true',
-                       help='과적합 개선된 가중치 조합 테스트')
+    parser = argparse.ArgumentParser(description="앙상블 가중치 최적화")
+    parser.add_argument(
+        "--horizon",
+        choices=["short", "long", "both"],
+        default="short",
+        help="전략 유형 (기본: short)",
+    )
+    parser.add_argument(
+        "--weight-step", type=float, default=0.1, help="가중치 간격 (기본: 0.1)"
+    )
+    parser.add_argument(
+        "--max-weight", type=float, default=1.0, help="최대 가중치 (기본: 1.0)"
+    )
+    parser.add_argument(
+        "--combinations", type=int, default=200, help="최대 평가 조합 수 (기본: 200)"
+    )
+    parser.add_argument(
+        "--test-improved", action="store_true", help="과적합 개선된 가중치 조합 테스트"
+    )
 
     args = parser.parse_args()
 
     if args.test_improved:
         # 과적합 개선된 가중치 조합 테스트
         improved_weights = {
-            'short': [
-                {'grid': 0.35, 'ridge': 0.57, 'xgboost': 0.08, 'rf': 0.00},  # XGBoost 감소, Ridge 증가
-                {'grid': 0.30, 'ridge': 0.60, 'xgboost': 0.10, 'rf': 0.00},  # 추가 옵션
-                {'grid': 0.40, 'ridge': 0.50, 'xgboost': 0.10, 'rf': 0.00},  # 보수적 옵션
+            "short": [
+                {
+                    "grid": 0.35,
+                    "ridge": 0.57,
+                    "xgboost": 0.08,
+                    "rf": 0.00,
+                },  # XGBoost 감소, Ridge 증가
+                {"grid": 0.30, "ridge": 0.60, "xgboost": 0.10, "rf": 0.00},  # 추가 옵션
+                {
+                    "grid": 0.40,
+                    "ridge": 0.50,
+                    "xgboost": 0.10,
+                    "rf": 0.00,
+                },  # 보수적 옵션
             ],
-            'long': [
-                {'grid': 0.10, 'ridge': 0.20, 'xgboost': 0.70, 'rf': 0.00},  # XGBoost 단독 → 앙상블
-                {'grid': 0.15, 'ridge': 0.25, 'xgboost': 0.60, 'rf': 0.00},  # 보수적 옵션
-                {'grid': 0.05, 'ridge': 0.15, 'xgboost': 0.80, 'rf': 0.00},  # 공격적 옵션
-            ]
+            "long": [
+                {
+                    "grid": 0.10,
+                    "ridge": 0.20,
+                    "xgboost": 0.70,
+                    "rf": 0.00,
+                },  # XGBoost 단독 → 앙상블
+                {
+                    "grid": 0.15,
+                    "ridge": 0.25,
+                    "xgboost": 0.60,
+                    "rf": 0.00,
+                },  # 보수적 옵션
+                {
+                    "grid": 0.05,
+                    "ridge": 0.15,
+                    "xgboost": 0.80,
+                    "rf": 0.00,
+                },  # 공격적 옵션
+            ],
         }
 
-        if args.horizon in ['short', 'both']:
-            test_specific_weights('short', improved_weights['short'])
+        if args.horizon in ["short", "both"]:
+            test_specific_weights("short", improved_weights["short"])
 
-        if args.horizon in ['long', 'both']:
-            test_specific_weights('long', improved_weights['long'])
+        if args.horizon in ["long", "both"]:
+            test_specific_weights("long", improved_weights["long"])
 
     else:
         # 기존 최적화 실행
-        if args.horizon in ['short', 'both']:
-            optimize_ensemble_weights('short', args.weight_step, args.max_weight, args.combinations)
+        if args.horizon in ["short", "both"]:
+            optimize_ensemble_weights(
+                "short", args.weight_step, args.max_weight, args.combinations
+            )
 
-        if args.horizon in ['long', 'both']:
-            optimize_ensemble_weights('long', args.weight_step, args.max_weight, args.combinations)
+        if args.horizon in ["long", "both"]:
+            optimize_ensemble_weights(
+                "long", args.weight_step, args.max_weight, args.combinations
+            )
+
 
 if __name__ == "__main__":
     main()

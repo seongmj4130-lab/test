@@ -3,7 +3,6 @@
 총수익률 과대 문제 해결 - L6 데이터 정규화
 """
 
-from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -16,9 +15,11 @@ def fix_total_return_data():
     print("=" * 50)
 
     # L6 데이터 경로
-    baseline_dir = Path('baseline_20260112_145649')
-    original_path = baseline_dir / 'data' / 'interim' / 'rebalance_scores.parquet'
-    backup_path = baseline_dir / 'data' / 'interim' / 'rebalance_scores_original.parquet'
+    baseline_dir = Path("baseline_20260112_145649")
+    original_path = baseline_dir / "data" / "interim" / "rebalance_scores.parquet"
+    backup_path = (
+        baseline_dir / "data" / "interim" / "rebalance_scores_original.parquet"
+    )
 
     if not original_path.exists():
         print("❌ L6 데이터 파일이 없습니다.")
@@ -26,6 +27,7 @@ def fix_total_return_data():
 
     # 원본 데이터 백업
     import shutil
+
     if not backup_path.exists():
         shutil.copy2(original_path, backup_path)
         print("📦 원본 데이터 백업 완료")
@@ -46,8 +48,8 @@ def fix_total_return_data():
     print(f"  최대: {df['true_long'].max():.6f}")
 
     # 백분율에서 소수점으로 변환 (÷100)
-    df['true_short'] = df['true_short'] / 100
-    df['true_long'] = df['true_long'] / 100
+    df["true_short"] = df["true_short"] / 100
+    df["true_long"] = df["true_long"] / 100
 
     # 수정 후 통계
     print("\n✅ 수정 후 true_short 통계:")
@@ -62,11 +64,13 @@ def fix_total_return_data():
 
     # 수정된 데이터 샘플
     print("\n🔍 수정된 데이터 샘플:")
-    sample_cols = ['date', 'ticker', 'phase', 'true_short', 'true_long']
+    sample_cols = ["date", "ticker", "phase", "true_short", "true_long"]
     print(df[sample_cols].head(10))
 
     # 수정된 데이터 저장
-    corrected_path = baseline_dir / 'data' / 'interim' / 'rebalance_scores_corrected.parquet'
+    corrected_path = (
+        baseline_dir / "data" / "interim" / "rebalance_scores_corrected.parquet"
+    )
     df.to_parquet(corrected_path, index=False)
     print(f"\n💾 수정된 데이터 저장: {corrected_path}")
 
@@ -78,17 +82,18 @@ def fix_total_return_data():
 
     return corrected_path
 
+
 def update_backtest_data_path():
     """백테스트 스크립트에서 수정된 데이터 경로 사용하도록 업데이트"""
 
-    script_path = Path('run_dynamic_period_backtest.py')
+    script_path = Path("run_dynamic_period_backtest.py")
 
     if not script_path.exists():
         print("❌ 백테스트 스크립트를 찾을 수 없습니다.")
         return
 
     # 스크립트 내용 읽기
-    with open(script_path, 'r', encoding='utf-8') as f:
+    with open(script_path, encoding="utf-8") as f:
         content = f.read()
 
     # 데이터 경로 변경
@@ -99,12 +104,13 @@ def update_backtest_data_path():
         updated_content = content.replace(old_path, new_path)
 
         # 업데이트된 내용 저장
-        with open(script_path, 'w', encoding='utf-8') as f:
+        with open(script_path, "w", encoding="utf-8") as f:
             f.write(updated_content)
 
         print(f"✅ 백테스트 스크립트 업데이트: {old_path} → {new_path}")
     else:
         print("ℹ️  백테스트 스크립트에 변경사항 없음")
+
 
 if __name__ == "__main__":
     corrected_path = fix_total_return_data()

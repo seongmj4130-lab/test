@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 4개 모델 백테스트 실행 스크립트
 
@@ -24,12 +23,12 @@ import pandas as pd
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
-sys.stdout.reconfigure(encoding='utf-8')
+sys.stdout.reconfigure(encoding="utf-8")
 
 logging.basicConfig(
     level=logging.INFO,
     format="[%(asctime)s] [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
 
@@ -46,30 +45,36 @@ def run_backtest_for_strategy(
     rebalance_scores: pd.DataFrame,
 ) -> pd.DataFrame:
     """특정 전략에 대한 백테스트 실행"""
-    strategy_name = strategy_config['name']
-    config_section = cfg.get(strategy_config['config_section'], {})
+    strategy_name = strategy_config["name"]
+    config_section = cfg.get(strategy_config["config_section"], {})
 
     logger.info(f"[L7] {strategy_name} 백테스트 실행")
-    logger.info(f"  holding_days={config_section.get('holding_days')}, rebalance_interval={config_section.get('rebalance_interval')}")
+    logger.info(
+        f"  holding_days={config_section.get('holding_days')}, rebalance_interval={config_section.get('rebalance_interval')}"
+    )
 
     # L7: 백테스트
     # [수정] rebalance_interval 설정 추가 (기본값 1이 아닌 config에서 읽기)
     rebalance_interval = int(config_section.get("rebalance_interval", 1))
 
     # [수정] return_col도 config에서 읽기 (BT120은 true_short 사용)
-    return_col = config_section.get("return_col", strategy_config['return_col'])
+    return_col = config_section.get("return_col", strategy_config["return_col"])
 
     # [수정] 오버래핑 트랜치 설정 (BT120 전략용)
-    overlapping_tranches_enabled = config_section.get("overlapping_tranches_enabled", False)
+    overlapping_tranches_enabled = config_section.get(
+        "overlapping_tranches_enabled", False
+    )
     tranche_holding_days = int(config_section.get("tranche_holding_days", 120))
     tranche_max_active = int(config_section.get("tranche_max_active", 4))
-    tranche_allocation_mode = config_section.get("tranche_allocation_mode", "fixed_equal")
+    tranche_allocation_mode = config_section.get(
+        "tranche_allocation_mode", "fixed_equal"
+    )
 
     bt_cfg = BacktestConfig(
         holding_days=int(config_section.get("holding_days", 20)),
         top_k=int(config_section.get("top_k", 20)),
         cost_bps=float(config_section.get("cost_bps", 10.0)),
-        score_col=strategy_config['score_col'],
+        score_col=strategy_config["score_col"],
         ret_col=return_col,  # [수정] config에서 읽은 값 사용
         weighting=config_section.get("weighting", "equal"),
         softmax_temp=float(config_section.get("softmax_temperature", 1.0)),
@@ -88,7 +93,7 @@ def run_backtest_for_strategy(
 
     if len(result) >= 4:
         bt_metrics = result[3]
-        bt_metrics['strategy'] = strategy_name
+        bt_metrics["strategy"] = strategy_name
         return bt_metrics
     else:
         raise ValueError(f"Unexpected result length: {len(result)}")
@@ -113,7 +118,9 @@ def main():
     dataset_daily = load_artifact(interim_dir / "dataset_daily.parquet")
     cv_folds_short = load_artifact(interim_dir / "cv_folds_short.parquet")
     cv_folds_long = load_artifact(interim_dir / "cv_folds_long.parquet")
-    universe_monthly = load_artifact(interim_dir / "universe_k200_membership_monthly.parquet")
+    universe_monthly = load_artifact(
+        interim_dir / "universe_k200_membership_monthly.parquet"
+    )
 
     # L5: 모델 학습 (필요한 경우)
     pred_short_file = interim_dir / "pred_short_oos.parquet"
@@ -150,7 +157,9 @@ def main():
         # 저장
         save_artifact(pred_s, pred_short_file)
         save_artifact(pred_l, pred_long_file)
-        logger.info(f"[L5] 완료: pred_short_oos {len(pred_s):,}행, pred_long_oos {len(pred_l):,}행")
+        logger.info(
+            f"[L5] 완료: pred_short_oos {len(pred_s):,}행, pred_long_oos {len(pred_l):,}행"
+        )
     else:
         logger.info("[L5] 기존 예측 결과 사용")
         pred_s = load_artifact(pred_short_file)
@@ -171,28 +180,28 @@ def main():
     # 4개 모델 백테스트 실행
     strategies = [
         {
-            'name': 'bt20_ens',
-            'config_section': 'l7_bt20_ens',
-            'score_col': 'score_ens',
-            'return_col': 'true_short',
+            "name": "bt20_ens",
+            "config_section": "l7_bt20_ens",
+            "score_col": "score_ens",
+            "return_col": "true_short",
         },
         {
-            'name': 'bt20_short',
-            'config_section': 'l7_bt20_short',
-            'score_col': 'score_total_short',
-            'return_col': 'true_short',
+            "name": "bt20_short",
+            "config_section": "l7_bt20_short",
+            "score_col": "score_total_short",
+            "return_col": "true_short",
         },
         {
-            'name': 'bt120_ens',
-            'config_section': 'l7_bt120_ens',
-            'score_col': 'score_ens',
-            'return_col': 'true_short',  # [수정] 오버래핑 트랜치: 월별 PnL(20일 fwd)로 계산
+            "name": "bt120_ens",
+            "config_section": "l7_bt120_ens",
+            "score_col": "score_ens",
+            "return_col": "true_short",  # [수정] 오버래핑 트랜치: 월별 PnL(20일 fwd)로 계산
         },
         {
-            'name': 'bt120_long',
-            'config_section': 'l7_bt120_long',
-            'score_col': 'score_total_long',
-            'return_col': 'true_short',  # [수정] 오버래핑 트랜치: 월별 PnL(20일 fwd)로 계산
+            "name": "bt120_long",
+            "config_section": "l7_bt120_long",
+            "score_col": "score_total_long",
+            "return_col": "true_short",  # [수정] 오버래핑 트랜치: 월별 PnL(20일 fwd)로 계산
         },
     ]
 
@@ -215,10 +224,10 @@ def main():
             save_artifact(bt_metrics, output_file)
             logger.info(f"[저장] {output_file}")
 
-            all_results[strategy['name']] = bt_metrics
+            all_results[strategy["name"]] = bt_metrics
 
             # Holdout 구간 메트릭 출력
-            holdout = bt_metrics[bt_metrics['phase'] == 'holdout']
+            holdout = bt_metrics[bt_metrics["phase"] == "holdout"]
             if len(holdout) > 0:
                 logger.info(f"[{strategy['name']}] Holdout 성과:")
                 logger.info(f"  Sharpe: {holdout['net_sharpe'].iloc[0]:.4f}")
@@ -237,24 +246,28 @@ def main():
 
     comparison_rows = []
     for strategy_name, bt_metrics in all_results.items():
-        holdout = bt_metrics[bt_metrics['phase'] == 'holdout']
+        holdout = bt_metrics[bt_metrics["phase"] == "holdout"]
         if len(holdout) == 0:
             continue
 
         row = {
-            'strategy': strategy_name,
-            'holding_days': holdout['holding_days'].iloc[0] if 'holding_days' in holdout.columns else None,
-            'net_sharpe': holdout['net_sharpe'].iloc[0],
-            'net_cagr': holdout['net_cagr'].iloc[0],
-            'net_mdd': holdout['net_mdd'].iloc[0],
-            'net_calmar_ratio': holdout['net_calmar_ratio'].iloc[0],
+            "strategy": strategy_name,
+            "holding_days": (
+                holdout["holding_days"].iloc[0]
+                if "holding_days" in holdout.columns
+                else None
+            ),
+            "net_sharpe": holdout["net_sharpe"].iloc[0],
+            "net_cagr": holdout["net_cagr"].iloc[0],
+            "net_mdd": holdout["net_mdd"].iloc[0],
+            "net_calmar_ratio": holdout["net_calmar_ratio"].iloc[0],
         }
         comparison_rows.append(row)
 
     if comparison_rows:
         comparison_df = pd.DataFrame(comparison_rows)
         comparison_file = artifacts_dir / "backtest_4models_comparison.csv"
-        comparison_df.to_csv(comparison_file, index=False, encoding='utf-8-sig')
+        comparison_df.to_csv(comparison_file, index=False, encoding="utf-8-sig")
         logger.info(f"\n[비교 리포트] {comparison_file}")
         logger.info("\n" + comparison_df.to_string())
 

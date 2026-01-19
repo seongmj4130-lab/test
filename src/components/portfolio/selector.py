@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/components/portfolio/selector.py
 """
 [Stage13] Top-K 선택 로직 with Fallback 및 Drop Reason 추적
@@ -6,9 +5,8 @@
 - 가능한 범위에서 K_eff를 20에 가깝게 복원 (fallback 적용)
 - drop reason을 수치로 남김
 """
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
-import numpy as np
 import pandas as pd
 
 
@@ -19,15 +17,15 @@ def select_topk_with_fallback(
     score_col: str = "score_ens",
     top_k: int = 20,
     buffer_k: int = 0,
-    prev_holdings: List[str] = None,
+    prev_holdings: list[str] = None,
     group_col: Optional[str] = None,
     max_names_per_group: Optional[int] = None,
-    required_cols: Optional[List[str]] = None,
+    required_cols: Optional[list[str]] = None,
     filter_missing_price: bool = True,
     filter_suspended: bool = True,
     smart_buffer_enabled: bool = False,
     smart_buffer_stability_threshold: float = 0.7,
-) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+) -> tuple[pd.DataFrame, dict[str, Any]]:
     """
     Top-K 선택 with Fallback 및 Drop Reason 추적
 
@@ -72,7 +70,7 @@ def select_topk_with_fallback(
     dropped_filter = 0
     dropped_sectorcap = 0
     filled_from_next_rank = 0
-    drop_reasons: Dict[str, int] = {}
+    drop_reasons: dict[str, int] = {}
 
     # 1) 필수 컬럼 결측 필터링
     g_filtered = g_sorted.copy()
@@ -85,16 +83,28 @@ def select_topk_with_fallback(
     # 2) 가격 결측 필터링 (ret_col 등)
     if filter_missing_price:
         # ret_col 또는 price 관련 컬럼 확인
-        price_cols = [c for c in g_filtered.columns if "ret" in c.lower() or "price" in c.lower() or "close" in c.lower()]
+        price_cols = [
+            c
+            for c in g_filtered.columns
+            if "ret" in c.lower() or "price" in c.lower() or "close" in c.lower()
+        ]
         if price_cols:
             before = len(g_filtered)
-            g_filtered = g_filtered.dropna(subset=price_cols[:1])  # 첫 번째 가격 컬럼만 체크
+            g_filtered = g_filtered.dropna(
+                subset=price_cols[:1]
+            )  # 첫 번째 가격 컬럼만 체크
             dropped_missing += before - len(g_filtered)
             drop_reasons["missing_price"] = before - len(g_filtered)
 
     # 3) 거래정지 필터링 (suspended, delisted 등)
     if filter_suspended:
-        suspended_cols = [c for c in g_filtered.columns if "suspended" in c.lower() or "delisted" in c.lower() or "status" in c.lower()]
+        suspended_cols = [
+            c
+            for c in g_filtered.columns
+            if "suspended" in c.lower()
+            or "delisted" in c.lower()
+            or "status" in c.lower()
+        ]
         if suspended_cols:
             before = len(g_filtered)
             # suspended=True 또는 status != "active" 제외
@@ -102,14 +112,16 @@ def select_topk_with_fallback(
                 if g_filtered[col].dtype == bool:
                     g_filtered = g_filtered[~g_filtered[col]]
                 elif g_filtered[col].dtype == object:
-                    g_filtered = g_filtered[g_filtered[col].astype(str).str.lower() == "active"]
+                    g_filtered = g_filtered[
+                        g_filtered[col].astype(str).str.lower() == "active"
+                    ]
             dropped_filter += before - len(g_filtered)
             drop_reasons["suspended"] = before - len(g_filtered)
 
     # 4) 업종 분산 제약 적용 (있는 경우)
     selected = []
     selected_set = set()
-    group_counts: Dict[str, int] = {}
+    group_counts: dict[str, int] = {}
 
     allow_n = top_k + buffer_k if buffer_k > 0 else top_k
     allow = g_filtered.head(allow_n).copy()
@@ -146,7 +158,11 @@ def select_topk_with_fallback(
         for t in keep:
             ticker_row = allow[allow[ticker_col].astype(str) == t]
             if len(ticker_row) > 0:
-                sector = str(ticker_row.iloc[0][group_col]) if pd.notna(ticker_row.iloc[0][group_col]) else "기타"
+                sector = (
+                    str(ticker_row.iloc[0][group_col])
+                    if pd.notna(ticker_row.iloc[0][group_col])
+                    else "기타"
+                )
                 current_count = group_counts.get(sector, 0)
                 if current_count < max_names_per_group:
                     selected.append(t)
@@ -154,7 +170,9 @@ def select_topk_with_fallback(
                     group_counts[sector] = current_count + 1
                 else:
                     dropped_sectorcap += 1
-                    drop_reasons[f"sectorcap_{sector}"] = drop_reasons.get(f"sectorcap_{sector}", 0) + 1
+                    drop_reasons[f"sectorcap_{sector}"] = (
+                        drop_reasons.get(f"sectorcap_{sector}", 0) + 1
+                    )
 
         # 부족한 만큼 상위에서 채움 (업종 제약 고려)
         for _, row in allow.iterrows():
@@ -174,7 +192,9 @@ def select_topk_with_fallback(
                 group_counts[sector] = current_count + 1
             else:
                 dropped_sectorcap += 1
-                drop_reasons[f"sectorcap_{sector}"] = drop_reasons.get(f"sectorcap_{sector}", 0) + 1
+                drop_reasons[f"sectorcap_{sector}"] = (
+                    drop_reasons.get(f"sectorcap_{sector}", 0) + 1
+                )
     else:
         # 업종 분산 제약 없음
         # keep 먼저
@@ -200,7 +220,11 @@ def select_topk_with_fallback(
         fallback_candidates = g_filtered.iloc[allow_n:].copy()
 
         # 업종 분산 제약이 있으면 적용
-        if group_col and max_names_per_group and group_col in fallback_candidates.columns:
+        if (
+            group_col
+            and max_names_per_group
+            and group_col in fallback_candidates.columns
+        ):
             for _, row in fallback_candidates.iterrows():
                 if len(selected) >= top_k:
                     break
@@ -237,7 +261,9 @@ def select_topk_with_fallback(
 
     # 선택된 DataFrame 생성
     selected_df = g_sorted[g_sorted[ticker_col].astype(str).isin(selected)].copy()
-    selected_df = selected_df.sort_values([score_col, ticker_col], ascending=[False, True]).reset_index(drop=True)
+    selected_df = selected_df.sort_values(
+        [score_col, ticker_col], ascending=[False, True]
+    ).reset_index(drop=True)
 
     # Diagnostics
     diagnostics = {

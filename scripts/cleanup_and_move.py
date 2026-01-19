@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 파일 정리 스크립트: README.md 기준으로 필요한 파일만 유지하고 나머지는 05_backup으로 이동
 
@@ -27,12 +26,11 @@
 import logging
 import shutil
 from pathlib import Path
-from typing import List, Set
 
 logging.basicConfig(
     level=logging.INFO,
     format="[%(asctime)s] [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
 
@@ -41,7 +39,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 BACKUP_ROOT = Path(PROJECT_ROOT.parent) / "05_backup"
 
 # 유지할 파일/폴더 (상대 경로)
-KEEP_ITEMS: Set[str] = {
+KEEP_ITEMS: set[str] = {
     "src",
     "README.md",
     "final_report.md",
@@ -109,7 +107,7 @@ KEEP_INTERIM_PATTERNS = [
 ]
 
 # 이동할 폴더/파일 (상대 경로)
-MOVE_ITEMS: Set[str] = {
+MOVE_ITEMS: set[str] = {
     "backup",
     "backups",
     "ui",
@@ -220,7 +218,7 @@ def cleanup_interim_dir(dry_run: bool = False):
     """data/interim 디렉토리 정리"""
     interim_dir = PROJECT_ROOT / "data" / "interim"
     if not interim_dir.exists():
-        logger.warning(f"data/interim 디렉토리가 없습니다.")
+        logger.warning("data/interim 디렉토리가 없습니다.")
         return
 
     logger.info(f"[data/interim 정리] {interim_dir}")
@@ -296,8 +294,13 @@ def cleanup_root_files(dry_run: bool = False):
     for root_file in PROJECT_ROOT.iterdir():
         if root_file.is_file():
             # 유지할 파일 체크
-            if root_file.name in ["README.md", "final_report.md", "final_easy_report.md",
-                                 "final_backtest_report.md", "final_ranking_report.md"]:
+            if root_file.name in [
+                "README.md",
+                "final_report.md",
+                "final_easy_report.md",
+                "final_backtest_report.md",
+                "final_ranking_report.md",
+            ]:
                 continue
 
             # .md 파일이면 이동
@@ -358,7 +361,9 @@ def main(dry_run: bool = True):
     logger.info("=" * 80)
 
     if dry_run:
-        logger.info("\n⚠️  DRY RUN 모드입니다. 실제로 실행하려면 dry_run=False로 설정하세요.")
+        logger.info(
+            "\n⚠️  DRY RUN 모드입니다. 실제로 실행하려면 dry_run=False로 설정하세요."
+        )
 
 
 if __name__ == "__main__":
@@ -368,6 +373,8 @@ if __name__ == "__main__":
     dry_run = "--execute" not in sys.argv
 
     if dry_run:
-        logger.warning("⚠️  DRY RUN 모드입니다. 실제로 실행하려면 --execute 플래그를 추가하세요.")
+        logger.warning(
+            "⚠️  DRY RUN 모드입니다. 실제로 실행하려면 --execute 플래그를 추가하세요."
+        )
 
     main(dry_run=dry_run)

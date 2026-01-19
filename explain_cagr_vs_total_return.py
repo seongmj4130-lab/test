@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 
 
@@ -25,15 +24,15 @@ def explain_cagr_calculation():
     print()
 
     # 실제 신규 결과 분석
-    new_results = pd.read_csv('results/topk20_performance_metrics.csv')
+    new_results = pd.read_csv("results/topk20_performance_metrics.csv")
 
     print("📋 신규 결과 분석 (top_k=20, 23일 데이터):")
     print("-" * 50)
 
     for _, row in new_results.iterrows():
-        total_return = row['총수익률']
-        cagr = row['CAGR']
-        data_points = int(row['데이터포인트'])
+        total_return = row["총수익률"]
+        cagr = row["CAGR"]
+        data_points = int(row["데이터포인트"])
 
         print(f"🏆 {row['전략']}")
         print(".2%")
@@ -75,6 +74,7 @@ def explain_cagr_calculation():
     print("🎯 결론:")
     print("23일 데이터의 CAGR는 11배 기간 연장 효과로 비현실적!")
     print("총수익률로 평가하는 것이 더 정확함")
+
 
 if __name__ == "__main__":
     explain_cagr_calculation()

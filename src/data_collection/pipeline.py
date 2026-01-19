@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 데이터 수집 파이프라인 모듈
 
@@ -11,7 +10,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 import pandas as pd
 
@@ -23,7 +22,7 @@ from src.data_collection.collectors import (
     collect_universe,
 )
 from src.utils.config import get_path, load_config
-from src.utils.io import artifact_exists, load_artifact, save_artifact
+from src.utils.io import artifact_exists, load_artifact
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +52,8 @@ class DataCollectionPipeline:
         self.interim_dir.mkdir(parents=True, exist_ok=True)
 
         # 아티팩트 저장소
-        self.artifacts: Dict[str, any] = {}
-        self.artifacts_path: Dict[str, str] = {}
+        self.artifacts: dict[str, any] = {}
+        self.artifacts_path: dict[str, str] = {}
 
     def run_l0(self) -> pd.DataFrame:
         """L0: 유니버스 구성"""
@@ -63,9 +62,13 @@ class DataCollectionPipeline:
         cache_path = self.interim_dir / "universe_k200_membership_monthly"
 
         if artifact_exists(cache_path) and not self.force_rebuild:
-            self.artifacts["universe_k200_membership_monthly"] = load_artifact(cache_path)
+            self.artifacts["universe_k200_membership_monthly"] = load_artifact(
+                cache_path
+            )
             self.artifacts_path["universe"] = str(cache_path)
-            logger.info(f"  ✓ 캐시에서 로드: {len(self.artifacts['universe_k200_membership_monthly']):,}행")
+            logger.info(
+                f"  ✓ 캐시에서 로드: {len(self.artifacts['universe_k200_membership_monthly']):,}행"
+            )
             return self.artifacts["universe_k200_membership_monthly"]
 
         df = collect_universe(
@@ -122,7 +125,9 @@ class DataCollectionPipeline:
         if artifact_exists(cache_path) and not self.force_rebuild:
             self.artifacts["fundamentals_annual"] = load_artifact(cache_path)
             self.artifacts_path["fundamentals"] = str(cache_path)
-            logger.info(f"  ✓ 캐시에서 로드: {len(self.artifacts['fundamentals_annual']):,}행")
+            logger.info(
+                f"  ✓ 캐시에서 로드: {len(self.artifacts['fundamentals_annual']):,}행"
+            )
             return self.artifacts["fundamentals_annual"]
 
         df = collect_fundamentals(
@@ -135,7 +140,9 @@ class DataCollectionPipeline:
             self.artifacts["fundamentals_annual"] = df
             self.artifacts_path["fundamentals"] = str(cache_path)
         else:
-            logger.warning("  ⚠ 재무 데이터가 없습니다. L3에서 재무 데이터 없이 진행합니다.")
+            logger.warning(
+                "  ⚠ 재무 데이터가 없습니다. L3에서 재무 데이터 없이 진행합니다."
+            )
 
         return df
 
@@ -157,13 +164,17 @@ class DataCollectionPipeline:
         if artifact_exists(cache_path) and not self.force_rebuild:
             self.artifacts["panel_merged_daily"] = load_artifact(cache_path)
             self.artifacts_path["panel"] = str(cache_path)
-            logger.info(f"  ✓ 캐시에서 로드: {len(self.artifacts['panel_merged_daily']):,}행")
+            logger.info(
+                f"  ✓ 캐시에서 로드: {len(self.artifacts['panel_merged_daily']):,}행"
+            )
             return self.artifacts["panel_merged_daily"]
 
         df = collect_panel(
             ohlcv_daily=self.artifacts["ohlcv_daily"],
             fundamentals_annual=self.artifacts.get("fundamentals_annual"),
-            universe_membership_monthly=self.artifacts.get("universe_k200_membership_monthly"),
+            universe_membership_monthly=self.artifacts.get(
+                "universe_k200_membership_monthly"
+            ),
             fundamental_lag_days=self.params.get("fundamental_lag_days", 90),
             filter_k200_members_only=self.params.get("filter_k200_members_only", False),
             config_path=self.config_path,
@@ -175,7 +186,7 @@ class DataCollectionPipeline:
         self.artifacts_path["panel"] = str(cache_path)
         return df
 
-    def run_l4(self) -> Dict[str, any]:
+    def run_l4(self) -> dict[str, any]:
         """L4: CV 분할 및 타겟 생성"""
         logger.info("[Pipeline L4] CV 분할 및 타겟 생성")
 
@@ -188,17 +199,21 @@ class DataCollectionPipeline:
         cv_short_path = self.interim_dir / "cv_folds_short"
         cv_long_path = self.interim_dir / "cv_folds_long"
 
-        if (artifact_exists(dataset_path) and
-            artifact_exists(cv_short_path) and
-            artifact_exists(cv_long_path) and
-            not self.force_rebuild):
+        if (
+            artifact_exists(dataset_path)
+            and artifact_exists(cv_short_path)
+            and artifact_exists(cv_long_path)
+            and not self.force_rebuild
+        ):
             self.artifacts["dataset_daily"] = load_artifact(dataset_path)
             self.artifacts["cv_folds_short"] = load_artifact(cv_short_path)
             self.artifacts["cv_folds_long"] = load_artifact(cv_long_path)
             self.artifacts_path["dataset"] = str(dataset_path)
             self.artifacts_path["cv_short"] = str(cv_short_path)
             self.artifacts_path["cv_long"] = str(cv_long_path)
-            logger.info(f"  ✓ 캐시에서 로드: dataset {len(self.artifacts['dataset_daily']):,}행")
+            logger.info(
+                f"  ✓ 캐시에서 로드: dataset {len(self.artifacts['dataset_daily']):,}행"
+            )
             return {
                 "dataset_daily": self.artifacts["dataset_daily"],
                 "cv_folds_short": self.artifacts["cv_folds_short"],
@@ -221,7 +236,7 @@ class DataCollectionPipeline:
 
         return result
 
-    def run_all(self) -> Dict[str, any]:
+    def run_all(self) -> dict[str, any]:
         """L0~L4 전체 실행"""
         logger.info("=" * 80)
         logger.info("데이터 수집 파이프라인 전체 실행 (L0~L4)")
@@ -251,20 +266,20 @@ class DataCollectionPipeline:
             "artifacts_path": self.artifacts_path,
         }
 
-    def get_artifacts(self) -> Dict[str, any]:
+    def get_artifacts(self) -> dict[str, any]:
         """수집된 아티팩트 반환"""
         return self.artifacts
 
-    def get_artifacts_path(self) -> Dict[str, str]:
+    def get_artifacts_path(self) -> dict[str, str]:
         """아티팩트 경로 반환"""
         return self.artifacts_path
 
 
 def run_data_collection_pipeline(
     config_path: str = "configs/config.yaml",
-    stages: Optional[List[str]] = None,
+    stages: Optional[list[str]] = None,
     force_rebuild: bool = False,
-) -> Dict[str, any]:
+) -> dict[str, any]:
     """
     데이터 수집 파이프라인 실행 (편의 함수)
 
@@ -310,11 +325,12 @@ def run_data_collection_pipeline(
 
     for stage in stages:
         if stage not in stage_map:
-            raise ValueError(f"Unknown stage: {stage}. Use one of {list(stage_map.keys())}")
+            raise ValueError(
+                f"Unknown stage: {stage}. Use one of {list(stage_map.keys())}"
+            )
         stage_map[stage]()
 
     return {
         "artifacts": pipeline.get_artifacts(),
         "artifacts_path": pipeline.get_artifacts_path(),
     }
-

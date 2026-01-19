@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # src/tracks/shared/stages/data/l1_technical_features.py
 # [FEATURESET_COMPLETE] OHLCV 기반 기술적 지표 계산 함수
 # 문서: docs/FEATURESET_COMPLETE.md
@@ -76,11 +75,15 @@ def calculate_technical_features(
 
     # 5. volatility_20d: 20일 rolling 변동성 (연율화)
     # std(일일 수익률, window=20) × sqrt(252)
-    vol_20d = grouped["daily_return"].rolling(window=20, min_periods=5).std() * np.sqrt(252)
+    vol_20d = grouped["daily_return"].rolling(window=20, min_periods=5).std() * np.sqrt(
+        252
+    )
     df["volatility_20d"] = vol_20d.reset_index(level=0, drop=True).reindex(df.index)
 
     # 6. volatility_60d: 60일 rolling 변동성 (연율화)
-    vol_60d = grouped["daily_return"].rolling(window=60, min_periods=10).std() * np.sqrt(252)
+    vol_60d = grouped["daily_return"].rolling(
+        window=60, min_periods=10
+    ).std() * np.sqrt(252)
     df["volatility_60d"] = vol_60d.reset_index(level=0, drop=True).reindex(df.index)
 
     # 7. volatility: 일반 변동성 (20일 기준, volatility_20d와 동일)
@@ -94,7 +97,9 @@ def calculate_technical_features(
         drawdown = (prices - rolling_max) / (rolling_max + 1e-10)
         return drawdown
 
-    max_dd_series = grouped.apply(lambda x: _calculate_max_drawdown(x)).reset_index(level=0, drop=True)
+    max_dd_series = grouped.apply(lambda x: _calculate_max_drawdown(x)).reset_index(
+        level=0, drop=True
+    )
     df["max_drawdown_60d"] = max_dd_series.reindex(df.index)
 
     # 9. downside_volatility_60d: 60일 하방 변동성
@@ -104,12 +109,16 @@ def calculate_technical_features(
         downside = group["daily_return"].where(group["daily_return"] < 0, 0)
         return downside.rolling(window=60, min_periods=10).std() * np.sqrt(252)
 
-    downside_vol_series = grouped.apply(lambda x: _calculate_downside_volatility(x)).reset_index(level=0, drop=True)
+    downside_vol_series = grouped.apply(
+        lambda x: _calculate_downside_volatility(x)
+    ).reset_index(level=0, drop=True)
     df["downside_volatility_60d"] = downside_vol_series.reindex(df.index)
 
     # 10. volume_ratio: 거래량 비율 (20일 이동평균 대비)
     volume_ma = grouped[volume_col].rolling(window=20, min_periods=5).mean()
-    df["volume_ratio"] = df[volume_col] / (volume_ma.reset_index(level=0, drop=True).reindex(df.index) + 1e-10)  # 0으로 나누기 방지
+    df["volume_ratio"] = df[volume_col] / (
+        volume_ma.reset_index(level=0, drop=True).reindex(df.index) + 1e-10
+    )  # 0으로 나누기 방지
 
     # 11. momentum_reversal: 모멘텀 반전 지표
     # 단기 모멘텀(5일)과 장기 모멘텀(20일)의 차이

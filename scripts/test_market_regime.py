@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 시장 국면 판단 로직 테스트
 """
 import sys
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 # 프로젝트 루트를 경로에 추가
@@ -17,11 +15,11 @@ import logging
 from src.tracks.shared.stages.regime.l1d_market_regime import build_market_regime
 
 logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 logger = logging.getLogger(__name__)
+
 
 def test_market_regime():
     """시장 국면 판단 로직 테스트"""
@@ -57,7 +55,7 @@ def test_market_regime():
     print(f"  종목 수: {ohlcv['ticker'].nunique()}개")
 
     # 3. 수익률 계산 테스트 (수동으로)
-    print(f"\n" + "=" * 80)
+    print("\n" + "=" * 80)
     print("수익률 계산 테스트 (수동)")
     print("=" * 80)
 
@@ -89,7 +87,7 @@ def test_market_regime():
             prev_data[["ticker", "close"]],
             on="ticker",
             how="inner",
-            suffixes=("", "_prev")
+            suffixes=("", "_prev"),
         )
 
         if len(merged) == 0:
@@ -97,19 +95,23 @@ def test_market_regime():
             continue
 
         # 수익률 계산
-        merged["daily_return"] = (merged["close"] - merged["close_prev"]) / merged["close_prev"]
+        merged["daily_return"] = (merged["close"] - merged["close_prev"]) / merged[
+            "close_prev"
+        ]
         valid_returns = merged["daily_return"].dropna()
 
         print(f"  매칭된 종목 수: {len(merged)}개")
         print(f"  유효한 수익률: {len(valid_returns)}개")
         if len(valid_returns) > 0:
             print(f"  평균 수익률: {valid_returns.mean()*100:.2f}%")
-            print(f"  수익률 범위: {valid_returns.min()*100:.2f}% ~ {valid_returns.max()*100:.2f}%")
+            print(
+                f"  수익률 범위: {valid_returns.min()*100:.2f}% ~ {valid_returns.max()*100:.2f}%"
+            )
         else:
             print("  ⚠️  유효한 수익률 없음")
 
     # 4. build_market_regime 함수 테스트
-    print(f"\n" + "=" * 80)
+    print("\n" + "=" * 80)
     print("build_market_regime 함수 테스트")
     print("=" * 80)
 
@@ -128,7 +130,9 @@ def test_market_regime():
         print(f"⚠️  cv_folds_short 없음, 테스트용 날짜 사용: {len(test_dates)}개")
 
     if "test_end" in cv.columns:
-        rebalance_dates = pd.to_datetime(cv["test_end"]).dropna().unique()[:10]  # 처음 10개만
+        rebalance_dates = (
+            pd.to_datetime(cv["test_end"]).dropna().unique()[:10]
+        )  # 처음 10개만
     else:
         rebalance_dates = sorted(ohlcv["date"].unique())[60:70]
 
@@ -145,34 +149,36 @@ def test_market_regime():
             use_volatility=True,
         )
 
-        print(f"\n✓ build_market_regime 실행 완료")
-        print(f"\n결과:")
+        print("\n✓ build_market_regime 실행 완료")
+        print("\n결과:")
         print(regime_df.to_string())
 
-        print(f"\n국면 분포:")
+        print("\n국면 분포:")
         regime_counts = regime_df["regime"].value_counts()
         for regime, count in regime_counts.items():
             print(f"  {regime}: {count}개 ({count/len(regime_df)*100:.1f}%)")
 
         # 중립만 있는지 확인
         if len(regime_counts) == 1 and "neutral" in regime_counts:
-            print(f"\n⚠️  모든 날짜가 neutral로 분류되었습니다!")
-            print(f"  수익률 계산에 문제가 있을 수 있습니다.")
+            print("\n⚠️  모든 날짜가 neutral로 분류되었습니다!")
+            print("  수익률 계산에 문제가 있을 수 있습니다.")
 
             # 디버깅: 수익률 값 확인
-            print(f"\n디버깅 정보:")
-            print(f"  lookback_return_pct 범위:")
+            print("\n디버깅 정보:")
+            print("  lookback_return_pct 범위:")
             print(f"    최소: {regime_df['lookback_return_pct'].min():.2f}%")
             print(f"    최대: {regime_df['lookback_return_pct'].max():.2f}%")
             print(f"    평균: {regime_df['lookback_return_pct'].mean():.2f}%")
             print(f"    NaN 개수: {regime_df['lookback_return_pct'].isna().sum()}개")
         else:
-            print(f"\n✓ 다양한 국면으로 분류되었습니다.")
+            print("\n✓ 다양한 국면으로 분류되었습니다.")
 
     except Exception as e:
         print(f"\n❌ 오류 발생: {e}")
         import traceback
+
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     test_market_regime()

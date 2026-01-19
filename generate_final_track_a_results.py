@@ -1,5 +1,3 @@
-import os
-
 import pandas as pd
 
 
@@ -11,66 +9,75 @@ def generate_final_track_a_results():
 
     # 현재 최적화된 Track A 성과지표 데이터
     track_a_results = {
-        'bt20_short': {
-            'hit_ratio_dev': 57.3,
-            'hit_ratio_holdout': 43.5,
-            'ic_dev': -0.0310,
-            'ic_holdout': -0.0009,
-            'icir_dev': -0.2142,
-            'icir_holdout': -0.0056,
-            'model_type': 'Grid Search (Ensemble)',
-            'overfitting_risk': 'LOW',
-            'evaluation': '안정적, Holdout IC 소폭 우수'
+        "bt20_short": {
+            "hit_ratio_dev": 57.3,
+            "hit_ratio_holdout": 43.5,
+            "ic_dev": -0.0310,
+            "ic_holdout": -0.0009,
+            "icir_dev": -0.2142,
+            "icir_holdout": -0.0056,
+            "model_type": "Grid Search (Ensemble)",
+            "overfitting_risk": "LOW",
+            "evaluation": "안정적, Holdout IC 소폭 우수",
         },
-        'bt20_ens': {
-            'hit_ratio_dev': 52.0,
-            'hit_ratio_holdout': 48.0,
-            'ic_dev': -0.025,
-            'ic_holdout': -0.010,
-            'icir_dev': -0.180,
-            'icir_holdout': -0.070,
-            'model_type': 'Ensemble',
-            'overfitting_risk': 'MEDIUM',
-            'evaluation': '균형 잡힌 성과'
+        "bt20_ens": {
+            "hit_ratio_dev": 52.0,
+            "hit_ratio_holdout": 48.0,
+            "ic_dev": -0.025,
+            "ic_holdout": -0.010,
+            "icir_dev": -0.180,
+            "icir_holdout": -0.070,
+            "model_type": "Ensemble",
+            "overfitting_risk": "MEDIUM",
+            "evaluation": "균형 잡힌 성과",
         },
-        'bt120_long': {
-            'hit_ratio_dev': 50.5,
-            'hit_ratio_holdout': 49.2,
-            'ic_dev': -0.0400,
-            'ic_holdout': 0.0257,
-            'icir_dev': -0.3747,
-            'icir_holdout': 0.1779,
-            'model_type': 'Grid Search (Ensemble)',
-            'overfitting_risk': 'VERY_LOW',
-            'evaluation': '과적합 없음, Holdout 우수'
+        "bt120_long": {
+            "hit_ratio_dev": 50.5,
+            "hit_ratio_holdout": 49.2,
+            "ic_dev": -0.0400,
+            "ic_holdout": 0.0257,
+            "icir_dev": -0.3747,
+            "icir_holdout": 0.1779,
+            "model_type": "Grid Search (Ensemble)",
+            "overfitting_risk": "VERY_LOW",
+            "evaluation": "과적합 없음, Holdout 우수",
         },
-        'bt120_ens': {
-            'hit_ratio_dev': 51.2,
-            'hit_ratio_holdout': 47.8,
-            'ic_dev': -0.025,
-            'ic_holdout': -0.010,
-            'icir_dev': -0.180,
-            'icir_holdout': -0.070,
-            'model_type': 'Ensemble',
-            'overfitting_risk': 'MEDIUM',
-            'evaluation': '안정적 성과'
-        }
+        "bt120_ens": {
+            "hit_ratio_dev": 51.2,
+            "hit_ratio_holdout": 47.8,
+            "ic_dev": -0.025,
+            "ic_holdout": -0.010,
+            "icir_dev": -0.180,
+            "icir_holdout": -0.070,
+            "model_type": "Ensemble",
+            "overfitting_risk": "MEDIUM",
+            "evaluation": "안정적 성과",
+        },
     }
 
     print("\n📊 Track A 최종 성과지표 결과")
     print("-" * 90)
 
     strategy_names = {
-        'bt20_short': 'BT20 단기',
-        'bt20_ens': 'BT20 앙상블',
-        'bt120_long': 'BT120 장기',
-        'bt120_ens': 'BT120 앙상블'
+        "bt20_short": "BT20 단기",
+        "bt20_ens": "BT20 앙상블",
+        "bt120_long": "BT120 장기",
+        "bt120_ens": "BT120 앙상블",
     }
 
-    print("전략".ljust(12), "Hit Ratio Dev".rjust(12), "Hit Ratio Hold".rjust(14), "IC Dev".rjust(8), "IC Hold".rjust(8), "ICIR Dev".rjust(10), "ICIR Hold".rjust(10), "위험도".rjust(6))
+    print(
+        "전략".ljust(12),
+        "Hit Ratio Dev".rjust(12),
+        "Hit Ratio Hold".rjust(14),
+        "IC Dev".rjust(8),
+        "IC Hold".rjust(8),
+        "ICIR Dev".rjust(10),
+        "ICIR Hold".rjust(10),
+        "위험도".rjust(6),
+    )
     print("-" * 120)
 
-    for strategy in ['bt20_short', 'bt20_ens', 'bt120_long', 'bt120_ens']:
+    for strategy in ["bt20_short", "bt20_ens", "bt120_long", "bt120_ens"]:
         data = track_a_results[strategy]
         name = strategy_names[strategy]
         hit_dev = f"{data['hit_ratio_dev']:.1f}%"
@@ -79,14 +86,16 @@ def generate_final_track_a_results():
         ic_hold = f"{data['ic_holdout']:.3f}"
         icir_dev = f"{data['icir_dev']:.3f}"
         icir_hold = f"{data['icir_holdout']:.3f}"
-        risk = data['overfitting_risk']
+        risk = data["overfitting_risk"]
 
-        print(f"{name:<12} {hit_dev:>12} {hit_hold:>14} {ic_dev:>8} {ic_hold:>8} {icir_dev:>10} {icir_hold:>10} {risk:>6}")
+        print(
+            f"{name:<12} {hit_dev:>12} {hit_hold:>14} {ic_dev:>8} {ic_hold:>8} {icir_dev:>10} {icir_hold:>10} {risk:>6}"
+        )
 
     print("\n📋 전략별 상세 평가")
     print("-" * 50)
 
-    for strategy in ['bt20_short', 'bt20_ens', 'bt120_long', 'bt120_ens']:
+    for strategy in ["bt20_short", "bt20_ens", "bt120_long", "bt120_ens"]:
         data = track_a_results[strategy]
         name = strategy_names[strategy]
 
@@ -96,7 +105,7 @@ def generate_final_track_a_results():
         print(f"   • 종합 평가: {data['evaluation']}")
 
         # IC 분석
-        ic_diff = data['ic_holdout'] - data['ic_dev']
+        ic_diff = data["ic_holdout"] - data["ic_dev"]
         if abs(ic_diff) < 0.01:
             ic_status = "안정적"
         elif ic_diff > 0.01:
@@ -107,7 +116,7 @@ def generate_final_track_a_results():
         print(f"   • IC 차이: {ic_diff:.3f} ({ic_status})")
 
         # Hit Ratio 분석
-        hit_diff = data['hit_ratio_holdout'] - data['hit_ratio_dev']
+        hit_diff = data["hit_ratio_holdout"] - data["hit_ratio_dev"]
         if hit_diff > 5:
             hit_status = "Holdout 우수 ⭐"
         elif hit_diff > 0:
@@ -123,14 +132,29 @@ def generate_final_track_a_results():
     print("-" * 50)
 
     # 종합 평가
-    best_ic_strategy = max(track_a_results.keys(), key=lambda x: track_a_results[x]['ic_holdout'])
-    best_hit_strategy = max(track_a_results.keys(), key=lambda x: track_a_results[x]['hit_ratio_holdout'])
-    best_overall = min(track_a_results.keys(), key=lambda x: ['VERY_LOW', 'LOW', 'MEDIUM', 'HIGH'].index(track_a_results[x]['overfitting_risk']))
+    best_ic_strategy = max(
+        track_a_results.keys(), key=lambda x: track_a_results[x]["ic_holdout"]
+    )
+    best_hit_strategy = max(
+        track_a_results.keys(), key=lambda x: track_a_results[x]["hit_ratio_holdout"]
+    )
+    best_overall = min(
+        track_a_results.keys(),
+        key=lambda x: ["VERY_LOW", "LOW", "MEDIUM", "HIGH"].index(
+            track_a_results[x]["overfitting_risk"]
+        ),
+    )
 
     print("🏆 최우수 전략 평가:")
-    print(f"   • IC 성과: {strategy_names[best_ic_strategy]} (Holdout IC: {track_a_results[best_ic_strategy]['ic_holdout']:.3f})")
-    print(f"   • Hit Ratio: {strategy_names[best_hit_strategy]} (Holdout: {track_a_results[best_hit_strategy]['hit_ratio_holdout']:.1f}%)")
-    print(f"   • 과적합 안정성: {strategy_names[best_overall]} ({track_a_results[best_overall]['overfitting_risk']})")
+    print(
+        f"   • IC 성과: {strategy_names[best_ic_strategy]} (Holdout IC: {track_a_results[best_ic_strategy]['ic_holdout']:.3f})"
+    )
+    print(
+        f"   • Hit Ratio: {strategy_names[best_hit_strategy]} (Holdout: {track_a_results[best_hit_strategy]['hit_ratio_holdout']:.1f}%)"
+    )
+    print(
+        f"   • 과적합 안정성: {strategy_names[best_overall]} ({track_a_results[best_overall]['overfitting_risk']})"
+    )
 
     print("\n💡 주요 발견사항:")
     print("   • BT120 장기가 가장 안정적 (과적합 위험 VERY_LOW)")
@@ -145,33 +169,38 @@ def generate_final_track_a_results():
 
     # CSV 저장
     results_data = []
-    for strategy in ['bt20_short', 'bt20_ens', 'bt120_long', 'bt120_ens']:
+    for strategy in ["bt20_short", "bt20_ens", "bt120_long", "bt120_ens"]:
         data = track_a_results[strategy]
         row = {
-            'strategy': strategy_names[strategy],
-            'model_type': data['model_type'],
-            'hit_ratio_dev': data['hit_ratio_dev'],
-            'hit_ratio_holdout': data['hit_ratio_holdout'],
-            'ic_dev': data['ic_dev'],
-            'ic_holdout': data['ic_holdout'],
-            'icir_dev': data['icir_dev'],
-            'icir_holdout': data['icir_holdout'],
-            'overfitting_risk': data['overfitting_risk'],
-            'evaluation': data['evaluation']
+            "strategy": strategy_names[strategy],
+            "model_type": data["model_type"],
+            "hit_ratio_dev": data["hit_ratio_dev"],
+            "hit_ratio_holdout": data["hit_ratio_holdout"],
+            "ic_dev": data["ic_dev"],
+            "ic_holdout": data["ic_holdout"],
+            "icir_dev": data["icir_dev"],
+            "icir_holdout": data["icir_holdout"],
+            "overfitting_risk": data["overfitting_risk"],
+            "evaluation": data["evaluation"],
         }
         results_data.append(row)
 
     df_results = pd.DataFrame(results_data)
-    df_results.to_csv("results/final_track_a_performance_results.csv", index=False, encoding='utf-8-sig')
+    df_results.to_csv(
+        "results/final_track_a_performance_results.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
 
     print("\n✅ 결과 저장: results/final_track_a_performance_results.csv")
     # 마크다운 보고서 생성
     create_track_a_report(track_a_results, strategy_names)
 
+
 def create_track_a_report(results, strategy_names):
     """Track A 성과 보고서 생성"""
 
-    report = f"""# Track A 최종 성과지표 보고서
+    report = """# Track A 최종 성과지표 보고서
 
 ## 📊 모델링 성과 분석 결과
 
@@ -186,7 +215,7 @@ def create_track_a_report(results, strategy_names):
 |------|-----------|---------------|-------------------|--------|------------|----------|--------------|------------|
 """
 
-    for strategy in ['bt20_short', 'bt20_ens', 'bt120_long', 'bt120_ens']:
+    for strategy in ["bt20_short", "bt20_ens", "bt120_long", "bt120_ens"]:
         data = results[strategy]
         name = strategy_names[strategy]
         report += f"| {name} | {data['model_type']} | {data['hit_ratio_dev']:.1f}% | {data['hit_ratio_holdout']:.1f}% | {data['ic_dev']:.3f} | {data['ic_holdout']:.3f} | {data['icir_dev']:.3f} | {data['icir_holdout']:.3f} | {data['overfitting_risk']} |\n"
@@ -216,10 +245,13 @@ def create_track_a_report(results, strategy_names):
 모델링 단계의 성과지표가 백테스트 단계와 결합하여 최종 전략 평가의 기반이 됩니다.
 """
 
-    with open("artifacts/reports/final_track_a_performance_report.md", "w", encoding="utf-8") as f:
+    with open(
+        "artifacts/reports/final_track_a_performance_report.md", "w", encoding="utf-8"
+    ) as f:
         f.write(report)
 
     print("✅ 보고서 저장: artifacts/reports/final_track_a_performance_report.md")
+
 
 if __name__ == "__main__":
     generate_final_track_a_results()

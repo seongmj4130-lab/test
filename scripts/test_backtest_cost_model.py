@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 [개선안 1번][개선안 3번] L7 거래비용/슬리피지(턴오버 기반) 계산 테스트
 
@@ -34,12 +33,48 @@ def test_cost_model_turnover_based() -> None:
     # date1: A,B 선택 (prev empty)
     # date2: A,C 선택 (B -> C 교체)
     rows = [
-        {"date": "2024-01-02", "phase": "dev", "ticker": "A", "score_ens": 2.0, "true_short": 0.10},
-        {"date": "2024-01-02", "phase": "dev", "ticker": "B", "score_ens": 1.0, "true_short": 0.00},
-        {"date": "2024-01-02", "phase": "dev", "ticker": "C", "score_ens": 0.0, "true_short": 0.00},
-        {"date": "2024-01-22", "phase": "dev", "ticker": "A", "score_ens": 2.0, "true_short": 0.00},
-        {"date": "2024-01-22", "phase": "dev", "ticker": "B", "score_ens": 0.0, "true_short": 0.00},
-        {"date": "2024-01-22", "phase": "dev", "ticker": "C", "score_ens": 1.0, "true_short": 0.00},
+        {
+            "date": "2024-01-02",
+            "phase": "dev",
+            "ticker": "A",
+            "score_ens": 2.0,
+            "true_short": 0.10,
+        },
+        {
+            "date": "2024-01-02",
+            "phase": "dev",
+            "ticker": "B",
+            "score_ens": 1.0,
+            "true_short": 0.00,
+        },
+        {
+            "date": "2024-01-02",
+            "phase": "dev",
+            "ticker": "C",
+            "score_ens": 0.0,
+            "true_short": 0.00,
+        },
+        {
+            "date": "2024-01-22",
+            "phase": "dev",
+            "ticker": "A",
+            "score_ens": 2.0,
+            "true_short": 0.00,
+        },
+        {
+            "date": "2024-01-22",
+            "phase": "dev",
+            "ticker": "B",
+            "score_ens": 0.0,
+            "true_short": 0.00,
+        },
+        {
+            "date": "2024-01-22",
+            "phase": "dev",
+            "ticker": "C",
+            "score_ens": 1.0,
+            "true_short": 0.00,
+        },
     ]
     rebalance_scores = pd.DataFrame(rows)
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 [개선안 32번] bt20 전략(regime 파라미터) 그리드 서치로 "전체 지표" 개선
 
@@ -19,9 +18,7 @@
 from __future__ import annotations
 
 import sys
-from dataclasses import asdict
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 import pandas as pd
 
@@ -45,7 +42,7 @@ def _load_parquet_flex(p: Path) -> pd.DataFrame:
     raise FileNotFoundError(str(p))
 
 
-def _pick_metric_row(bt_metrics: pd.DataFrame, phase: str) -> Dict:
+def _pick_metric_row(bt_metrics: pd.DataFrame, phase: str) -> dict:
     if bt_metrics is None or bt_metrics.empty:
         return {}
     r = bt_metrics[bt_metrics["phase"].astype(str) == phase]
@@ -54,7 +51,7 @@ def _pick_metric_row(bt_metrics: pd.DataFrame, phase: str) -> Dict:
     return dict(r.iloc[0])
 
 
-def _objective(m_hold: Dict) -> float:
+def _objective(m_hold: dict) -> float:
     """
     단순 목적함수(스코어):
     - Sharpe가 가장 중요(+)
@@ -74,7 +71,9 @@ def main() -> None:
     report_dir = project_root / "artifacts" / "reports"
     report_dir.mkdir(parents=True, exist_ok=True)
 
-    reb = _load_parquet_flex(interim / "rebalance_scores_from_ranking_interval_20.parquet")
+    reb = _load_parquet_flex(
+        interim / "rebalance_scores_from_ranking_interval_20.parquet"
+    )
     ohlcv = _load_parquet_flex(interim / "ohlcv_daily.parquet")
 
     # 시장 국면 생성(3단계 bull/bear/neutral)
@@ -89,8 +88,21 @@ def main() -> None:
 
     # 전략별 스코어/리턴 컬럼
     strategies = {
-        "bt20_short": {"score_col": "score_total_short", "ret_col": "true_short", "top_k": 12, "buffer_k": 15, "weighting": "equal"},
-        "bt20_ens": {"score_col": "score_ens", "ret_col": "true_short", "top_k": 15, "buffer_k": 20, "weighting": "softmax", "softmax_temp": 0.5},
+        "bt20_short": {
+            "score_col": "score_total_short",
+            "ret_col": "true_short",
+            "top_k": 12,
+            "buffer_k": 15,
+            "weighting": "equal",
+        },
+        "bt20_ens": {
+            "score_col": "score_ens",
+            "ret_col": "true_short",
+            "top_k": 15,
+            "buffer_k": 20,
+            "weighting": "softmax",
+            "softmax_temp": 0.5,
+        },
     }
 
     # Grid (작게 시작)
@@ -99,7 +111,7 @@ def main() -> None:
     exposure_bear_grid = [0.7, 0.8, 1.0]
     risk_bear_mult_grid = [0.7, 0.8, 0.9]
 
-    rows: List[Dict] = []
+    rows: list[dict] = []
     for strat, sconf in strategies.items():
         for nb in neutral_band_grid:
             # 시장국면은 nb에 따라 달라지므로 매번 생성
@@ -127,7 +139,9 @@ def main() -> None:
                             regime_enabled=True,
                             regime_top_k_bear=int(tk_bear),
                             regime_exposure_bear=float(ex_bear),
-                            regime_top_k_bull=int(sconf["top_k"]),  # bull은 기본 top_k 유지
+                            regime_top_k_bull=int(
+                                sconf["top_k"]
+                            ),  # bull은 기본 top_k 유지
                             regime_exposure_bull=1.0,
                             risk_scaling_enabled=True,
                             risk_scaling_bear_multiplier=float(rbm),
@@ -141,7 +155,15 @@ def main() -> None:
                             volatility_adjustment_min=0.7,
                             volatility_adjustment_max=1.2,
                         )
-                        bt_pos, bt_ret, bt_eq, bt_met, quality, warns, *_ = run_backtest(
+                        (
+                            bt_pos,
+                            bt_ret,
+                            bt_eq,
+                            bt_met,
+                            quality,
+                            warns,
+                            *_,
+                        ) = run_backtest(
                             rebalance_scores=reb,
                             cfg=cfg_bt,
                             market_regime=mr,
@@ -164,12 +186,18 @@ def main() -> None:
                                 "hold_calmar": m_hold.get("net_calmar_ratio"),
                                 "hold_turnover": m_hold.get("avg_turnover_oneway"),
                                 "hold_avg_cost_pct": m_hold.get("avg_cost_pct"),
-                                "dev_net_sharpe": m_dev.get("net_sharpe") if m_dev else None,
+                                "dev_net_sharpe": (
+                                    m_dev.get("net_sharpe") if m_dev else None
+                                ),
                                 "dev_net_mdd": m_dev.get("net_mdd") if m_dev else None,
                             }
                         )
 
-    out = pd.DataFrame(rows).sort_values(["strategy", "obj"], ascending=[True, False]).reset_index(drop=True)
+    out = (
+        pd.DataFrame(rows)
+        .sort_values(["strategy", "obj"], ascending=[True, False])
+        .reset_index(drop=True)
+    )
     out_path = report_dir / "bt20_regime_grid_results.csv"
     out.to_csv(out_path, index=False, encoding="utf-8-sig")
 

@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/data/l1b_sector_map.py
 from __future__ import annotations
-
-from typing import List
 
 import pandas as pd
 
@@ -10,14 +7,18 @@ import pandas as pd
 def _require_pykrx():
     try:
         from pykrx import stock
+
         return stock
     except Exception as e:
-        raise ImportError("pykrx가 필요합니다. `pip install pykrx` 후 재실행하세요.") from e
+        raise ImportError(
+            "pykrx가 필요합니다. `pip install pykrx` 후 재실행하세요."
+        ) from e
+
 
 def build_sector_map(
     *,
-    asof_dates: pd.DatetimeIndex | List[pd.Timestamp],
-    tickers: List[str],
+    asof_dates: pd.DatetimeIndex | list[pd.Timestamp],
+    tickers: list[str],
 ) -> pd.DataFrame:
     """
     [Stage 4] 업종 매핑 생성
@@ -37,7 +38,9 @@ def build_sector_map(
     stock = _require_pykrx()
 
     # ticker 정규화
-    norm_tickers = sorted(set(str(t).strip().zfill(6) for t in tickers if str(t).strip()))
+    norm_tickers = sorted(
+        set(str(t).strip().zfill(6) for t in tickers if str(t).strip())
+    )
 
     if not norm_tickers:
         raise ValueError("tickers가 비어있습니다.")
@@ -48,7 +51,7 @@ def build_sector_map(
     else:
         dates = [pd.Timestamp(d) for d in asof_dates]
 
-    records: List[dict] = []
+    records: list[dict] = []
 
     # [Stage 4] 실데이터로 업종 정보 수집
     # pykrx를 사용하여 실제 업종 정보를 가져옵니다.
@@ -58,6 +61,7 @@ def build_sector_map(
     # [Stage 4] 실데이터로 업종 정보 수집
     # 각 날짜별로 업종 정보 수집 (날짜별로 업종이 변경될 수 있음)
     import logging
+
     logger = logging.getLogger(__name__)
 
     for date in dates:
@@ -78,23 +82,34 @@ def build_sector_map(
                     sector_name = _get_sector_from_pykrx(ticker, date_ts)
                     sector_mapping_cache[ticker] = sector_name
                 except Exception as e:
-                    logger.warning(f"[Stage 4] 업종 정보 가져오기 실패 (ticker={ticker}, date={date_str}): {e}")
+                    logger.warning(
+                        f"[Stage 4] 업종 정보 가져오기 실패 (ticker={ticker}, date={date_str}): {e}"
+                    )
                     sector_name = "기타"
                     sector_mapping_cache[ticker] = sector_name
 
-            records.append({
-                "date": date_ts,
-                "ticker": ticker,
-                "sector_name": sector_name,
-            })
+            records.append(
+                {
+                    "date": date_ts,
+                    "ticker": ticker,
+                    "sector_name": sector_name,
+                }
+            )
 
     if not records:
-        raise RuntimeError("업종 매핑 데이터를 생성할 수 없습니다. tickers와 dates를 확인하세요.")
+        raise RuntimeError(
+            "업종 매핑 데이터를 생성할 수 없습니다. tickers와 dates를 확인하세요."
+        )
 
     df = pd.DataFrame(records)
-    df = df.drop_duplicates(["date", "ticker"]).sort_values(["date", "ticker"]).reset_index(drop=True)
+    df = (
+        df.drop_duplicates(["date", "ticker"])
+        .sort_values(["date", "ticker"])
+        .reset_index(drop=True)
+    )
 
     return df
+
 
 # [Stage 4] 실제 업종 정보를 가져오는 헬퍼 함수 (pykrx 사용)
 def _get_sector_from_pykrx(ticker: str, date: pd.Timestamp) -> str:
@@ -196,6 +211,9 @@ def _get_sector_from_pykrx(ticker: str, date: pd.Timestamp) -> str:
     except Exception as e:
         # pykrx 오류 발생 시 "기타" 반환
         import logging
+
         logger = logging.getLogger(__name__)
-        logger.warning(f"[Stage 4] pykrx에서 업종 정보를 가져오는 중 오류 발생 (ticker={ticker}, date={date}): {e}")
+        logger.warning(
+            f"[Stage 4] pykrx에서 업종 정보를 가져오는 중 오류 발생 (ticker={ticker}, date={date}): {e}"
+        )
         return "기타"

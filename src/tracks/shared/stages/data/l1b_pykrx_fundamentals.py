@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 L1B: pykrx 재무데이터 다운로드
 
@@ -19,9 +18,12 @@ logger = logging.getLogger(__name__)
 def _require_pykrx():
     try:
         from pykrx import stock
+
         return stock
     except Exception as e:
-        raise ImportError("pykrx가 필요합니다. `pip install pykrx` 후 재실행하세요.") from e
+        raise ImportError(
+            "pykrx가 필요합니다. `pip install pykrx` 후 재실행하세요."
+        ) from e
 
 
 def _to_yyyymmdd(s: str) -> str:
@@ -63,7 +65,9 @@ def download_pykrx_fundamentals_daily(
     success_count = 0
     error_count = 0
 
-    logger.info(f"[L1B] pykrx 재무데이터 다운로드 시작: {total_tickers}개 종목, {start_date} ~ {end_date}")
+    logger.info(
+        f"[L1B] pykrx 재무데이터 다운로드 시작: {total_tickers}개 종목, {start_date} ~ {end_date}"
+    )
 
     for idx, ticker in enumerate(sorted(set(tickers)), 1):
         try:
@@ -73,7 +77,9 @@ def download_pykrx_fundamentals_daily(
             if df_fund is None or df_fund.empty:
                 error_count += 1
                 if idx % log_every == 0:
-                    logger.info(f"[L1B] 진행: {idx}/{total_tickers}, 성공: {success_count}, 실패: {error_count}")
+                    logger.info(
+                        f"[L1B] 진행: {idx}/{total_tickers}, 성공: {success_count}, 실패: {error_count}"
+                    )
                 time.sleep(sleep_sec)
                 continue
 
@@ -82,14 +88,16 @@ def download_pykrx_fundamentals_daily(
 
             # 데이터 정규화
             df_fund = df_fund.reset_index()
-            df_fund = df_fund.rename(columns={
-                "날짜": "date",
-                "PER": "PER",
-                "PBR": "PBR",
-                "EPS": "EPS",
-                "BPS": "BPS",
-                "DIV": "DIV",
-            })
+            df_fund = df_fund.rename(
+                columns={
+                    "날짜": "date",
+                    "PER": "PER",
+                    "PBR": "PBR",
+                    "EPS": "EPS",
+                    "BPS": "BPS",
+                    "DIV": "DIV",
+                }
+            )
 
             # date 컬럼이 없으면 첫 번째 컬럼을 date로 사용
             if "date" not in df_fund.columns:
@@ -102,10 +110,12 @@ def download_pykrx_fundamentals_daily(
             # 시가총액 병합
             if df_cap is not None and not df_cap.empty:
                 df_cap = df_cap.reset_index()
-                df_cap = df_cap.rename(columns={
-                    "날짜": "date",
-                    "시가총액": "market_cap",
-                })
+                df_cap = df_cap.rename(
+                    columns={
+                        "날짜": "date",
+                        "시가총액": "market_cap",
+                    }
+                )
 
                 if "date" not in df_cap.columns:
                     if len(df_cap.columns) > 0:
@@ -118,13 +128,22 @@ def download_pykrx_fundamentals_daily(
                 df_fund = df_fund.merge(
                     df_cap[["date", "ticker", "market_cap"]],
                     on=["date", "ticker"],
-                    how="left"
+                    how="left",
                 )
             else:
                 df_fund["market_cap"] = np.nan
 
             # 필요한 컬럼만 선택
-            keep_cols = ["date", "ticker", "PER", "PBR", "EPS", "BPS", "DIV", "market_cap"]
+            keep_cols = [
+                "date",
+                "ticker",
+                "PER",
+                "PBR",
+                "EPS",
+                "BPS",
+                "DIV",
+                "market_cap",
+            ]
             available_cols = [c for c in keep_cols if c in df_fund.columns]
             df_fund = df_fund[available_cols].copy()
 
@@ -137,7 +156,9 @@ def download_pykrx_fundamentals_daily(
             success_count += 1
 
             if idx % log_every == 0:
-                logger.info(f"[L1B] 진행: {idx}/{total_tickers}, 성공: {success_count}, 실패: {error_count}")
+                logger.info(
+                    f"[L1B] 진행: {idx}/{total_tickers}, 성공: {success_count}, 실패: {error_count}"
+                )
 
             time.sleep(sleep_sec)
 
@@ -145,14 +166,18 @@ def download_pykrx_fundamentals_daily(
             error_count += 1
             logger.warning(f"[L1B] 종목 {ticker} 다운로드 실패: {e}")
             if idx % log_every == 0:
-                logger.info(f"[L1B] 진행: {idx}/{total_tickers}, 성공: {success_count}, 실패: {error_count}")
+                logger.info(
+                    f"[L1B] 진행: {idx}/{total_tickers}, 성공: {success_count}, 실패: {error_count}"
+                )
             time.sleep(sleep_sec)
             continue
 
     if not records:
         logger.warning("[L1B] 다운로드된 데이터가 없습니다.")
         # 빈 DataFrame 반환 (스키마는 유지)
-        return pd.DataFrame(columns=["date", "ticker", "PER", "PBR", "EPS", "BPS", "DIV", "market_cap"])
+        return pd.DataFrame(
+            columns=["date", "ticker", "PER", "PBR", "EPS", "BPS", "DIV", "market_cap"]
+        )
 
     out = pd.concat(records, ignore_index=True)
     out = out.sort_values(["date", "ticker"]).reset_index(drop=True)
@@ -160,6 +185,8 @@ def download_pykrx_fundamentals_daily(
     # 날짜 형식 통일
     out["date"] = pd.to_datetime(out["date"]).dt.strftime("%Y-%m-%d")
 
-    logger.info(f"[L1B] 다운로드 완료: {len(out):,}행, 성공: {success_count}/{total_tickers}, 실패: {error_count}")
+    logger.info(
+        f"[L1B] 다운로드 완료: {len(out):,}행, 성공: {success_count}/{total_tickers}, 실패: {error_count}"
+    )
 
     return out

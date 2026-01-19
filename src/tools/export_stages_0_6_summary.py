@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/export_stages_0_6_summary.py
 """
 Stage0~6 종합 요약 리포트 생성 스크립트
@@ -8,14 +7,12 @@ Stage0~6 종합 요약 리포트 생성 스크립트
 - 종합 요약 리포트 생성
 """
 import argparse
-import os
 import re
 import subprocess
 import sys
-from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import pandas as pd
 import yaml
@@ -23,8 +20,9 @@ import yaml
 
 def load_config(config_path: Path) -> dict:
     """YAML 설정 파일 로드"""
-    with open(config_path, 'r', encoding='utf-8') as f:
+    with open(config_path, encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
+
 
 def get_path(cfg: dict, key: str) -> Path:
     """config에서 경로 추출"""
@@ -35,12 +33,13 @@ def get_path(cfg: dict, key: str) -> Path:
         return Path(path_template.format(base_dir=base_dir))
     return base_dir / key.replace("_", "/")
 
+
 def detect_stage_tags(
     stage: int,
     base_dir: Path,
     base_interim_dir: Path,
     reports_kpi_dir: Path,
-    reports_delta_dir: Path
+    reports_delta_dir: Path,
 ) -> Optional[str]:
     """
     Stage별 run_tag 자동 탐지
@@ -72,7 +71,9 @@ def detect_stage_tags(
     # C) Delta 리포트 파일명에서 탐지
     if reports_delta_dir.exists():
         for delta_file in reports_delta_dir.glob(f"delta_*__stage{stage}_*.csv"):
-            tag_match = re.search(rf"__stage{stage}_([^_]+(?:_[^_]+)*)\.csv", delta_file.name)
+            tag_match = re.search(
+                rf"__stage{stage}_([^_]+(?:_[^_]+)*)\.csv", delta_file.name
+            )
             if tag_match:
                 tag = f"stage{stage}_{tag_match.group(1)}"
                 mtime = delta_file.stat().st_mtime
@@ -90,6 +91,7 @@ def detect_stage_tags(
     # 최신 순으로 정렬
     sorted_tags = sorted(unique_tags.values(), key=lambda x: -x[1])
     return sorted_tags[0][0] if sorted_tags else None
+
 
 def ensure_kpi_report(base_dir: Path, run_tag: str, config_path: Path) -> bool:
     """KPI 리포트 생성/확인"""
@@ -110,15 +112,16 @@ def ensure_kpi_report(base_dir: Path, run_tag: str, config_path: Path) -> bool:
         [sys.executable, str(script), "--config", str(config_path), "--tag", run_tag],
         cwd=str(base_dir),
         capture_output=True,
-        text=True
+        text=True,
     )
 
     if result.returncode == 0:
-        print(f"  [KPI] 생성 완료")
+        print("  [KPI] 생성 완료")
         return True
     else:
         print(f"  [KPI] ERROR: {result.stderr}", file=sys.stderr)
         return False
+
 
 def ensure_delta_report(base_dir: Path, baseline_tag: str, run_tag: str) -> bool:
     """Delta 리포트 생성/확인"""
@@ -136,20 +139,30 @@ def ensure_delta_report(base_dir: Path, baseline_tag: str, run_tag: str) -> bool
         return False
 
     result = subprocess.run(
-        [sys.executable, str(script), "--baseline-tag", baseline_tag, "--run-tag", run_tag],
+        [
+            sys.executable,
+            str(script),
+            "--baseline-tag",
+            baseline_tag,
+            "--run-tag",
+            run_tag,
+        ],
         cwd=str(base_dir),
         capture_output=True,
-        text=True
+        text=True,
     )
 
     if result.returncode == 0:
-        print(f"  [Delta] 생성 완료")
+        print("  [Delta] 생성 완료")
         return True
     else:
         print(f"  [Delta] ERROR: {result.stderr}", file=sys.stderr)
         return False
 
-def run_stage_check(base_dir: Path, stage: int, run_tag: str, baseline_tag: str, config_path: Path) -> bool:
+
+def run_stage_check(
+    base_dir: Path, stage: int, run_tag: str, baseline_tag: str, config_path: Path
+) -> bool:
     """Stage 완료 체크 실행"""
     print(f"  [Check] 실행 중: Stage {stage}")
     script = base_dir / "src" / "tools" / "check_stage_completion.py"
@@ -159,23 +172,29 @@ def run_stage_check(base_dir: Path, stage: int, run_tag: str, baseline_tag: str,
 
     result = subprocess.run(
         [
-            sys.executable, str(script),
-            "--config", str(config_path),
-            "--run-tag", run_tag,
-            "--stage", str(stage),
-            "--baseline-tag", baseline_tag
+            sys.executable,
+            str(script),
+            "--config",
+            str(config_path),
+            "--run-tag",
+            run_tag,
+            "--stage",
+            str(stage),
+            "--baseline-tag",
+            baseline_tag,
         ],
         cwd=str(base_dir),
         capture_output=True,
-        text=True
+        text=True,
     )
 
     if result.returncode == 0:
-        print(f"  [Check] [PASS]")
+        print("  [Check] [PASS]")
         return True
     else:
         print(f"  [Check] [FAIL]: {result.stderr}", file=sys.stderr)
         return False
+
 
 def load_delta_kpi(delta_csv_path: Path) -> Optional[pd.DataFrame]:
     """Delta KPI CSV 로드"""
@@ -187,7 +206,10 @@ def load_delta_kpi(delta_csv_path: Path) -> Optional[pd.DataFrame]:
         print(f"  [WARN] Delta KPI 로드 실패: {e}", file=sys.stderr)
         return None
 
-def extract_top_changes(delta_df: pd.DataFrame, stage: int, top_n: int = 5) -> List[Dict]:
+
+def extract_top_changes(
+    delta_df: pd.DataFrame, stage: int, top_n: int = 5
+) -> list[dict]:
     """Delta에서 가장 크게 바뀐 KPI Top N 추출"""
     if delta_df is None or delta_df.empty:
         return []
@@ -206,7 +228,9 @@ def extract_top_changes(delta_df: pd.DataFrame, stage: int, top_n: int = 5) -> L
             continue
 
         # 해당 phase에 값이 있는 행만 필터링
-        phase_df = delta_df[delta_df[baseline_col].notna() | delta_df[current_col].notna()].copy()
+        phase_df = delta_df[
+            delta_df[baseline_col].notna() | delta_df[current_col].notna()
+        ].copy()
         if phase_df.empty:
             continue
 
@@ -235,24 +259,27 @@ def extract_top_changes(delta_df: pd.DataFrame, stage: int, top_n: int = 5) -> L
             if isinstance(delta_pct, (int, float)) and not pd.isna(delta_pct):
                 delta_pct = abs(delta_pct)  # 절대값 사용
 
-            top_changes.append({
-                "stage": stage,
-                "phase": phase.capitalize(),  # Dev, Holdout
-                "metric": metric,
-                "baseline": baseline_val,
-                "current": current_val,
-                "delta_abs": delta_abs,
-                "delta_pct": delta_pct,
-            })
+            top_changes.append(
+                {
+                    "stage": stage,
+                    "phase": phase.capitalize(),  # Dev, Holdout
+                    "metric": metric,
+                    "baseline": baseline_val,
+                    "current": current_val,
+                    "delta_abs": delta_abs,
+                    "delta_pct": delta_pct,
+                }
+            )
 
     return top_changes
 
+
 def generate_summary_report(
-    stage_tags: Dict[int, str],
+    stage_tags: dict[int, str],
     baseline_tag: str,
     base_dir: Path,
-    top_changes_by_stage: Dict[int, List[Dict]],
-    check_results: Dict[int, bool]
+    top_changes_by_stage: dict[int, list[dict]],
+    check_results: dict[int, bool],
 ) -> str:
     """종합 요약 리포트 생성"""
     lines = []
@@ -271,7 +298,13 @@ def generate_summary_report(
     lines.append("|---|---|---|")
     for stage in range(7):
         tag = stage_tags.get(stage, "N/A")
-        check_status = "[PASS]" if check_results.get(stage, False) else "[FAIL]" if tag != "N/A" else "N/A"
+        check_status = (
+            "[PASS]"
+            if check_results.get(stage, False)
+            else "[FAIL]"
+            if tag != "N/A"
+            else "N/A"
+        )
         lines.append(f"| Stage {stage} | `{tag}` | {check_status} |")
     lines.append("")
 
@@ -287,7 +320,9 @@ def generate_summary_report(
         lines.append("")
         lines.append(f"- **Run Tag**: `{tag}`")
         lines.append(f"- [KPI 리포트](reports/kpi/kpi_table__{tag}.md)")
-        lines.append(f"- [Delta 리포트](reports/delta/delta_report__{baseline_tag}__vs__{tag}.md)")
+        lines.append(
+            f"- [Delta 리포트](reports/delta/delta_report__{baseline_tag}__vs__{tag}.md)"
+        )
         lines.append(f"- [완료 체크](reports/stages/check__stage{stage}__{tag}.md)")
         lines.append("")
 
@@ -318,16 +353,22 @@ def generate_summary_report(
 
             # 숫자 포맷팅
             try:
-                delta_abs_str = f"{float(delta_abs):.4f}" if delta_abs != "N/A" else "N/A"
+                delta_abs_str = (
+                    f"{float(delta_abs):.4f}" if delta_abs != "N/A" else "N/A"
+                )
             except (ValueError, TypeError):
                 delta_abs_str = str(delta_abs)
 
             try:
-                delta_pct_str = f"{float(delta_pct):.2f}%" if delta_pct != "N/A" else "N/A"
+                delta_pct_str = (
+                    f"{float(delta_pct):.2f}%" if delta_pct != "N/A" else "N/A"
+                )
             except (ValueError, TypeError):
                 delta_pct_str = str(delta_pct) if delta_pct != "N/A" else "N/A"
 
-            lines.append(f"| {phase} | {metric} | {baseline} | {current} | {delta_abs_str} | {delta_pct_str} |")
+            lines.append(
+                f"| {phase} | {metric} | {baseline} | {current} | {delta_abs_str} | {delta_pct_str} |"
+            )
 
         lines.append("")
 
@@ -342,7 +383,9 @@ def generate_summary_report(
 
     if all_changes:
         all_changes.sort(key=lambda x: x.get("delta_abs", 0), reverse=True)
-        lines.append("| Stage | Phase | Metric | Baseline | Current | Δ (절대값) | Δ (%) |")
+        lines.append(
+            "| Stage | Phase | Metric | Baseline | Current | Δ (절대값) | Δ (%) |"
+        )
         lines.append("|---|---|---|---|---|---|---|")
 
         for change in all_changes[:10]:
@@ -356,16 +399,22 @@ def generate_summary_report(
 
             # 숫자 포맷팅
             try:
-                delta_abs_str = f"{float(delta_abs):.4f}" if delta_abs != "N/A" else "N/A"
+                delta_abs_str = (
+                    f"{float(delta_abs):.4f}" if delta_abs != "N/A" else "N/A"
+                )
             except (ValueError, TypeError):
                 delta_abs_str = str(delta_abs)
 
             try:
-                delta_pct_str = f"{float(delta_pct):.2f}%" if delta_pct != "N/A" else "N/A"
+                delta_pct_str = (
+                    f"{float(delta_pct):.2f}%" if delta_pct != "N/A" else "N/A"
+                )
             except (ValueError, TypeError):
                 delta_pct_str = str(delta_pct) if delta_pct != "N/A" else "N/A"
 
-            lines.append(f"| Stage {stage} | {phase} | {metric} | {baseline} | {current} | {delta_abs_str} | {delta_pct_str} |")
+            lines.append(
+                f"| Stage {stage} | {phase} | {metric} | {baseline} | {current} | {delta_abs_str} | {delta_pct_str} |"
+            )
         lines.append("")
 
     # 5. 경고사항 모음
@@ -378,14 +427,20 @@ def generate_summary_report(
         if not tag:
             continue
 
-        delta_csv = base_dir / "reports" / "delta" / f"delta_kpi__{baseline_tag}__vs__{tag}.csv"
+        delta_csv = (
+            base_dir / "reports" / "delta" / f"delta_kpi__{baseline_tag}__vs__{tag}.csv"
+        )
         if delta_csv.exists():
             try:
                 delta_df = pd.read_csv(delta_csv)
                 # cost_bps mismatch 같은 경고 찾기
                 if "metric" in delta_df.columns:
                     # cost_bps 관련 메트릭 찾기
-                    cost_bps_rows = delta_df[delta_df["metric"].str.contains("cost_bps", case=False, na=False)]
+                    cost_bps_rows = delta_df[
+                        delta_df["metric"].str.contains(
+                            "cost_bps", case=False, na=False
+                        )
+                    ]
                     if not cost_bps_rows.empty:
                         warnings_found = True
                         lines.append(f"### Stage {stage}")
@@ -399,18 +454,31 @@ def generate_summary_report(
                             if pd.notna(dev_abs) and abs(float(dev_abs)) > 0.01:
                                 baseline_val = row.get("baseline_dev_value", "N/A")
                                 current_val = row.get("current_dev_value", "N/A")
-                                lines.append(f"- ⚠️ {metric} (Dev): {baseline_val} → {current_val}")
+                                lines.append(
+                                    f"- ⚠️ {metric} (Dev): {baseline_val} → {current_val}"
+                                )
 
                             if pd.notna(holdout_abs) and abs(float(holdout_abs)) > 0.01:
                                 baseline_val = row.get("baseline_holdout_value", "N/A")
                                 current_val = row.get("current_holdout_value", "N/A")
-                                lines.append(f"- ⚠️ {metric} (Holdout): {baseline_val} → {current_val}")
+                                lines.append(
+                                    f"- ⚠️ {metric} (Holdout): {baseline_val} → {current_val}"
+                                )
 
-                        if not any([pd.notna(row.get("dev_abs_diff", 0)) and abs(float(row.get("dev_abs_diff", 0))) > 0.01
-                                   for _, row in cost_bps_rows.iterrows()]) and \
-                           not any([pd.notna(row.get("holdout_abs_diff", 0)) and abs(float(row.get("holdout_abs_diff", 0))) > 0.01
-                                   for _, row in cost_bps_rows.iterrows()]):
-                            lines.append(f"- ℹ️ cost_bps 관련 메트릭: 변경 없음")
+                        if not any(
+                            [
+                                pd.notna(row.get("dev_abs_diff", 0))
+                                and abs(float(row.get("dev_abs_diff", 0))) > 0.01
+                                for _, row in cost_bps_rows.iterrows()
+                            ]
+                        ) and not any(
+                            [
+                                pd.notna(row.get("holdout_abs_diff", 0))
+                                and abs(float(row.get("holdout_abs_diff", 0))) > 0.01
+                                for _, row in cost_bps_rows.iterrows()
+                            ]
+                        ):
+                            lines.append("- ℹ️ cost_bps 관련 메트릭: 변경 없음")
 
                         lines.append("")
             except Exception as e:
@@ -424,18 +492,26 @@ def generate_summary_report(
 
     return "\n".join(lines)
 
+
 def main():
-    parser = argparse.ArgumentParser(
-        description="Export Stages 0-6 Summary Report"
+    parser = argparse.ArgumentParser(description="Export Stages 0-6 Summary Report")
+    parser.add_argument(
+        "--config", type=str, default="configs/config.yaml", help="Config file path"
     )
-    parser.add_argument("--config", type=str, default="configs/config.yaml",
-                       help="Config file path")
-    parser.add_argument("--baseline-tag", type=str, default="baseline_prerefresh_20251219_143636",
-                       help="Baseline tag")
-    parser.add_argument("--dry-run", action="store_true",
-                       help="Dry run: 탐지만 하고 실행하지 않음")
-    parser.add_argument("--apply", action="store_true",
-                       help="Apply: KPI/Delta/Check 실행 및 리포트 생성")
+    parser.add_argument(
+        "--baseline-tag",
+        type=str,
+        default="baseline_prerefresh_20251219_143636",
+        help="Baseline tag",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Dry run: 탐지만 하고 실행하지 않음"
+    )
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Apply: KPI/Delta/Check 실행 및 리포트 생성",
+    )
     args = parser.parse_args()
 
     # 경로 설정
@@ -457,7 +533,9 @@ def main():
     print("=" * 80)
     print(f"Base Dir: {base_dir}")
     print(f"Baseline Tag: {args.baseline_tag}")
-    print(f"Mode: {'DRY-RUN' if args.dry_run else 'APPLY' if args.apply else 'DETECT ONLY'}")
+    print(
+        f"Mode: {'DRY-RUN' if args.dry_run else 'APPLY' if args.apply else 'DETECT ONLY'}"
+    )
     print()
 
     # Stage별 run_tag 탐지
@@ -465,7 +543,9 @@ def main():
     print("-" * 80)
     stage_tags = {}
     for stage in range(7):
-        tag = detect_stage_tags(stage, base_dir, base_interim_dir, reports_kpi_dir, reports_delta_dir)
+        tag = detect_stage_tags(
+            stage, base_dir, base_interim_dir, reports_kpi_dir, reports_delta_dir
+        )
         stage_tags[stage] = tag
         status = f"[OK] {tag}" if tag else "[MISSING] 없음"
         print(f"  Stage {stage}: {status}")
@@ -476,7 +556,9 @@ def main():
         return
 
     if not args.apply:
-        print("[INFO] --apply 플래그가 없어 실행하지 않습니다. --apply를 추가하면 실행됩니다.")
+        print(
+            "[INFO] --apply 플래그가 없어 실행하지 않습니다. --apply를 추가하면 실행됩니다."
+        )
         return
 
     # Stage별 처리
@@ -504,7 +586,12 @@ def main():
         check_results[stage] = check_ok
 
         # Delta에서 Top Changes 추출
-        delta_csv = base_dir / "reports" / "delta" / f"delta_kpi__{args.baseline_tag}__vs__{tag}.csv"
+        delta_csv = (
+            base_dir
+            / "reports"
+            / "delta"
+            / f"delta_kpi__{args.baseline_tag}__vs__{tag}.csv"
+        )
         delta_df = load_delta_kpi(delta_csv)
         top_changes = extract_top_changes(delta_df, stage, top_n=5)
         top_changes_by_stage[stage] = top_changes
@@ -515,8 +602,7 @@ def main():
     print("[3] 종합 요약 리포트 생성")
     print("-" * 80)
     summary_content = generate_summary_report(
-        stage_tags, args.baseline_tag, base_dir,
-        top_changes_by_stage, check_results
+        stage_tags, args.baseline_tag, base_dir, top_changes_by_stage, check_results
     )
 
     reports_stages_dir = base_dir / "reports" / "stages"
@@ -552,6 +638,7 @@ def main():
     else:
         print("\n[FAIL] 일부 Stage 검증 실패")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

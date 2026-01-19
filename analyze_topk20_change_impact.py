@@ -1,7 +1,3 @@
-import os
-from datetime import datetime
-
-import numpy as np
 import pandas as pd
 
 
@@ -12,14 +8,22 @@ def analyze_topk_change_impact():
     print("=" * 60)
 
     # 신규 결과 로드 (top_k=20)
-    new_results = pd.read_csv('results/topk20_performance_metrics.csv')
+    new_results = pd.read_csv("results/topk20_performance_metrics.csv")
 
     # 기존 결과 (참고용)
     try:
-        old_results = pd.read_csv('C:\\Users\\seong\\OneDrive\\Desktop\\bootcamp\\03_code\\artifacts\\reports\\backtest_4models_comparison.csv')
+        old_results = pd.read_csv(
+            "C:\\Users\\seong\\OneDrive\\Desktop\\bootcamp\\03_code\\artifacts\\reports\\backtest_4models_comparison.csv"
+        )
         print("📊 기존 결과 (참고):")
         for _, row in old_results.iterrows():
-            strategy_name = row['strategy'].replace('bt20_ens', 'BT20 앙상블').replace('bt20_short', 'BT20 단기').replace('bt120_ens', 'BT120 앙상블').replace('bt120_long', 'BT120 장기')
+            strategy_name = (
+                row["strategy"]
+                .replace("bt20_ens", "BT20 앙상블")
+                .replace("bt20_short", "BT20 단기")
+                .replace("bt120_ens", "BT120 앙상블")
+                .replace("bt120_long", "BT120 장기")
+            )
             print(".3f")
         print()
     except:
@@ -85,8 +89,8 @@ def analyze_topk_change_impact():
     print("-" * 40)
 
     for _, row in new_results.iterrows():
-        total_return = row['총수익률']
-        mdd = row['MDD']
+        total_return = row["총수익률"]
+        mdd = row["MDD"]
         if mdd != 0:
             modified_calmar = total_return / abs(mdd)
         else:
@@ -97,6 +101,7 @@ def analyze_topk_change_impact():
         print(".2%")
         print(".2f")
         print()
+
 
 if __name__ == "__main__":
     analyze_topk_change_impact()

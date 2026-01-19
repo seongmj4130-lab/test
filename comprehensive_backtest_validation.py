@@ -5,7 +5,6 @@
 
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 
@@ -16,8 +15,8 @@ def comprehensive_backtest_validation():
     print("=" * 80)
 
     # 최신 백테스트 결과 로드
-    results_dir = Path('results')
-    csv_files = list(results_dir.glob('dynamic_period_backtest_clean_*.csv'))
+    results_dir = Path("results")
+    csv_files = list(results_dir.glob("dynamic_period_backtest_clean_*.csv"))
     latest_file = max(csv_files, key=lambda x: x.stat().st_mtime)
 
     df = pd.read_csv(latest_file)
@@ -27,7 +26,7 @@ def comprehensive_backtest_validation():
 
     # 샘플 데이터 10개 출력
     print("📋 샘플 데이터 10개:")
-    print(df.head(10).to_string(index=False, float_format='%.3f'))
+    print(df.head(10).to_string(index=False, float_format="%.3f"))
     print()
 
     print("🔧 코드 핵심 로직 분석")
@@ -37,7 +36,8 @@ def comprehensive_backtest_validation():
     print("1️⃣ 총수익률 계산 과정 (코드 기반)")
     print("-" * 40)
     print("📊 L7 백테스트 수익률 계산 코드:")
-    print("""
+    print(
+        """
     # MDD 계산 함수 (_mdd)에서 확인된 로직:
     eq = 1.0  # 초기 포트폴리오 가치
     for r in rr:  # rr: 일별 수익률 배열
@@ -48,15 +48,16 @@ def comprehensive_backtest_validation():
     if eq_g > 0 and years > 0:
         gross_cagr_val = eq_g ** (1.0 / years) - 1.0  # 연환산
         gross_cagr = float(gross_cagr_val)
-    """)
+    """
+    )
 
     # 실제 계산 검증
-    sample = df[df['strategy'] == 'bt20_short'].iloc[0]
-    total_return = sample['Total Return (%)'] / 100
-    cagr = sample['CAGR (%)'] / 100
-    holding_days = sample['holding_days']
+    sample = df[df["strategy"] == "bt20_short"].iloc[0]
+    total_return = sample["Total Return (%)"] / 100
+    cagr = sample["CAGR (%)"] / 100
+    holding_days = sample["holding_days"]
 
-    print(f"샘플 케이스 검증 (단기 20일):")
+    print("샘플 케이스 검증 (단기 20일):")
     print(".4f")
     print(".4f")
 
@@ -72,7 +73,8 @@ def comprehensive_backtest_validation():
     print("2️⃣ Sharpe Ratio 공식 (코드 기반)")
     print("-" * 40)
     print("📊 L7 백테스트 Sharpe 계산 코드:")
-    print("""
+    print(
+        """
     # Sharpe 계산 (연환산 적용):
     periods_per_year = 252  # 일별 데이터 기준
 
@@ -84,10 +86,11 @@ def comprehensive_backtest_validation():
     # - 연환산: ×√252
     # - 무위험수익률: 0 (제외)
     # - ddof=1: 표본 표준편차
-    """)
+    """
+    )
 
-    sample_sharpe = df[df['strategy'] == 'bt20_short'].iloc[0]['sharpe']
-    sample_cagr = df[df['strategy'] == 'bt20_short'].iloc[0]['CAGR (%)'] / 100
+    sample_sharpe = df[df["strategy"] == "bt20_short"].iloc[0]["sharpe"]
+    sample_cagr = df[df["strategy"] == "bt20_short"].iloc[0]["CAGR (%)"] / 100
 
     print(".4f")
     print(".4f")
@@ -102,7 +105,8 @@ def comprehensive_backtest_validation():
     print("3️⃣ MDD 계산 (코드 기반)")
     print("-" * 40)
     print("📊 L7 백테스트 MDD 계산 코드:")
-    print("""
+    print(
+        """
     def _mdd(rr: np.ndarray) -> float:
         eq = 1.0      # 초기 포트폴리오 가치
         peak = 1.0    # 최고점
@@ -114,9 +118,10 @@ def comprehensive_backtest_validation():
             mdd = min(mdd, (eq / peak) - 1.0)  # 낙폭 계산
 
         return float(mdd)
-    """)
+    """
+    )
 
-    mdd_values = df['MDD (%)'].abs()
+    mdd_values = df["MDD (%)"].abs()
     max_mdd_idx = mdd_values.idxmax()
     max_mdd_row = df.loc[max_mdd_idx]
 
@@ -129,7 +134,8 @@ def comprehensive_backtest_validation():
     print("4️⃣ 비용(slippage/cost) 적용 (코드 기반)")
     print("-" * 40)
     print("📊 L7 백테스트 비용 계산 코드:")
-    print("""
+    print(
+        """
     def _calculate_trading_cost():
         # 거래된 가치 계산
         tv = turnover_oneway * abs(exposure)
@@ -141,14 +147,15 @@ def comprehensive_backtest_validation():
 
         # 비용 차감 (포트폴리오 가치에서 차감)
         eq -= total_cost
-    """)
+    """
+    )
 
     print("현재 적용 비용:")
     print("- cost_bps: 15 (단기), 10 (장기), 12 (통합)")
     print("- slippage_bps: 0 (현재 비활성화)")
     print()
 
-    cost_analysis = df.groupby('strategy')[['avg_turnover', 'profit_factor']].mean()
+    cost_analysis = df.groupby("strategy")[["avg_turnover", "profit_factor"]].mean()
     print("전략별 비용 영향 분석:")
     print(cost_analysis.round(3))
     print()
@@ -157,7 +164,8 @@ def comprehensive_backtest_validation():
     print("5️⃣ look-ahead bias 방지 (코드 기반)")
     print("-" * 40)
     print("📊 백테스트 데이터 흐름:")
-    print("""
+    print(
+        """
     # Walk-forward 검증 적용:
     for phase, dphase in df_sorted.groupby(phase_col, sort=False):
         # dev phase: 모델 학습
@@ -167,7 +175,8 @@ def comprehensive_backtest_validation():
     df_sorted = df.sort_values([phase_col, date_col, ...], ascending=[True, True, ...])
 
     # Purged K-Fold 적용 (L4 단계)
-    """)
+    """
+    )
 
     print("look-ahead 방지 상태:")
     print("✅ Phase 구분: dev → holdout 순차 처리")
@@ -180,13 +189,15 @@ def comprehensive_backtest_validation():
     print("6️⃣ regime/turnover 경고 분석")
     print("-" * 40)
     print("📊 경고 발생 코드:")
-    print("""
+    print(
+        """
     # Regime 경고:
     if market_regime is None:
         warnings_list.append("regime 기능 작동하지 않음: market_regime 데이터 누락")
 
     # Turnover 경고 없음 (정상 처리)
-    """)
+    """
+    )
 
     print("경고 영향 평가:")
     print("- Regime 미적용: 국면 기반 전략 비활성화")
@@ -220,6 +231,7 @@ def comprehensive_backtest_validation():
     print("- DEV/HOLDOUT 성과 격차 분석으로 안정성 평가")
     print("- Hit Ratio L6 연동으로 예측력 검증")
     print()
+
 
 if __name__ == "__main__":
     comprehensive_backtest_validation()

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/ranking/ui_payload_builder.py
 """
 [Stage11] UI Payload Builder
@@ -14,10 +13,6 @@ Top/Bottom 일별 데이터 생성 및 최신 스냅샷 생성
 """
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
-
-import numpy as np
 import pandas as pd
 
 
@@ -25,7 +20,7 @@ def build_ui_top_bottom_daily(
     ranking_daily: pd.DataFrame,
     top_k: int = 10,
     bottom_k: int = 10,
-) -> Tuple[pd.DataFrame, List[str]]:
+) -> tuple[pd.DataFrame, list[str]]:
     """
     Top/Bottom 일별 데이터 생성
 
@@ -37,7 +32,7 @@ def build_ui_top_bottom_daily(
     Returns:
         (ui_top_bottom_daily DataFrame, warnings)
     """
-    warns: List[str] = []
+    warns: list[str] = []
 
     # 필수 컬럼 확인
     required_cols = ["date", "ticker", "rank_total"]
@@ -69,12 +64,20 @@ def build_ui_top_bottom_daily(
         # Top K
         top_df = group_sorted.head(top_k)
         top_list = top_df["ticker"].tolist()
-        top_scores = top_df["score_total"].tolist() if "score_total" in top_df.columns else [None] * len(top_list)
+        top_scores = (
+            top_df["score_total"].tolist()
+            if "score_total" in top_df.columns
+            else [None] * len(top_list)
+        )
 
         # Bottom K
         bottom_df = group_sorted.tail(bottom_k)
         bottom_list = bottom_df["ticker"].tolist()
-        bottom_scores = bottom_df["score_total"].tolist() if "score_total" in bottom_df.columns else [None] * len(bottom_list)
+        bottom_scores = (
+            bottom_df["score_total"].tolist()
+            if "score_total" in bottom_df.columns
+            else [None] * len(bottom_list)
+        )
 
         # 기여도 요약 (contrib_* 컬럼이 있으면)
         contrib_cols = [c for c in group.columns if c.startswith("contrib_")]
@@ -95,8 +98,12 @@ def build_ui_top_bottom_daily(
             "date": date,
             "top_list": ",".join(top_list),
             "bottom_list": ",".join(bottom_list),
-            "top_scores": ",".join([str(s) if s is not None else "" for s in top_scores]),
-            "bottom_scores": ",".join([str(s) if s is not None else "" for s in bottom_scores]),
+            "top_scores": ",".join(
+                [str(s) if s is not None else "" for s in top_scores]
+            ),
+            "bottom_scores": ",".join(
+                [str(s) if s is not None else "" for s in bottom_scores]
+            ),
             "top_count": len(top_list),
             "bottom_count": len(bottom_list),
         }
@@ -116,11 +123,12 @@ def build_ui_top_bottom_daily(
 
     return df, warns
 
+
 def build_ui_snapshot(
     ranking_daily: pd.DataFrame,
     top_k: int = 10,
     bottom_k: int = 10,
-) -> Tuple[pd.DataFrame, List[str]]:
+) -> tuple[pd.DataFrame, list[str]]:
     """
     최신일 기준 Top10/Bottom10 스냅샷 생성
 
@@ -132,7 +140,7 @@ def build_ui_snapshot(
     Returns:
         (ui_snapshot DataFrame, warnings)
     """
-    warns: List[str] = []
+    warns: list[str] = []
 
     # 필수 컬럼 확인
     required_cols = ["date", "ticker", "rank_total"]
@@ -167,13 +175,22 @@ def build_ui_snapshot(
     # Bottom K
     bottom_df = snapshot_df.tail(bottom_k).copy()
     bottom_df["snapshot_type"] = "bottom"
-    bottom_df["snapshot_rank"] = range(len(snapshot_df) - len(bottom_df) + 1, len(snapshot_df) + 1)
+    bottom_df["snapshot_rank"] = range(
+        len(snapshot_df) - len(bottom_df) + 1, len(snapshot_df) + 1
+    )
 
     # 병합
     result_df = pd.concat([top_df, bottom_df], ignore_index=True)
 
     # 컬럼 선택 (필요한 컬럼만)
-    output_cols = ["snapshot_date", "snapshot_type", "snapshot_rank", "ticker", "rank_total", "score_total"]
+    output_cols = [
+        "snapshot_date",
+        "snapshot_type",
+        "snapshot_rank",
+        "ticker",
+        "rank_total",
+        "score_total",
+    ]
 
     # 추가 컬럼 (있으면)
     optional_cols = ["regime_label", "regime_score", "top_features"]
@@ -193,10 +210,15 @@ def build_ui_snapshot(
     result_df["snapshot_date"] = latest_date
 
     # 컬럼 순서 재정렬
-    col_order = ["snapshot_date", "snapshot_type", "snapshot_rank"] + [c for c in available_cols if c not in ["snapshot_date", "snapshot_type", "snapshot_rank"]]
+    col_order = ["snapshot_date", "snapshot_type", "snapshot_rank"] + [
+        c
+        for c in available_cols
+        if c not in ["snapshot_date", "snapshot_type", "snapshot_rank"]
+    ]
     result_df = result_df[col_order]
 
     return result_df, warns
+
 
 def run_L11_ui_payload(
     cfg: dict,

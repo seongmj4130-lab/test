@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/validation/validate_l6_outputs.py
 from __future__ import annotations
 
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -17,22 +16,26 @@ from src.utils.io import artifact_exists, load_artifact
 def _root_dir() -> Path:
     return Path(__file__).resolve().parents[2]
 
+
 def _fail(msg: str) -> None:
     raise SystemExit(msg)
+
 
 def _ensure_datetime(s: pd.Series, name: str) -> pd.Series:
     if not np.issubdtype(s.dtype, np.datetime64):
         return pd.to_datetime(s, errors="raise")
     return s
 
-def _read_meta(interim: Path, artifact_name: str) -> Dict[str, Any]:
+
+def _read_meta(interim: Path, artifact_name: str) -> dict[str, Any]:
     meta_path = interim / f"{artifact_name}__meta.json"
     if not meta_path.exists():
         _fail(f"[FAIL] meta file not found: {meta_path}")
     with meta_path.open("r", encoding="utf-8") as f:
         return json.load(f)
 
-def _get_l6_weights(cfg: dict) -> Tuple[float, float]:
+
+def _get_l6_weights(cfg: dict) -> tuple[float, float]:
     p = cfg.get("params", {}) or {}
     l6 = p.get("l6", {})
     if not isinstance(l6, dict):
@@ -44,16 +47,19 @@ def _get_l6_weights(cfg: dict) -> Tuple[float, float]:
     s = w_s + w_l
     return (w_s / s, w_l / s)
 
-def _detect_col(df: pd.DataFrame, candidates: List[str]) -> str | None:
+
+def _detect_col(df: pd.DataFrame, candidates: list[str]) -> str | None:
     for c in candidates:
         if c in df.columns:
             return c
     return None
 
+
 @dataclass(frozen=True)
 class L6CheckResult:
     ok: bool
-    messages: List[str]
+    messages: list[str]
+
 
 def _validate_fold_windows_nonoverlap(cv: pd.DataFrame, *, name: str) -> None:
     # segment(phase)별로 test window가 서로 겹치지 않는지 확인(겹치면 fold_id->date 검증이 애매해짐)
@@ -70,6 +76,7 @@ def _validate_fold_windows_nonoverlap(cv: pd.DataFrame, *, name: str) -> None:
                     f"prev_end={prev_end.date()} cur_start={ts.date()} fold_id={row['fold_id']}"
                 )
             prev_end = te
+
 
 def _fold_membership_check(
     scores: pd.DataFrame,
@@ -106,25 +113,37 @@ def _fold_membership_check(
 
     if m["test_start"].isna().any():
         bad = m.loc[m["test_start"].isna(), ["date", "phase", fold_col]].head(20)
-        _fail(f"[FAIL] {name}: fold_id not found in cv_folds for given phase(segment). sample:\n{bad}")
+        _fail(
+            f"[FAIL] {name}: fold_id not found in cv_folds for given phase(segment). sample:\n{bad}"
+        )
 
     in_window = (m["date"] >= m["test_start"]) & (m["date"] <= m["test_end"])
     bad_cnt = int((~in_window).sum())
     if bad_cnt > 0:
-        bad = m.loc[~in_window, ["date", "phase", fold_col, "test_start", "test_end"]].head(20)
-        _fail(f"[FAIL] {name}: date not in the test window of its fold_id. sample:\n{bad}")
+        bad = m.loc[
+            ~in_window, ["date", "phase", fold_col, "test_start", "test_end"]
+        ].head(20)
+        _fail(
+            f"[FAIL] {name}: date not in the test window of its fold_id. sample:\n{bad}"
+        )
+
 
 def validate_l6_outputs(cfg_path: Path) -> L6CheckResult:
     cfg = load_config(str(cfg_path))
     interim = get_path(cfg, "data_interim")
 
-    msgs: List[str] = []
+    msgs: list[str] = []
     msgs.append("=== L6 Validation Runner ===")
     msgs.append(f"ROOT  : {_root_dir()}")
     msgs.append(f"CFG   : {cfg_path}")
     msgs.append(f"INTERIM: {interim}")
 
-    required = ["rebalance_scores", "rebalance_scores_summary", "cv_folds_short", "cv_folds_long"]
+    required = [
+        "rebalance_scores",
+        "rebalance_scores_summary",
+        "cv_folds_short",
+        "cv_folds_long",
+    ]
     for n in required:
         if not artifact_exists(interim / n):
             _fail(f"[FAIL] missing artifact: {n} at {interim / n}")
@@ -139,9 +158,13 @@ def validate_l6_outputs(cfg_path: Path) -> L6CheckResult:
 
     msgs.append("\n=== Meta check ===")
     msgs.append(f"- rebalance_scores meta.stage: {meta_scores.get('stage')}")
-    msgs.append(f"- rebalance_scores meta.quality keys: {list((meta_scores.get('quality') or {}).keys())}")
+    msgs.append(
+        f"- rebalance_scores meta.quality keys: {list((meta_scores.get('quality') or {}).keys())}"
+    )
     msgs.append(f"- rebalance_scores_summary meta.stage: {meta_summary.get('stage')}")
-    msgs.append(f"- rebalance_scores_summary meta.quality keys: {list((meta_summary.get('quality') or {}).keys())}")
+    msgs.append(
+        f"- rebalance_scores_summary meta.quality keys: {list((meta_summary.get('quality') or {}).keys())}"
+    )
 
     if "scoring" not in (meta_scores.get("quality") or {}):
         _fail("[FAIL] rebalance_scores meta.quality missing key 'scoring'")
@@ -183,16 +206,22 @@ def validate_l6_outputs(cfg_path: Path) -> L6CheckResult:
     if score_long_col is None:
         _fail("[FAIL] rebalance_scores missing 'score_long'")
     if score_ens_col is None:
-        _fail("[FAIL] rebalance_scores missing ensemble score col (score_ens/score_ensemble/score)")
+        _fail(
+            "[FAIL] rebalance_scores missing ensemble score col (score_ens/score_ensemble/score)"
+        )
 
     # fold cols (merge suffix 대응)
     fold_short = _detect_col(scores, ["fold_id_short", "fold_id_x", "fold_id"])
     fold_long = _detect_col(scores, ["fold_id_long", "fold_id_y"])
     if fold_short is None:
-        _fail("[FAIL] rebalance_scores missing short fold id col (fold_id_short/fold_id_x/fold_id)")
+        _fail(
+            "[FAIL] rebalance_scores missing short fold id col (fold_id_short/fold_id_x/fold_id)"
+        )
     # long은 없는 기간이 있으므로 컬럼 자체는 있어야 한다
     if fold_long is None:
-        _fail("[FAIL] rebalance_scores missing long fold id col (fold_id_long/fold_id_y)")
+        _fail(
+            "[FAIL] rebalance_scores missing long fold id col (fold_id_long/fold_id_y)"
+        )
 
     s_short = pd.to_numeric(scores[score_short_col], errors="coerce")
     s_long = pd.to_numeric(scores[score_long_col], errors="coerce")
@@ -205,7 +234,9 @@ def validate_l6_outputs(cfg_path: Path) -> L6CheckResult:
     fl = scores[fold_long].astype("string")
     bad = long_missing & fl.notna()
     if int(bad.sum()) > 0:
-        sample = scores.loc[bad, ["date", "ticker", "phase", fold_long, score_long_col]].head(20)
+        sample = scores.loc[
+            bad, ["date", "ticker", "phase", fold_long, score_long_col]
+        ].head(20)
         _fail(f"[FAIL] long missing rows have non-null fold_id_long. sample:\n{sample}")
 
     msgs.append("\n=== CV windows sanity ===")
@@ -241,7 +272,7 @@ def validate_l6_outputs(cfg_path: Path) -> L6CheckResult:
     msgs.append(f"- weights: short={w_s:.6f}, long={w_l:.6f}")
 
     wsum = (~s_short.isna()).astype(float) * w_s + (~s_long.isna()).astype(float) * w_l
-    exp = (s_short.fillna(0) * w_s + s_long.fillna(0) * w_l)
+    exp = s_short.fillna(0) * w_s + s_long.fillna(0) * w_l
     exp = exp.where(wsum > 0, np.nan) / wsum.where(wsum > 0, np.nan)
 
     diff = (s_ens - exp).abs()
@@ -249,16 +280,18 @@ def validate_l6_outputs(cfg_path: Path) -> L6CheckResult:
     p99 = float(diff.quantile(0.99))
     msgs.append(f"- |ens - expected| median={med:.10f}, p99={p99:.10f}")
     if not np.isfinite(med) or p99 > 1e-6:
-        _fail("[FAIL] ensemble score does not match expected weighted merge (check build_rebalance_scores)")
+        _fail(
+            "[FAIL] ensemble score does not match expected weighted merge (check build_rebalance_scores)"
+        )
 
     # Summary 정합성
     msgs.append("\n=== Coverage vs summary ===")
-    calc = (
-        scores.groupby(["date", "phase"], as_index=False)
-        .agg(
-            n_tickers_calc=("ticker", "nunique"),
-            ens_missing=(score_ens_col, lambda x: float(pd.to_numeric(x, errors="coerce").isna().mean())),
-        )
+    calc = scores.groupby(["date", "phase"], as_index=False).agg(
+        n_tickers_calc=("ticker", "nunique"),
+        ens_missing=(
+            score_ens_col,
+            lambda x: float(pd.to_numeric(x, errors="coerce").isna().mean()),
+        ),
     )
     merged = summary.merge(calc, on=["date", "phase"], how="left")
     if merged["n_tickers_calc"].isna().any():
@@ -267,16 +300,24 @@ def validate_l6_outputs(cfg_path: Path) -> L6CheckResult:
 
     diff_nt = (merged["n_tickers"] - merged["n_tickers_calc"]).abs()
     if int(diff_nt.max()) != 0:
-        bad = merged.loc[diff_nt != 0, ["date", "phase", "n_tickers", "n_tickers_calc"]].head(20)
+        bad = merged.loc[
+            diff_nt != 0, ["date", "phase", "n_tickers", "n_tickers_calc"]
+        ].head(20)
         _fail(f"[FAIL] n_tickers mismatch between summary and scores. sample:\n{bad}")
 
-    if (summary["coverage_ticker_pct"] < 0).any() or (summary["coverage_ticker_pct"] > 100).any():
-        bad = summary.loc[(summary["coverage_ticker_pct"] < 0) | (summary["coverage_ticker_pct"] > 100)].head(20)
+    if (summary["coverage_ticker_pct"] < 0).any() or (
+        summary["coverage_ticker_pct"] > 100
+    ).any():
+        bad = summary.loc[
+            (summary["coverage_ticker_pct"] < 0)
+            | (summary["coverage_ticker_pct"] > 100)
+        ].head(20)
         _fail(f"[FAIL] coverage_ticker_pct out of range [0,100]. sample:\n{bad}")
 
     msgs.append("\n✅ L6 VALIDATION COMPLETE: All critical checks passed.")
     msgs.append("➡️ Next: proceed to L7 (backtest / portfolio construction).")
     return L6CheckResult(ok=True, messages=msgs)
+
 
 def main():
     root = _root_dir()
@@ -284,6 +325,7 @@ def main():
     res = validate_l6_outputs(cfg_path)
     for m in res.messages:
         print(m)
+
 
 if __name__ == "__main__":
     main()

@@ -1,14 +1,11 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/validation/check_stage0_stage1_completion.py
 """
 Stage0/Stage1 완료 점검 스크립트
 """
-import os
 import re
-import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 # 프로젝트 루트
 BASE_DIR = Path(r"C:\Users\seong\OneDrive\Desktop\bootcamp\03_code")
@@ -38,7 +35,8 @@ REQUIRED_REPORTS = [
     ("delta", "delta_report__{baseline_tag}__vs__{tag}.md"),
 ]
 
-def find_stage_tags() -> Tuple[Optional[str], Optional[str]]:
+
+def find_stage_tags() -> tuple[Optional[str], Optional[str]]:
     """Stage0/Stage1 태그 자동 탐지"""
     interim_dir = BASE_DIR / "data" / "interim"
 
@@ -71,11 +69,13 @@ def find_stage_tags() -> Tuple[Optional[str], Optional[str]]:
 
     return stage0_tag, stage1_tag
 
+
 def check_file_exists(filepath: Path) -> bool:
     """파일 존재 여부 확인"""
     return filepath.exists() and filepath.is_file()
 
-def check_reports(tag: str, baseline_tag: str) -> Dict[str, bool]:
+
+def check_reports(tag: str, baseline_tag: str) -> dict[str, bool]:
     """필수 리포트 파일 존재 체크"""
     results = {}
 
@@ -88,7 +88,8 @@ def check_reports(tag: str, baseline_tag: str) -> Dict[str, bool]:
 
     return results
 
-def check_artifacts(tag: str) -> Dict[str, bool]:
+
+def check_artifacts(tag: str) -> dict[str, bool]:
     """필수 산출물(parquet) 존재 체크"""
     results = {}
     interim_dir = BASE_DIR / "data" / "interim" / tag
@@ -99,7 +100,8 @@ def check_artifacts(tag: str) -> Dict[str, bool]:
 
     return results
 
-def check_l2_reuse() -> Dict[str, any]:
+
+def check_l2_reuse() -> dict[str, any]:
     """L2 재무 재사용 규칙 체크"""
     results = {
         "root_file_exists": False,
@@ -114,7 +116,8 @@ def check_l2_reuse() -> Dict[str, any]:
 
     return results
 
-def check_legacy_root_save() -> Dict[str, any]:
+
+def check_legacy_root_save() -> dict[str, any]:
     """legacy-root-save 감지"""
     results = {
         "suspected": False,
@@ -146,15 +149,16 @@ def check_legacy_root_save() -> Dict[str, any]:
 
     return results
 
+
 def format_markdown_report(
     stage0_tag: Optional[str],
     stage1_tag: Optional[str],
-    stage0_reports: Dict[str, bool],
-    stage1_reports: Dict[str, bool],
-    stage0_artifacts: Dict[str, bool],
-    stage1_artifacts: Dict[str, bool],
-    l2_check: Dict[str, any],
-    legacy_check: Dict[str, any],
+    stage0_reports: dict[str, bool],
+    stage1_reports: dict[str, bool],
+    stage0_artifacts: dict[str, bool],
+    stage1_artifacts: dict[str, bool],
+    l2_check: dict[str, any],
+    legacy_check: dict[str, any],
 ) -> str:
     """Markdown 형식 보고서 생성"""
     lines = []
@@ -251,7 +255,9 @@ def format_markdown_report(
                     missing_stage0.append(filename)
             lines.append("")
             lines.append("**참고**: 루트에 파일이 있지만 태그 디렉토리가 없습니다.")
-            lines.append("`--legacy-root-save` 모드로 실행되었거나 `--run-tag` 옵션이 사용되지 않은 것으로 보입니다.")
+            lines.append(
+                "`--legacy-root-save` 모드로 실행되었거나 `--run-tag` 옵션이 사용되지 않은 것으로 보입니다."
+            )
             lines.append("")
         else:
             lines.append("[FAIL] **태그 없음** - 산출물 체크 불가")
@@ -295,7 +301,9 @@ def format_markdown_report(
                     missing_stage1.append(filename)
             lines.append("")
             lines.append("**참고**: 루트에 파일이 있지만 태그 디렉토리가 없습니다.")
-            lines.append("`--legacy-root-save` 모드로 실행되었거나 `--run-tag` 옵션이 사용되지 않은 것으로 보입니다.")
+            lines.append(
+                "`--legacy-root-save` 모드로 실행되었거나 `--run-tag` 옵션이 사용되지 않은 것으로 보입니다."
+            )
             lines.append("")
         else:
             lines.append("[FAIL] **태그 없음** - 산출물 체크 불가")
@@ -307,7 +315,7 @@ def format_markdown_report(
     lines.append("")
 
     if l2_check["root_file_exists"]:
-        lines.append(f"[OK] **PASS**: 루트 파일 존재")
+        lines.append("[OK] **PASS**: 루트 파일 존재")
         lines.append(f"   - 경로: `{l2_check['root_file_path']}`")
         lines.append("")
         lines.append("**참고**: L2 재사용 규칙에 따라 `fundamentals_annual.parquet`는")
@@ -315,7 +323,9 @@ def format_markdown_report(
         lines.append("")
     else:
         lines.append("[FAIL] **FAIL**: 루트 파일 없음")
-        lines.append(f"   - 예상 경로: `{BASE_DIR / 'data' / 'interim' / 'fundamentals_annual.parquet'}`")
+        lines.append(
+            f"   - 예상 경로: `{BASE_DIR / 'data' / 'interim' / 'fundamentals_annual.parquet'}`"
+        )
         lines.append("")
 
     # [5] Legacy Root Save 감지
@@ -325,7 +335,9 @@ def format_markdown_report(
     if legacy_check["suspected"]:
         lines.append("[WARN] **LEGACY_ROOT_SAVE_SUSPECTED**")
         lines.append("")
-        lines.append(f"- 루트 parquet 파일 개수: {legacy_check['root_artifacts_count']}")
+        lines.append(
+            f"- 루트 parquet 파일 개수: {legacy_check['root_artifacts_count']}"
+        )
         lines.append(f"- 누락 태그: {', '.join(legacy_check['missing_tags'])}")
         lines.append("")
         lines.append("**의미**: `--legacy-root-save` 모드로 실행되었거나,")
@@ -341,12 +353,14 @@ def format_markdown_report(
 
     # Stage0 판정
     stage0_completed = (
-        stage0_tag is not None and
-        all(stage0_reports.values()) and
-        all(stage0_artifacts.values())
+        stage0_tag is not None
+        and all(stage0_reports.values())
+        and all(stage0_artifacts.values())
     )
 
-    lines.append(f"### Stage0: {'[OK] **COMPLETED**' if stage0_completed else '[FAIL] **NOT COMPLETED**'}")
+    lines.append(
+        f"### Stage0: {'[OK] **COMPLETED**' if stage0_completed else '[FAIL] **NOT COMPLETED**'}"
+    )
     lines.append("")
 
     if stage0_completed:
@@ -362,18 +376,22 @@ def format_markdown_report(
             missing_reports = [f for f, exists in stage0_reports.items() if not exists]
             lines.append(f"- 리포트 파일 누락: {', '.join(missing_reports)}")
         if stage0_tag and not all(stage0_artifacts.values()):
-            missing_artifacts = [f for f, exists in stage0_artifacts.items() if not exists]
+            missing_artifacts = [
+                f for f, exists in stage0_artifacts.items() if not exists
+            ]
             lines.append(f"- 산출물 누락: {', '.join(missing_artifacts)}")
         lines.append("")
 
     # Stage1 판정
     stage1_completed = (
-        stage1_tag is not None and
-        all(stage1_reports.values()) and
-        all(stage1_artifacts.values())
+        stage1_tag is not None
+        and all(stage1_reports.values())
+        and all(stage1_artifacts.values())
     )
 
-    lines.append(f"### Stage1: {'[OK] **COMPLETED**' if stage1_completed else '[FAIL] **NOT COMPLETED**'}")
+    lines.append(
+        f"### Stage1: {'[OK] **COMPLETED**' if stage1_completed else '[FAIL] **NOT COMPLETED**'}"
+    )
     lines.append("")
 
     if stage1_completed:
@@ -389,13 +407,17 @@ def format_markdown_report(
             missing_reports = [f for f, exists in stage1_reports.items() if not exists]
             lines.append(f"- 리포트 파일 누락: {', '.join(missing_reports)}")
         if stage1_tag and not all(stage1_artifacts.values()):
-            missing_artifacts = [f for f, exists in stage1_artifacts.items() if not exists]
+            missing_artifacts = [
+                f for f, exists in stage1_artifacts.items() if not exists
+            ]
             lines.append(f"- 산출물 누락: {', '.join(missing_artifacts)}")
         lines.append("")
 
     # L2 재사용 규칙 판정
     l2_pass = l2_check["root_file_exists"]
-    lines.append(f"### L2 재무 재사용 규칙 준수: {'[OK] **PASS**' if l2_pass else '[FAIL] **FAIL**'}")
+    lines.append(
+        f"### L2 재무 재사용 규칙 준수: {'[OK] **PASS**' if l2_pass else '[FAIL] **FAIL**'}"
+    )
     lines.append("")
 
     if l2_pass:
@@ -406,6 +428,7 @@ def format_markdown_report(
         lines.append("")
 
     return "\n".join(lines)
+
 
 def main():
     """메인 함수"""
@@ -456,15 +479,15 @@ def main():
     print()
 
     stage0_completed = (
-        stage0_tag is not None and
-        all(stage0_reports.values()) and
-        all(stage0_artifacts.values())
+        stage0_tag is not None
+        and all(stage0_reports.values())
+        and all(stage0_artifacts.values())
     )
 
     stage1_completed = (
-        stage1_tag is not None and
-        all(stage1_reports.values()) and
-        all(stage1_artifacts.values())
+        stage1_tag is not None
+        and all(stage1_reports.values())
+        and all(stage1_artifacts.values())
     )
 
     l2_pass = l2_check["root_file_exists"]
@@ -491,11 +514,19 @@ def main():
     if not stage0_completed or not stage1_completed:
         print("2. KPI/Delta 생성 스크립트 실행 필요: YES")
         if stage0_tag and not all(stage0_reports.values()):
-            print(f"   - Stage0: python src\\tools\\export_kpi_table.py --config configs\\config.yaml --tag {stage0_tag}")
-            print(f"   - Stage0: python src\\tools\\build_kpi_delta.py --baseline-tag {BASELINE_TAG} --tag {stage0_tag}")
+            print(
+                f"   - Stage0: python src\\tools\\export_kpi_table.py --config configs\\config.yaml --tag {stage0_tag}"
+            )
+            print(
+                f"   - Stage0: python src\\tools\\build_kpi_delta.py --baseline-tag {BASELINE_TAG} --tag {stage0_tag}"
+            )
         if stage1_tag and not all(stage1_reports.values()):
-            print(f"   - Stage1: python src\\tools\\export_kpi_table.py --config configs\\config.yaml --tag {stage1_tag}")
-            print(f"   - Stage1: python src\\tools\\build_kpi_delta.py --baseline-tag {BASELINE_TAG} --tag {stage1_tag}")
+            print(
+                f"   - Stage1: python src\\tools\\export_kpi_table.py --config configs\\config.yaml --tag {stage1_tag}"
+            )
+            print(
+                f"   - Stage1: python src\\tools\\build_kpi_delta.py --baseline-tag {BASELINE_TAG} --tag {stage1_tag}"
+            )
     else:
         print("2. KPI/Delta 생성 스크립트 실행 필요: NO (이미 완료됨)")
 
@@ -507,6 +538,7 @@ def main():
         print("3. L2 재사용 규칙 위반 여부: NO (정상)")
 
     print()
+
 
 if __name__ == "__main__":
     main()

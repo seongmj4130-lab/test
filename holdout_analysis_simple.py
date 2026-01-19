@@ -12,7 +12,7 @@ import yaml
 
 def main():
     print("📈 HOLDOUT 기간 시장 특성 분석 (2023.01-2024.12)")
-    print("="*60)
+    print("=" * 60)
 
     # HOLDOUT 데이터 분석
     monthly_path = "data/ui_strategies_cumulative_comparison.csv"
@@ -25,8 +25,8 @@ def main():
     # 월별 수익률 계산
     kospi_monthly = []
     for i in range(1, len(df)):
-        prev = df['kospi200'].iloc[i-1]
-        curr = df['kospi200'].iloc[i]
+        prev = df["kospi200"].iloc[i - 1]
+        curr = df["kospi200"].iloc[i]
         monthly_return = curr - prev
         kospi_monthly.append(monthly_return)
 
@@ -65,10 +65,20 @@ def main():
     bull_mask = kospi_monthly > 0
     bear_mask = kospi_monthly < 0
 
-    strategies = ['bt20_단기', 'bt20_앙상블', 'bt120_장기']
-    col_names = ['bt20_단기_cumulative_log_return', 'bt20_앙상블_cumulative_log_return', 'bt120_장기_cumulative_log_return']
+    strategies = ["bt20_단기", "bt20_앙상블", "bt120_장기"]
+    col_names = [
+        "bt20_단기_cumulative_log_return",
+        "bt20_앙상블_cumulative_log_return",
+        "bt120_장기_cumulative_log_return",
+    ]
 
-    print("구분".ljust(10), "KOSPI".ljust(8), "단기".ljust(8), "통합".ljust(8), "장기".ljust(8))
+    print(
+        "구분".ljust(10),
+        "KOSPI".ljust(8),
+        "단기".ljust(8),
+        "통합".ljust(8),
+        "장기".ljust(8),
+    )
     print("-" * 50)
 
     # 상승장 성과
@@ -77,7 +87,7 @@ def main():
     for col in col_names:
         strategy_monthly = []
         for i in range(1, len(df)):
-            prev = df[col].iloc[i-1]
+            prev = df[col].iloc[i - 1]
             curr = df[col].iloc[i]
             monthly_return = curr - prev
             strategy_monthly.append(monthly_return)
@@ -93,7 +103,7 @@ def main():
     for col in col_names:
         strategy_monthly = []
         for i in range(1, len(df)):
-            prev = df[col].iloc[i-1]
+            prev = df[col].iloc[i - 1]
             curr = df[col].iloc[i]
             monthly_return = curr - prev
             strategy_monthly.append(monthly_return)
@@ -113,32 +123,34 @@ def main():
 
     print("\n✅ HOLDOUT 기간 특성 분석 및 전략 반영 완료!")
 
+
 def update_holdout_config():
     """HOLDOUT 특성 기반 설정 업데이트"""
-    config_path = 'configs/config.yaml'
+    config_path = "configs/config.yaml"
 
     try:
         if Path(config_path).exists():
-            with open(config_path, 'r', encoding='utf-8') as f:
+            with open(config_path, encoding="utf-8") as f:
                 config = yaml.safe_load(f)
         else:
             config = {}
 
         # HOLDOUT 특성 추가
-        config['holdout_characteristics'] = {
-            'period': '2023.01-2024.12',
-            'bull_months_ratio': 0.43,
-            'bear_months_ratio': 0.48,
-            'recommended_strategy': 'regime_adaptive'
+        config["holdout_characteristics"] = {
+            "period": "2023.01-2024.12",
+            "bull_months_ratio": 0.43,
+            "bear_months_ratio": 0.48,
+            "recommended_strategy": "regime_adaptive",
         }
 
-        with open(config_path, 'w', encoding='utf-8') as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             yaml.dump(config, f, default_flow_style=False, allow_unicode=True, indent=2)
 
         print("✅ HOLDOUT 특성이 config.yaml에 반영되었습니다.")
 
     except Exception as e:
         print(f"❌ 설정 업데이트 실패: {e}")
+
 
 if __name__ == "__main__":
     main()

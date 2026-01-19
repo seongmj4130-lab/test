@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 """
@@ -21,7 +20,6 @@ import argparse
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import List
 
 KEEP_NAMES = {"README.md", "final_outputs"}
 
@@ -30,7 +28,7 @@ def _now_tag() -> str:
     return datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
-def cleanup_06_code22_to_outputs_only(target_root: Path) -> List[Path]:
+def cleanup_06_code22_to_outputs_only(target_root: Path) -> list[Path]:
     """
     [개선안 44번] 06_code22 루트를 정리한다(archive 이동).
 
@@ -45,7 +43,7 @@ def cleanup_06_code22_to_outputs_only(target_root: Path) -> List[Path]:
         raise FileNotFoundError(f"target_root not found: {target_root}")
 
     archive_dir = target_root / f"_archive_pre_outputs_{_now_tag()}"
-    moved: List[Path] = []
+    moved: list[Path] = []
 
     for p in target_root.iterdir():
         name = p.name
@@ -75,7 +73,9 @@ def cleanup_06_code22_to_outputs_only(target_root: Path) -> List[Path]:
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description="06_code22를 최종 산출물 저장소로 정리(archive 이동)")
+    p = argparse.ArgumentParser(
+        description="06_code22를 최종 산출물 저장소로 정리(archive 이동)"
+    )
     p.add_argument("--target", dest="target", default=r"..\06_code22")
     return p
 
@@ -88,5 +88,3 @@ if __name__ == "__main__":
         print("-", m)
     if len(moved) > 20:
         print(f"... (+{len(moved)-20} more)")
-
-

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 targets_and_folds.parquet 생성 스크립트
 

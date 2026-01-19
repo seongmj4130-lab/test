@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/run_stage_pipeline.py
 """
 [Cursor 실행형 코드매니저] Stage 실행 통합 파이프라인
@@ -14,13 +13,14 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Optional
 
 import pandas as pd
 import yaml
 
 # 프로젝트 루트 고정
 PROJECT_ROOT = Path(r"C:\Users\seong\OneDrive\Desktop\bootcamp\03_code")
+
 
 def get_file_hash(filepath: Path) -> str:
     """파일의 SHA256 해시 계산"""
@@ -32,10 +32,12 @@ def get_file_hash(filepath: Path) -> str:
             sha256_hash.update(byte_block)
     return sha256_hash.hexdigest()
 
+
 def load_config(config_path: Path) -> dict:
     """YAML 설정 파일 로드"""
-    with open(config_path, 'r', encoding='utf-8') as f:
+    with open(config_path, encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
+
 
 def get_base_dir(cfg: dict) -> Path:
     """config에서 base_dir 추출 및 경로 버그 방지"""
@@ -56,6 +58,7 @@ def get_base_dir(cfg: dict) -> Path:
         raise ValueError(f"base_dir은 절대 경로여야 합니다: {base_dir}")
 
     return base_dir
+
 
 def detect_global_baseline(base_dir: Path) -> Optional[str]:
     """
@@ -90,6 +93,7 @@ def detect_global_baseline(base_dir: Path) -> Optional[str]:
         print(f"[WARNING] Global baseline 탐지 실패: {e}", file=sys.stderr)
         return None
 
+
 def detect_prev_stage_baseline(base_dir: Path, stage: int) -> Optional[str]:
     """
     직전 Stage baseline 탐지: 같은 Stage 번호의 최신 run_tag
@@ -120,7 +124,10 @@ def detect_prev_stage_baseline(base_dir: Path, stage: int) -> Optional[str]:
     except Exception:
         return None
 
-def verify_l2_hash(base_interim_dir: Path, stage: int) -> Tuple[bool, str, Optional[str]]:
+
+def verify_l2_hash(
+    base_interim_dir: Path, stage: int
+) -> tuple[bool, str, Optional[str]]:
     """
     L2 파일 해시 검증 (재사용 규칙 준수)
 
@@ -144,12 +151,10 @@ def verify_l2_hash(base_interim_dir: Path, stage: int) -> Tuple[bool, str, Optio
         # Stage2 실행 후: L2 파일이 변경되지 않았는지 확인
         return True, f"L2 파일 해시 검증 완료 (해시: {hash_value[:16]}...)", hash_value
 
+
 def run_command(
-    cmd: List[str],
-    cwd: Path,
-    description: str,
-    check_returncode: bool = True
-) -> Tuple[int, str, str]:
+    cmd: list[str], cwd: Path, description: str, check_returncode: bool = True
+) -> tuple[int, str, str]:
     """명령어 실행 및 결과 반환"""
     print(f"\n{'='*60}")
     print(f"[{description}]")
@@ -163,8 +168,8 @@ def run_command(
             cwd=str(cwd),
             capture_output=True,
             text=True,
-            encoding='utf-8',
-            errors='replace'
+            encoding="utf-8",
+            errors="replace",
         )
 
         if result.stdout:
@@ -183,6 +188,7 @@ def run_command(
         print(f"\n[ERROR] [{description}] Exception: {e}")
         return 1, "", str(e)
 
+
 def verify_artifact_exists(file_path: Path, description: str) -> bool:
     """산출물 파일 존재 확인"""
     if file_path.exists():
@@ -193,35 +199,50 @@ def verify_artifact_exists(file_path: Path, description: str) -> bool:
         print(f"[MISSING] {description}: NOT FOUND - {file_path}")
         return False
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="[Cursor 실행형 코드매니저] Stage 실행 통합 파이프라인"
     )
-    parser.add_argument("--stage", type=int, required=True,
-                       help="Stage 번호 (0-13)")
-    parser.add_argument("--run-tag", type=str, default=None,
-                       help="Run tag (없으면 자동 생성)")
-    parser.add_argument("--baseline-tag", type=str, default=None,
-                       help="Baseline tag (직전 Stage, 없으면 자동 탐지)")
-    parser.add_argument("--global-baseline-tag", type=str, default=None,
-                       help="Global baseline tag (Stage12 최신, 없으면 자동 탐지)")
-    parser.add_argument("--config", type=str, default="configs/config.yaml",
-                       help="Config 파일 경로")
-    parser.add_argument("--skip-stage", action="store_true",
-                       help="Stage 실행 건너뛰기 (리포트만 생성)")
-    parser.add_argument("--skip-kpi", action="store_true",
-                       help="KPI 생성 건너뛰기")
-    parser.add_argument("--skip-delta", action="store_true",
-                       help="Delta 리포트 생성 건너뛰기")
-    parser.add_argument("--skip-check", action="store_true",
-                       help="Stage Check 리포트 생성 건너뛰기")
-    parser.add_argument("--skip-history", action="store_true",
-                       help="History Manifest 업데이트 건너뛰기")
+    parser.add_argument("--stage", type=int, required=True, help="Stage 번호 (0-13)")
+    parser.add_argument(
+        "--run-tag", type=str, default=None, help="Run tag (없으면 자동 생성)"
+    )
+    parser.add_argument(
+        "--baseline-tag",
+        type=str,
+        default=None,
+        help="Baseline tag (직전 Stage, 없으면 자동 탐지)",
+    )
+    parser.add_argument(
+        "--global-baseline-tag",
+        type=str,
+        default=None,
+        help="Global baseline tag (Stage12 최신, 없으면 자동 탐지)",
+    )
+    parser.add_argument(
+        "--config", type=str, default="configs/config.yaml", help="Config 파일 경로"
+    )
+    parser.add_argument(
+        "--skip-stage", action="store_true", help="Stage 실행 건너뛰기 (리포트만 생성)"
+    )
+    parser.add_argument("--skip-kpi", action="store_true", help="KPI 생성 건너뛰기")
+    parser.add_argument(
+        "--skip-delta", action="store_true", help="Delta 리포트 생성 건너뛰기"
+    )
+    parser.add_argument(
+        "--skip-check", action="store_true", help="Stage Check 리포트 생성 건너뛰기"
+    )
+    parser.add_argument(
+        "--skip-history", action="store_true", help="History Manifest 업데이트 건너뛰기"
+    )
     args = parser.parse_args()
 
     # 프로젝트 루트 확인
     if not PROJECT_ROOT.exists():
-        print(f"ERROR: 프로젝트 루트가 존재하지 않습니다: {PROJECT_ROOT}", file=sys.stderr)
+        print(
+            f"ERROR: 프로젝트 루트가 존재하지 않습니다: {PROJECT_ROOT}", file=sys.stderr
+        )
         sys.exit(1)
 
     # Config 로드
@@ -235,7 +256,10 @@ def main():
 
     # 바탕 화면 경로 문제 최종 체크
     if "바탕 화면" in str(base_dir):
-        print(f"ERROR: base_dir에 '바탕 화면'이 포함되어 있습니다: {base_dir}", file=sys.stderr)
+        print(
+            f"ERROR: base_dir에 '바탕 화면'이 포함되어 있습니다: {base_dir}",
+            file=sys.stderr,
+        )
         print("config.yaml의 paths.base_dir을 수정하세요.", file=sys.stderr)
         sys.exit(1)
 
@@ -271,16 +295,16 @@ def main():
     logs_dir = base_dir / "reports" / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("[Cursor 실행형 코드매니저] Stage 실행 통합 파이프라인")
-    print("="*60)
+    print("=" * 60)
     print(f"프로젝트 루트: {base_dir}")
     print(f"Stage: {args.stage}")
     print(f"Run Tag: {run_tag}")
     print(f"Baseline Tag (직전): {baseline_tag or 'N/A'}")
     print(f"Global Baseline Tag: {global_baseline_tag or 'N/A'}")
     print(f"Track: {track}")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     # ============================================================
     # 0) L2 해시 검증 (Stage 실행 전)
@@ -292,7 +316,7 @@ def main():
     print(f"L2 검증 (실행 전): {l2_msg_before}")
 
     if not l2_valid_before and args.stage != 2:
-        print(f"WARNING: L2 파일이 없습니다. Stage2를 먼저 실행하세요.")
+        print("WARNING: L2 파일이 없습니다. Stage2를 먼저 실행하세요.")
 
     # ============================================================
     # 1) Stage 실행
@@ -311,16 +335,20 @@ def main():
             stage_cmd = [
                 sys.executable,
                 str(stage_script),
-                "--config", args.config,
-                "--run-tag", run_tag,
+                "--config",
+                args.config,
+                "--run-tag",
+                run_tag,
             ]
         else:
             # run_all.py 사용
             stage_cmd = [
                 sys.executable,
                 str(base_dir / "src" / "run_all.py"),
-                "--config", args.config,
-                "--run-tag", run_tag,
+                "--config",
+                args.config,
+                "--run-tag",
+                run_tag,
                 "--force-rebuild",  # skip_if_exists 무시
             ]
 
@@ -354,7 +382,7 @@ def main():
             stage_cmd,
             cwd=base_dir,
             description=f"Stage {args.stage} 실행",
-            check_returncode=True
+            check_returncode=True,
         )
 
         if returncode != 0:
@@ -375,7 +403,7 @@ def main():
     # L2 해시 비교 (Stage2가 아니면 변경되지 않아야 함)
     if args.stage != 2 and l2_hash_before and l2_hash_after:
         if l2_hash_before != l2_hash_after:
-            print(f"ERROR: L2 파일이 변경되었습니다!", file=sys.stderr)
+            print("ERROR: L2 파일이 변경되었습니다!", file=sys.stderr)
             print(f"  실행 전: {l2_hash_before[:16]}...", file=sys.stderr)
             print(f"  실행 후: {l2_hash_after[:16]}...", file=sys.stderr)
             sys.exit(1)
@@ -391,15 +419,14 @@ def main():
         kpi_cmd = [
             sys.executable,
             str(base_dir / "src" / "tools" / "export_kpi_table.py"),
-            "--config", args.config,
-            "--tag", run_tag,
+            "--config",
+            args.config,
+            "--tag",
+            run_tag,
         ]
 
         returncode, stdout, stderr = run_command(
-            kpi_cmd,
-            cwd=base_dir,
-            description="KPI 테이블 생성",
-            check_returncode=True
+            kpi_cmd, cwd=base_dir, description="KPI 테이블 생성", check_returncode=True
         )
 
         if returncode != 0:
@@ -421,7 +448,9 @@ def main():
         print("\n[4/7] Δ 리포트 생성 중...")
 
         # Baseline KPI 확인 및 생성
-        baseline_kpi_csv = base_dir / "reports" / "kpi" / f"kpi_table__{baseline_tag}.csv"
+        baseline_kpi_csv = (
+            base_dir / "reports" / "kpi" / f"kpi_table__{baseline_tag}.csv"
+        )
         if baseline_tag and not baseline_kpi_csv.exists():
             print(f"\n[WARNING] Baseline KPI가 없습니다: {baseline_kpi_csv}")
             print("   Baseline KPI를 먼저 생성합니다...")
@@ -429,37 +458,45 @@ def main():
             baseline_kpi_cmd = [
                 sys.executable,
                 str(base_dir / "src" / "tools" / "export_kpi_table.py"),
-                "--config", args.config,
-                "--tag", baseline_tag,
+                "--config",
+                args.config,
+                "--tag",
+                baseline_tag,
             ]
 
             returncode, _, _ = run_command(
                 baseline_kpi_cmd,
                 cwd=base_dir,
                 description="Baseline KPI 생성",
-                check_returncode=False
+                check_returncode=False,
             )
 
         # Global baseline KPI 확인 및 생성
         global_baseline_kpi_csv = None
         if global_baseline_tag and global_baseline_tag != baseline_tag:
-            global_baseline_kpi_csv = base_dir / "reports" / "kpi" / f"kpi_table__{global_baseline_tag}.csv"
+            global_baseline_kpi_csv = (
+                base_dir / "reports" / "kpi" / f"kpi_table__{global_baseline_tag}.csv"
+            )
             if not global_baseline_kpi_csv.exists():
-                print(f"\n[WARNING] Global Baseline KPI가 없습니다: {global_baseline_kpi_csv}")
+                print(
+                    f"\n[WARNING] Global Baseline KPI가 없습니다: {global_baseline_kpi_csv}"
+                )
                 print("   Global Baseline KPI를 먼저 생성합니다...")
 
                 global_baseline_kpi_cmd = [
                     sys.executable,
                     str(base_dir / "src" / "tools" / "export_kpi_table.py"),
-                    "--config", args.config,
-                    "--tag", global_baseline_tag,
+                    "--config",
+                    args.config,
+                    "--tag",
+                    global_baseline_tag,
                 ]
 
                 returncode, _, _ = run_command(
                     global_baseline_kpi_cmd,
                     cwd=base_dir,
                     description="Global Baseline KPI 생성",
-                    check_returncode=False
+                    check_returncode=False,
                 )
 
         # Delta 리포트 생성 (직전 baseline)
@@ -467,19 +504,26 @@ def main():
             delta_cmd = [
                 sys.executable,
                 str(base_dir / "src" / "tools" / "export_delta_report.py"),
-                "--baseline-tag", baseline_tag,
-                "--run-tag", run_tag,
+                "--baseline-tag",
+                baseline_tag,
+                "--run-tag",
+                run_tag,
             ]
 
             returncode, stdout, stderr = run_command(
                 delta_cmd,
                 cwd=base_dir,
                 description=f"Δ 리포트 생성 (직전 baseline: {baseline_tag})",
-                check_returncode=True
+                check_returncode=True,
             )
 
             if returncode == 0:
-                delta_csv = base_dir / "reports" / "delta" / f"delta_kpi__{baseline_tag}__vs__{run_tag}.csv"
+                delta_csv = (
+                    base_dir
+                    / "reports"
+                    / "delta"
+                    / f"delta_kpi__{baseline_tag}__vs__{run_tag}.csv"
+                )
                 verify_artifact_exists(delta_csv, "Delta CSV (직전 baseline)")
 
         # Delta 리포트 생성 (Global baseline)
@@ -488,20 +532,29 @@ def main():
                 global_delta_cmd = [
                     sys.executable,
                     str(base_dir / "src" / "tools" / "export_delta_report.py"),
-                    "--baseline-tag", global_baseline_tag,
-                    "--run-tag", run_tag,
+                    "--baseline-tag",
+                    global_baseline_tag,
+                    "--run-tag",
+                    run_tag,
                 ]
 
                 returncode, stdout, stderr = run_command(
                     global_delta_cmd,
                     cwd=base_dir,
                     description=f"Δ 리포트 생성 (Global baseline: {global_baseline_tag})",
-                    check_returncode=False  # 실패해도 계속 진행
+                    check_returncode=False,  # 실패해도 계속 진행
                 )
 
                 if returncode == 0:
-                    global_delta_csv = base_dir / "reports" / "delta" / f"delta_kpi__{global_baseline_tag}__vs__{run_tag}.csv"
-                    verify_artifact_exists(global_delta_csv, "Delta CSV (Global baseline)")
+                    global_delta_csv = (
+                        base_dir
+                        / "reports"
+                        / "delta"
+                        / f"delta_kpi__{global_baseline_tag}__vs__{run_tag}.csv"
+                    )
+                    verify_artifact_exists(
+                        global_delta_csv, "Delta CSV (Global baseline)"
+                    )
     else:
         print("\n⏭️  Δ 리포트 생성 건너뛰기 (--skip-delta)")
 
@@ -514,24 +567,33 @@ def main():
         check_cmd = [
             sys.executable,
             str(base_dir / "src" / "tools" / "check_stage_completion.py"),
-            "--config", args.config,
-            "--run-tag", run_tag,
-            "--stage", str(args.stage),
-            "--baseline-tag", baseline_tag or "",
+            "--config",
+            args.config,
+            "--run-tag",
+            run_tag,
+            "--stage",
+            str(args.stage),
+            "--baseline-tag",
+            baseline_tag or "",
         ]
 
         returncode, stdout, stderr = run_command(
             check_cmd,
             cwd=base_dir,
             description="Stage 체크리포트 생성",
-            check_returncode=False  # 실패해도 계속 진행
+            check_returncode=False,  # 실패해도 계속 진행
         )
 
         if returncode == 0:
-            check_report = base_dir / "reports" / "stages" / f"check__stage{args.stage}__{run_tag}.md"
+            check_report = (
+                base_dir
+                / "reports"
+                / "stages"
+                / f"check__stage{args.stage}__{run_tag}.md"
+            )
             verify_artifact_exists(check_report, "체크리포트")
         else:
-            print(f"[WARNING] 체크리포트 생성 실패 (계속 진행)")
+            print("[WARNING] 체크리포트 생성 실패 (계속 진행)")
     else:
         print("\n⏭️  체크리포트 생성 건너뛰기 (--skip-check)")
 
@@ -544,34 +606,41 @@ def main():
         history_cmd = [
             sys.executable,
             str(base_dir / "src" / "tools" / "update_history_manifest.py"),
-            "--config", args.config,
-            "--stage", str(args.stage),
-            "--track", track,
-            "--run-tag", run_tag,
-            "--baseline-tag", baseline_tag or "",
+            "--config",
+            args.config,
+            "--stage",
+            str(args.stage),
+            "--track",
+            track,
+            "--run-tag",
+            run_tag,
+            "--baseline-tag",
+            baseline_tag or "",
         ]
 
         returncode, stdout, stderr = run_command(
             history_cmd,
             cwd=base_dir,
             description="History Manifest 업데이트",
-            check_returncode=False  # 실패해도 계속 진행
+            check_returncode=False,  # 실패해도 계속 진행
         )
 
         if returncode == 0:
-            history_manifest = base_dir / "reports" / "history" / "history_manifest.parquet"
+            history_manifest = (
+                base_dir / "reports" / "history" / "history_manifest.parquet"
+            )
             verify_artifact_exists(history_manifest, "History Manifest")
         else:
-            print(f"[WARNING] History Manifest 업데이트 실패 (계속 진행)")
+            print("[WARNING] History Manifest 업데이트 실패 (계속 진행)")
     else:
         print("\n⏭️  History Manifest 업데이트 건너뛰기 (--skip-history)")
 
     # ============================================================
     # 7) 최종 요약 출력
     # ============================================================
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("[7/7] 최종 요약")
-    print("="*60)
+    print("=" * 60)
 
     outputs = []
 
@@ -580,19 +649,18 @@ def main():
     if interim_dir.exists():
         parquet_files = list(interim_dir.glob("*.parquet"))
         csv_files = list(interim_dir.glob("*.csv"))
-        outputs.append((
-            "산출물 (interim)",
-            f"{interim_dir} ({len(parquet_files)} parquet, {len(csv_files)} csv)"
-        ))
+        outputs.append(
+            (
+                "산출물 (interim)",
+                f"{interim_dir} ({len(parquet_files)} parquet, {len(csv_files)} csv)",
+            )
+        )
 
     # L2 파일 (base_interim_dir에 있음)
     l2_file = base_interim_dir / "fundamentals_annual.parquet"
     if l2_file.exists():
         l2_hash_short = l2_hash_after[:16] if l2_hash_after else "N/A"
-        outputs.append((
-            "L2 파일 (재사용)",
-            f"{l2_file} (해시: {l2_hash_short}...)"
-        ))
+        outputs.append(("L2 파일 (재사용)", f"{l2_file} (해시: {l2_hash_short}...)"))
 
     # KPI 리포트
     kpi_csv = base_dir / "reports" / "kpi" / f"kpi_table__{run_tag}.csv"
@@ -604,23 +672,45 @@ def main():
 
     # Delta 리포트
     if baseline_tag:
-        delta_csv = base_dir / "reports" / "delta" / f"delta_kpi__{baseline_tag}__vs__{run_tag}.csv"
-        delta_md = base_dir / "reports" / "delta" / f"delta_report__{baseline_tag}__vs__{run_tag}.md"
+        delta_csv = (
+            base_dir
+            / "reports"
+            / "delta"
+            / f"delta_kpi__{baseline_tag}__vs__{run_tag}.csv"
+        )
+        delta_md = (
+            base_dir
+            / "reports"
+            / "delta"
+            / f"delta_report__{baseline_tag}__vs__{run_tag}.md"
+        )
         if delta_csv.exists():
             outputs.append(("Delta CSV (직전)", str(delta_csv)))
         if delta_md.exists():
             outputs.append(("Delta MD (직전)", str(delta_md)))
 
     if global_baseline_tag and global_baseline_tag != baseline_tag:
-        global_delta_csv = base_dir / "reports" / "delta" / f"delta_kpi__{global_baseline_tag}__vs__{run_tag}.csv"
-        global_delta_md = base_dir / "reports" / "delta" / f"delta_report__{global_baseline_tag}__vs__{run_tag}.md"
+        global_delta_csv = (
+            base_dir
+            / "reports"
+            / "delta"
+            / f"delta_kpi__{global_baseline_tag}__vs__{run_tag}.csv"
+        )
+        global_delta_md = (
+            base_dir
+            / "reports"
+            / "delta"
+            / f"delta_report__{global_baseline_tag}__vs__{run_tag}.md"
+        )
         if global_delta_csv.exists():
             outputs.append(("Delta CSV (Global)", str(global_delta_csv)))
         if global_delta_md.exists():
             outputs.append(("Delta MD (Global)", str(global_delta_md)))
 
     # 체크리포트
-    check_report = base_dir / "reports" / "stages" / f"check__stage{args.stage}__{run_tag}.md"
+    check_report = (
+        base_dir / "reports" / "stages" / f"check__stage{args.stage}__{run_tag}.md"
+    )
     if check_report.exists():
         outputs.append(("체크리포트", str(check_report)))
 
@@ -634,15 +724,16 @@ def main():
         print(f"{i}) {desc}:")
         print(f"   {path}")
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("[OK] 모든 단계 완료")
-    print("="*60)
+    print("=" * 60)
     print(f"\n[PASS] Stage {args.stage} 완료")
     print(f"Run Tag: {run_tag}")
     print(f"Baseline Tag (직전): {baseline_tag or 'N/A'}")
     print(f"Global Baseline Tag: {global_baseline_tag or 'N/A'}")
     print(f"생성된 파일 수: {len(outputs)}개")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
+
 
 if __name__ == "__main__":
     main()

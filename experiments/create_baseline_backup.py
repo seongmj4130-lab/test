@@ -2,8 +2,6 @@ import os
 import shutil
 from datetime import datetime
 
-import pandas as pd
-
 
 def create_baseline_backup():
     """
@@ -22,20 +20,20 @@ def create_baseline_backup():
 
     # 백업할 폴더들
     folders_to_backup = [
-        'configs',      # 모든 설정 파일
-        'src',         # 모든 파이프라인 코드
-        'data',        # 현재 데이터 상태
-        'artifacts'    # 모델과 리포트
+        "configs",  # 모든 설정 파일
+        "src",  # 모든 파이프라인 코드
+        "data",  # 현재 데이터 상태
+        "artifacts",  # 모델과 리포트
     ]
 
     # 백업할 개별 파일들
     files_to_backup = [
-        'README.md',
-        'ppt_report.md',
-        'final_report.md',
-        'final_ranking_report.md',
-        'final_backtest_report.md',
-        'final_easy_report.md'
+        "README.md",
+        "ppt_report.md",
+        "final_report.md",
+        "final_ranking_report.md",
+        "final_backtest_report.md",
+        "final_easy_report.md",
     ]
 
     # 폴더 백업
@@ -129,28 +127,33 @@ def create_baseline_backup():
 - 실전 적용 전 추가 검증 필요
 """
 
-    with open(os.path.join(baseline_dir, 'BASELINE_INFO.md'), 'w', encoding='utf-8') as f:
+    with open(
+        os.path.join(baseline_dir, "BASELINE_INFO.md"), "w", encoding="utf-8"
+    ) as f:
         f.write(baseline_info)
 
     # 현재 상태 요약 생성
     current_status = {
-        'timestamp': timestamp,
-        'project_status': 'completed',
-        'track_a_performance': {
-            'short_holdout_hit_ratio': 50.99,
-            'ensemble_holdout_hit_ratio': 51.06,
-            'long_holdout_hit_ratio': 51.00
+        "timestamp": timestamp,
+        "project_status": "completed",
+        "track_a_performance": {
+            "short_holdout_hit_ratio": 50.99,
+            "ensemble_holdout_hit_ratio": 51.06,
+            "long_holdout_hit_ratio": 51.00,
         },
-        'track_b_performance': {
-            'bt20_short_sharpe': 0.914,
-            'bt20_short_cagr': 0.134,
-            'bt20_short_mdd': -0.044
-        }
+        "track_b_performance": {
+            "bt20_short_sharpe": 0.914,
+            "bt20_short_cagr": 0.134,
+            "bt20_short_mdd": -0.044,
+        },
     }
 
     # JSON으로 저장
     import json
-    with open(os.path.join(baseline_dir, 'baseline_status.json'), 'w', encoding='utf-8') as f:
+
+    with open(
+        os.path.join(baseline_dir, "baseline_status.json"), "w", encoding="utf-8"
+    ) as f:
         json.dump(current_status, f, indent=2, ensure_ascii=False)
 
     print("✅ Baseline 백업 완료!")
@@ -167,6 +170,7 @@ def create_baseline_backup():
     print("향후 변경사항은 이 baseline과 비교하여 평가할 수 있습니다.")
 
     return baseline_dir
+
 
 if __name__ == "__main__":
     create_baseline_backup()

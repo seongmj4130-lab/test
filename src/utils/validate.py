@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/utils/validate.py
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Optional
 
 import pandas as pd
 
@@ -12,18 +11,21 @@ import pandas as pd
 class ValidationError(RuntimeError):
     pass
 
+
 @dataclass
 class ValidationResult:
     ok: bool
-    errors: List[str]
-    warnings: List[str]
-    stats: Dict[str, Any]
+    errors: list[str]
+    warnings: list[str]
+    stats: dict[str, Any]
 
-def _missing_pct(df: pd.DataFrame) -> Dict[str, float]:
+
+def _missing_pct(df: pd.DataFrame) -> dict[str, float]:
     if df.empty:
         return {}
     miss = (df.isna().mean() * 100.0).sort_values(ascending=False)
     return {k: float(v) for k, v in miss.items()}
+
 
 def validate_df(
     df: pd.DataFrame,
@@ -33,12 +35,14 @@ def validate_df(
     key_cols: Sequence[str] = ("date", "ticker"),
     enforce_unique_key: bool = True,
     enforce_time_sorted: bool = True,
-    max_missing_pct: Optional[float] = None,   # e.g. 80.0 (컬럼 결측 80% 초과는 에러)
-    optional_cols: Optional[Sequence[str]] = None,  # [Stage13] 옵션 컬럼 (missing pct 체크에서 제외)
+    max_missing_pct: Optional[float] = None,  # e.g. 80.0 (컬럼 결측 80% 초과는 에러)
+    optional_cols: Optional[
+        Sequence[str]
+    ] = None,  # [Stage13] 옵션 컬럼 (missing pct 체크에서 제외)
 ) -> ValidationResult:
-    errors: List[str] = []
-    warnings: List[str] = []
-    stats: Dict[str, Any] = {}
+    errors: list[str] = []
+    warnings: list[str] = []
+    stats: dict[str, Any] = {}
 
     if df is None:
         errors.append("df is None")
@@ -72,10 +76,14 @@ def validate_df(
             tmp = tmp.sort_values(["ticker", "_date"], kind="mergesort")
 
             # ticker별 단조 증가 여부
-            mono = tmp.groupby("ticker")["_date"].apply(lambda x: x.is_monotonic_increasing)
+            mono = tmp.groupby("ticker")["_date"].apply(
+                lambda x: x.is_monotonic_increasing
+            )
             bad = mono[~mono].index.astype(str).tolist()
             if bad:
-                warnings.append(f"Non-monotonic dates for some tickers (sample): {bad[:10]}")
+                warnings.append(
+                    f"Non-monotonic dates for some tickers (sample): {bad[:10]}"
+                )
 
     # 4) missing
     miss = _missing_pct(df)
@@ -86,12 +94,19 @@ def validate_df(
     if max_missing_pct is not None and miss:
         # [Stage13] optional_cols는 missing pct 체크에서 제외
         optional_set = set(optional_cols) if optional_cols else set()
-        too_missing = [c for c, p in miss.items() if p > float(max_missing_pct) and c not in optional_set]
+        too_missing = [
+            c
+            for c, p in miss.items()
+            if p > float(max_missing_pct) and c not in optional_set
+        ]
         if too_missing:
-            errors.append(f"Columns exceed max_missing_pct({max_missing_pct}%): {too_missing[:20]}")
+            errors.append(
+                f"Columns exceed max_missing_pct({max_missing_pct}%): {too_missing[:20]}"
+            )
 
-    ok = (len(errors) == 0)
+    ok = len(errors) == 0
     return ValidationResult(ok=ok, errors=errors, warnings=warnings, stats=stats)
+
 
 def raise_if_invalid(result: ValidationResult, *, stage: str) -> None:
     if result.ok:

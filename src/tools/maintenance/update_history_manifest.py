@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/maintenance/update_history_manifest.py
 """
 History Manifest 업데이트 스크립트 (PPT급 컬럼 포함)
@@ -24,12 +23,12 @@ import sys
 import warnings
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import pandas as pd
-import yaml
 
 warnings.filterwarnings("ignore")
+
 
 def get_file_hash(filepath: Path) -> str:
     """파일의 SHA256 해시 계산"""
@@ -41,10 +40,12 @@ def get_file_hash(filepath: Path) -> str:
             sha256_hash.update(byte_block)
     return sha256_hash.hexdigest()
 
+
 def get_git_commit(repo_dir: Path) -> Optional[str]:
     """Git 커밋 해시 반환"""
     try:
         import subprocess
+
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],
             cwd=str(repo_dir),
@@ -58,10 +59,13 @@ def get_git_commit(repo_dir: Path) -> Optional[str]:
         pass
     return None
 
+
 def get_python_version() -> str:
     """Python 버전 반환"""
     import sys
+
     return f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+
 
 def load_kpi_table(kpi_csv: Path) -> Optional[pd.DataFrame]:
     """KPI 테이블 로드"""
@@ -73,6 +77,7 @@ def load_kpi_table(kpi_csv: Path) -> Optional[pd.DataFrame]:
         print(f"WARNING: KPI 테이블 로드 실패: {e}", file=sys.stderr)
         return None
 
+
 def load_delta_table(delta_csv: Path) -> Optional[pd.DataFrame]:
     """Delta 테이블 로드"""
     if not delta_csv.exists():
@@ -83,7 +88,10 @@ def load_delta_table(delta_csv: Path) -> Optional[pd.DataFrame]:
         print(f"WARNING: Delta 테이블 로드 실패: {e}", file=sys.stderr)
         return None
 
-def extract_kpi_value(df: pd.DataFrame, section: str, metric: str, phase: str = "dev") -> Optional[Any]:
+
+def extract_kpi_value(
+    df: pd.DataFrame, section: str, metric: str, phase: str = "dev"
+) -> Optional[Any]:
     """KPI 테이블에서 특정 값 추출"""
     if df is None or df.empty:
         return None
@@ -98,7 +106,10 @@ def extract_kpi_value(df: pd.DataFrame, section: str, metric: str, phase: str = 
     val = matches.iloc[0][col]
     return val if pd.notna(val) else None
 
-def extract_delta_value(df: pd.DataFrame, section: str, metric: str, phase: str = "dev") -> Optional[Any]:
+
+def extract_delta_value(
+    df: pd.DataFrame, section: str, metric: str, phase: str = "dev"
+) -> Optional[Any]:
     """Delta 테이블에서 특정 값 추출"""
     if df is None or df.empty:
         return None
@@ -113,6 +124,7 @@ def extract_delta_value(df: pd.DataFrame, section: str, metric: str, phase: str 
     val = matches.iloc[0][col]
     return val if pd.notna(val) else None
 
+
 def get_data_range_from_kpi(kpi_df: pd.DataFrame) -> Optional[str]:
     """KPI에서 데이터 범위 추출"""
     if kpi_df is None or kpi_df.empty:
@@ -125,7 +137,8 @@ def get_data_range_from_kpi(kpi_df: pd.DataFrame) -> Optional[str]:
 
     return None
 
-def get_ranking_kpis(run_tag: str, base_dir: Path) -> Dict[str, Any]:
+
+def get_ranking_kpis(run_tag: str, base_dir: Path) -> dict[str, Any]:
     """랭킹 KPI 추출 (Stage7+)"""
     kpis = {}
 
@@ -134,8 +147,12 @@ def get_ranking_kpis(run_tag: str, base_dir: Path) -> Dict[str, Any]:
     if ranking_path.exists():
         try:
             df = pd.read_parquet(ranking_path)
-            kpis["score_missing"] = df["score"].isna().sum() if "score" in df.columns else None
-            kpis["rank_duplicates"] = df.duplicated(["date", "rank"]).sum() if "rank" in df.columns else None
+            kpis["score_missing"] = (
+                df["score"].isna().sum() if "score" in df.columns else None
+            )
+            kpis["rank_duplicates"] = (
+                df.duplicated(["date", "rank"]).sum() if "rank" in df.columns else None
+            )
 
             # top20 HHI 계산
             if "rank" in df.columns:
@@ -148,7 +165,9 @@ def get_ranking_kpis(run_tag: str, base_dir: Path) -> Dict[str, Any]:
             print(f"WARNING: ranking_daily.parquet 읽기 실패: {e}", file=sys.stderr)
 
     # sector_concentration.csv 확인
-    sector_path = base_dir / "reports" / "ranking" / f"sector_concentration__{run_tag}.csv"
+    sector_path = (
+        base_dir / "reports" / "ranking" / f"sector_concentration__{run_tag}.csv"
+    )
     if sector_path.exists():
         try:
             df = pd.read_csv(sector_path)
@@ -163,12 +182,13 @@ def get_ranking_kpis(run_tag: str, base_dir: Path) -> Dict[str, Any]:
 
     return kpis
 
+
 def get_input_artifact_info(
     artifact_name: str,
     run_tag: str,
     base_dir: Path,
     baseline_tag: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     입력 아티팩트의 해시/크기/mtime 정보 추출
 
@@ -186,10 +206,16 @@ def get_input_artifact_info(
     # 경로 후보 (baseline_tag 우선)
     candidates = []
     if baseline_tag:
-        candidates.append(base_dir / "data" / "interim" / baseline_tag / f"{artifact_name}.parquet")
-        candidates.append(base_dir / "data" / "interim" / baseline_tag / f"{artifact_name}.csv")
+        candidates.append(
+            base_dir / "data" / "interim" / baseline_tag / f"{artifact_name}.parquet"
+        )
+        candidates.append(
+            base_dir / "data" / "interim" / baseline_tag / f"{artifact_name}.csv"
+        )
 
-    candidates.append(base_dir / "data" / "interim" / run_tag / f"{artifact_name}.parquet")
+    candidates.append(
+        base_dir / "data" / "interim" / run_tag / f"{artifact_name}.parquet"
+    )
     candidates.append(base_dir / "data" / "interim" / run_tag / f"{artifact_name}.csv")
 
     # L2 예외 처리
@@ -209,7 +235,8 @@ def get_input_artifact_info(
 
     return info
 
-def get_k_eff_summary(run_tag: str, base_dir: Path) -> Dict[str, Any]:
+
+def get_k_eff_summary(run_tag: str, base_dir: Path) -> dict[str, Any]:
     """
     K_eff 요약 추출 (selection_diagnostics에서)
 
@@ -227,7 +254,9 @@ def get_k_eff_summary(run_tag: str, base_dir: Path) -> Dict[str, Any]:
         "eligible_mean": None,
     }
 
-    diag_path = base_dir / "data" / "interim" / run_tag / "selection_diagnostics.parquet"
+    diag_path = (
+        base_dir / "data" / "interim" / run_tag / "selection_diagnostics.parquet"
+    )
     if not diag_path.exists():
         return summary
 
@@ -247,7 +276,8 @@ def get_k_eff_summary(run_tag: str, base_dir: Path) -> Dict[str, Any]:
 
     return summary
 
-def get_missing_rate_summary(run_tag: str, base_dir: Path) -> Dict[str, Any]:
+
+def get_missing_rate_summary(run_tag: str, base_dir: Path) -> dict[str, Any]:
     """
     결측률 요약 추출 (rebalance_scores_summary에서)
 
@@ -264,29 +294,42 @@ def get_missing_rate_summary(run_tag: str, base_dir: Path) -> Dict[str, Any]:
         "score_ens_missing_pct": None,
     }
 
-    summary_path = base_dir / "data" / "interim" / run_tag / "rebalance_scores_summary.parquet"
+    summary_path = (
+        base_dir / "data" / "interim" / run_tag / "rebalance_scores_summary.parquet"
+    )
     if not summary_path.exists():
         return summary
 
     try:
         df = pd.read_parquet(summary_path)
         if "score_short_missing" in df.columns and "n_tickers" in df.columns:
-            df["score_short_missing_pct"] = df["score_short_missing"] / df["n_tickers"] * 100
-            summary["score_short_missing_pct"] = float(df["score_short_missing_pct"].mean())
+            df["score_short_missing_pct"] = (
+                df["score_short_missing"] / df["n_tickers"] * 100
+            )
+            summary["score_short_missing_pct"] = float(
+                df["score_short_missing_pct"].mean()
+            )
 
         if "score_long_missing" in df.columns and "n_tickers" in df.columns:
-            df["score_long_missing_pct"] = df["score_long_missing"] / df["n_tickers"] * 100
-            summary["score_long_missing_pct"] = float(df["score_long_missing_pct"].mean())
+            df["score_long_missing_pct"] = (
+                df["score_long_missing"] / df["n_tickers"] * 100
+            )
+            summary["score_long_missing_pct"] = float(
+                df["score_long_missing_pct"].mean()
+            )
 
         if "score_ens_missing" in df.columns and "n_tickers" in df.columns:
-            df["score_ens_missing_pct"] = df["score_ens_missing"] / df["n_tickers"] * 100
+            df["score_ens_missing_pct"] = (
+                df["score_ens_missing"] / df["n_tickers"] * 100
+            )
             summary["score_ens_missing_pct"] = float(df["score_ens_missing_pct"].mean())
     except Exception as e:
         print(f"WARNING: rebalance_scores_summary 읽기 실패: {e}", file=sys.stderr)
 
     return summary
 
-def get_sector_concentration_summary(run_tag: str, base_dir: Path) -> Dict[str, Any]:
+
+def get_sector_concentration_summary(run_tag: str, base_dir: Path) -> dict[str, Any]:
     """
     섹터농도 요약 추출 (sector_concentration CSV에서)
 
@@ -303,7 +346,9 @@ def get_sector_concentration_summary(run_tag: str, base_dir: Path) -> Dict[str, 
         "sector_count_mean": None,
     }
 
-    sector_path = base_dir / "reports" / "ranking" / f"sector_concentration__{run_tag}.csv"
+    sector_path = (
+        base_dir / "reports" / "ranking" / f"sector_concentration__{run_tag}.csv"
+    )
     if not sector_path.exists():
         return summary
 
@@ -320,6 +365,7 @@ def get_sector_concentration_summary(run_tag: str, base_dir: Path) -> Dict[str, 
 
     return summary
 
+
 def build_history_record(
     stage_no: int,
     track: str,
@@ -328,12 +374,12 @@ def build_history_record(
     base_dir: Path,
     config_path: Path,
     change_title: Optional[str] = None,
-    change_summary: Optional[List[str]] = None,
+    change_summary: Optional[list[str]] = None,
     modified_files: Optional[str] = None,
     modified_functions: Optional[str] = None,
     baseline_global_tag: Optional[str] = None,
     baseline_pipeline_tag: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     History Manifest 레코드 생성 (PPT급 컬럼 포함)
 
@@ -344,7 +390,12 @@ def build_history_record(
     kpi_csv = base_dir / "reports" / "kpi" / f"kpi_table__{run_tag}.csv"
     delta_csv = None
     if baseline_tag_used:
-        delta_csv = base_dir / "reports" / "delta" / f"delta_kpi__{baseline_tag_used}__vs__{run_tag}.csv"
+        delta_csv = (
+            base_dir
+            / "reports"
+            / "delta"
+            / f"delta_kpi__{baseline_tag_used}__vs__{run_tag}.csv"
+        )
 
     kpi_df = load_kpi_table(kpi_csv)
     delta_df = load_delta_table(delta_csv) if delta_csv else None
@@ -359,7 +410,11 @@ def build_history_record(
     l2_hash = get_file_hash(l2_file) if l2_file.exists() else None
     l2_reuse_flag = l2_file.exists()
     l2_size_bytes = l2_file.stat().st_size if l2_file.exists() else None
-    l2_mtime = datetime.fromtimestamp(l2_file.stat().st_mtime).isoformat() if l2_file.exists() else None
+    l2_mtime = (
+        datetime.fromtimestamp(l2_file.stat().st_mtime).isoformat()
+        if l2_file.exists()
+        else None
+    )
 
     # 데이터 범위
     data_range = get_data_range_from_kpi(kpi_df)
@@ -387,7 +442,9 @@ def build_history_record(
 
     input_info_summary = {}
     for artifact_name in input_artifacts[:5]:  # 최대 5개만
-        info = get_input_artifact_info(artifact_name, run_tag, base_dir, baseline_tag_used)
+        info = get_input_artifact_info(
+            artifact_name, run_tag, base_dir, baseline_tag_used
+        )
         input_info_summary[f"input_{artifact_name}_hash"] = info.get("hash")
         input_info_summary[f"input_{artifact_name}_size_bytes"] = info.get("size_bytes")
         input_info_summary[f"input_{artifact_name}_mtime"] = info.get("mtime")
@@ -395,9 +452,15 @@ def build_history_record(
     # 파이프라인 KPI
     pipeline_kpis = {}
     if kpi_df is not None:
-        pipeline_kpis["coverage"] = extract_kpi_value(kpi_df, "DATA", "ohlcv_value_nonnull_pct")
-        pipeline_kpis["ic_rank"] = extract_kpi_value(kpi_df, "MODEL", "ic_rank_mean__20d")
-        pipeline_kpis["hit_ratio"] = extract_kpi_value(kpi_df, "MODEL", "hit_ratio_mean__20d")
+        pipeline_kpis["coverage"] = extract_kpi_value(
+            kpi_df, "DATA", "ohlcv_value_nonnull_pct"
+        )
+        pipeline_kpis["ic_rank"] = extract_kpi_value(
+            kpi_df, "MODEL", "ic_rank_mean__20d"
+        )
+        pipeline_kpis["hit_ratio"] = extract_kpi_value(
+            kpi_df, "MODEL", "hit_ratio_mean__20d"
+        )
 
     # 백테스트 KPI (NO-CARRY 규칙 적용)
     # 백테스트 산출물 존재 여부 확인
@@ -418,11 +481,21 @@ def build_history_record(
     if has_backtest:
         # 백테스트 산출물이 있으면 정상 추출
         if kpi_df is not None:
-            backtest_kpis["holdout_sharpe"] = extract_kpi_value(kpi_df, "BACKTEST", "net_sharpe", "holdout")
-            backtest_kpis["holdout_mdd"] = extract_kpi_value(kpi_df, "BACKTEST", "net_mdd", "holdout")
-            backtest_kpis["holdout_cagr"] = extract_kpi_value(kpi_df, "BACKTEST", "net_cagr", "holdout")
-            backtest_kpis["turnover"] = extract_kpi_value(kpi_df, "BACKTEST", "avg_turnover_oneway", "holdout")
-            backtest_kpis["cost"] = extract_kpi_value(kpi_df, "BACKTEST", "cost_bps_used", "holdout")
+            backtest_kpis["holdout_sharpe"] = extract_kpi_value(
+                kpi_df, "BACKTEST", "net_sharpe", "holdout"
+            )
+            backtest_kpis["holdout_mdd"] = extract_kpi_value(
+                kpi_df, "BACKTEST", "net_mdd", "holdout"
+            )
+            backtest_kpis["holdout_cagr"] = extract_kpi_value(
+                kpi_df, "BACKTEST", "net_cagr", "holdout"
+            )
+            backtest_kpis["turnover"] = extract_kpi_value(
+                kpi_df, "BACKTEST", "avg_turnover_oneway", "holdout"
+            )
+            backtest_kpis["cost"] = extract_kpi_value(
+                kpi_df, "BACKTEST", "cost_bps_used", "holdout"
+            )
         backtest_metric_source = "bt_metrics.parquet"
     else:
         # [NO-CARRY 규칙] 백테스트 산출물이 없으면 NA로 설정
@@ -451,17 +524,29 @@ def build_history_record(
     # 섹터농도 요약 (L8+)
     sector_concentration_summary = {}
     if stage_no >= 8:
-        sector_concentration_summary = get_sector_concentration_summary(run_tag, base_dir)
+        sector_concentration_summary = get_sector_concentration_summary(
+            run_tag, base_dir
+        )
 
     # 변경 요약
-    change_summary_1 = change_summary[0] if change_summary and len(change_summary) > 0 else None
-    change_summary_2 = change_summary[1] if change_summary and len(change_summary) > 1 else None
-    change_summary_3 = change_summary[2] if change_summary and len(change_summary) > 2 else None
+    change_summary_1 = (
+        change_summary[0] if change_summary and len(change_summary) > 0 else None
+    )
+    change_summary_2 = (
+        change_summary[1] if change_summary and len(change_summary) > 1 else None
+    )
+    change_summary_3 = (
+        change_summary[2] if change_summary and len(change_summary) > 2 else None
+    )
 
     # 파라미터 변경 추출 (delta에서)
     params_changed = None
     if delta_df is not None and not delta_df.empty:
-        settings_delta = delta_df[delta_df["section"] == "SETTINGS"] if "section" in delta_df.columns else pd.DataFrame()
+        settings_delta = (
+            delta_df[delta_df["section"] == "SETTINGS"]
+            if "section" in delta_df.columns
+            else pd.DataFrame()
+        )
         if not settings_delta.empty:
             # delta 컬럼명 확인 (dev_delta 또는 dev_value_delta 등)
             dev_col = None
@@ -478,7 +563,10 @@ def build_history_record(
             elif "dev_pct_diff" in settings_delta.columns:
                 changed_params = settings_delta[settings_delta["dev_pct_diff"].notna()]
             elif dev_col and holdout_col:
-                changed_params = settings_delta[settings_delta[dev_col].notna() | settings_delta[holdout_col].notna()]
+                changed_params = settings_delta[
+                    settings_delta[dev_col].notna()
+                    | settings_delta[holdout_col].notna()
+                ]
             elif dev_col:
                 changed_params = settings_delta[settings_delta[dev_col].notna()]
             elif holdout_col:
@@ -487,7 +575,9 @@ def build_history_record(
                 changed_params = pd.DataFrame()
 
             if not changed_params.empty and "metric" in changed_params.columns:
-                params_changed = ", ".join(changed_params["metric"].tolist()[:5])  # 최대 5개
+                params_changed = ", ".join(
+                    changed_params["metric"].tolist()[:5]
+                )  # 최대 5개
 
     # 게이트 정보 (간단 버전)
     gate_notes = []
@@ -520,7 +610,6 @@ def build_history_record(
         "l2_hash": l2_hash[:16] if l2_hash else None,
         "l2_size_bytes": l2_size_bytes,
         "l2_mtime": l2_mtime,
-
         # 변경 요약 (PPT용)
         "change_title": change_title,
         "change_summary_1": change_summary_1,
@@ -529,48 +618,41 @@ def build_history_record(
         "modified_files": modified_files,
         "modified_functions": modified_functions,
         "params_changed": params_changed,
-
         # 파이프라인 KPI
         "coverage": pipeline_kpis.get("coverage"),
         "ic_rank": pipeline_kpis.get("ic_rank"),
         "hit_ratio": pipeline_kpis.get("hit_ratio"),
-
         # 백테스트 KPI
         "holdout_sharpe": backtest_kpis.get("holdout_sharpe"),
         "holdout_mdd": backtest_kpis.get("holdout_mdd"),
         "holdout_cagr": backtest_kpis.get("holdout_cagr"),
         "turnover": backtest_kpis.get("turnover"),
         "cost": backtest_kpis.get("cost"),
-
         # [NO-CARRY 규칙] 백테스트 KPI 출처 명시
         "backtest_metric_source": backtest_metric_source,
-
         # 랭킹 KPI
         "score_missing": ranking_kpis.get("score_missing"),
         "rank_duplicates": ranking_kpis.get("rank_duplicates"),
         "top20_hhi": ranking_kpis.get("top20_hhi"),
         "max_sector_share": ranking_kpis.get("max_sector_share"),
         "sector_count": ranking_kpis.get("sector_count"),
-
         # [TASK A-2] 입력 아티팩트 정보
         **input_info_summary,
-
         # [TASK A-2] K_eff 요약
         "k_eff_mean": k_eff_summary.get("k_eff_mean"),
         "k_eff_min": k_eff_summary.get("k_eff_min"),
         "k_eff_max": k_eff_summary.get("k_eff_max"),
         "eligible_mean": k_eff_summary.get("eligible_mean"),
-
         # [TASK A-2] 결측률 요약
         "score_short_missing_pct": missing_rate_summary.get("score_short_missing_pct"),
         "score_long_missing_pct": missing_rate_summary.get("score_long_missing_pct"),
         "score_ens_missing_pct": missing_rate_summary.get("score_ens_missing_pct"),
-
         # [TASK A-2] 섹터농도 요약
         "sector_hhi_mean": sector_concentration_summary.get("sector_hhi_mean"),
-        "sector_max_share_mean": sector_concentration_summary.get("sector_max_share_mean"),
+        "sector_max_share_mean": sector_concentration_summary.get(
+            "sector_max_share_mean"
+        ),
         "sector_count_mean": sector_concentration_summary.get("sector_count_mean"),
-
         # 게이트
         "stage_status": "PASS",  # 기본값 (실패 시 수동 수정)
         "gate_notes": gate_notes_str,
@@ -582,10 +664,8 @@ def build_history_record(
 
     return record
 
-def upsert_history_manifest(
-    record: Dict[str, Any],
-    history_dir: Path
-) -> None:
+
+def upsert_history_manifest(record: dict[str, Any], history_dir: Path) -> None:
     """
     History Manifest에 레코드 업서트 (upsert)
     """
@@ -631,12 +711,18 @@ def upsert_history_manifest(
         stage = row.get("stage_no", "N/A")
         track = row.get("track", "N/A")
         run_tag = row.get("run_tag", "N/A")
-        created_at = row.get("created_at", "N/A")[:10] if pd.notna(row.get("created_at")) else "N/A"
+        created_at = (
+            row.get("created_at", "N/A")[:10]
+            if pd.notna(row.get("created_at"))
+            else "N/A"
+        )
         change_title = row.get("change_title", "") or ""
         sharpe = row.get("holdout_sharpe", "N/A")
         mdd = row.get("holdout_mdd", "N/A")
 
-        md_lines.append(f"| {stage} | {track} | `{run_tag}` | {created_at} | {change_title} | {sharpe} | {mdd} |")
+        md_lines.append(
+            f"| {stage} | {track} | `{run_tag}` | {created_at} | {change_title} | {sharpe} | {mdd} |"
+        )
 
     md_lines.append("")
     md_lines.append(f"*Total records: {len(df)}*")
@@ -646,8 +732,15 @@ def upsert_history_manifest(
     # Timeline CSV (PPT용)
     timeline_csv = history_dir / "history_timeline_ppt.csv"
     timeline_cols = [
-        "created_at", "stage_no", "track", "run_tag", "change_title",
-        "holdout_sharpe", "holdout_mdd", "holdout_cagr", "ppt_one_liner"
+        "created_at",
+        "stage_no",
+        "track",
+        "run_tag",
+        "change_title",
+        "holdout_sharpe",
+        "holdout_mdd",
+        "holdout_cagr",
+        "ppt_one_liner",
     ]
     # 존재하는 컬럼만 선택
     available_cols = [c for c in timeline_cols if c in df.columns]
@@ -663,34 +756,64 @@ def upsert_history_manifest(
     print(f"[History Manifest] Markdown: {manifest_md}")
     print(f"[History Manifest] Timeline CSV: {timeline_csv}")
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Update History Manifest (PPT급 컬럼 포함)"
     )
-    parser.add_argument("--config", type=str, default="configs/config.yaml",
-                       help="Config file path")
-    parser.add_argument("--stage", type=int, required=True,
-                       help="Stage number (0-8)")
-    parser.add_argument("--track", type=str, required=True, choices=["pipeline", "ranking"],
-                       help="Track: pipeline or ranking")
-    parser.add_argument("--run-tag", type=str, required=True,
-                       help="Run tag")
-    parser.add_argument("--baseline-tag", type=str, default=None,
-                       help="Baseline tag used for comparison")
-    parser.add_argument("--baseline-global-tag", type=str, default=None,
-                       help="[TASK A-2] UI/랭킹 최종 비교 기준 (Ranking Track용)")
-    parser.add_argument("--baseline-pipeline-tag", type=str, default=None,
-                       help="[TASK A-2] 백테스트 입력을 보장하는 최신 파이프라인 (Pipeline Track용)")
-    parser.add_argument("--change-title", type=str, default=None,
-                       help="Change title (PPT용)")
-    parser.add_argument("--change-summary", type=str, nargs="*", default=[],
-                       help="Change summary (최대 3개)")
-    parser.add_argument("--modified-files", type=str, default=None,
-                       help="Modified files (comma-separated)")
-    parser.add_argument("--modified-functions", type=str, default=None,
-                       help="Modified functions (comma-separated)")
-    parser.add_argument("--root", type=str, default=None,
-                       help="Project root directory")
+    parser.add_argument(
+        "--config", type=str, default="configs/config.yaml", help="Config file path"
+    )
+    parser.add_argument("--stage", type=int, required=True, help="Stage number (0-8)")
+    parser.add_argument(
+        "--track",
+        type=str,
+        required=True,
+        choices=["pipeline", "ranking"],
+        help="Track: pipeline or ranking",
+    )
+    parser.add_argument("--run-tag", type=str, required=True, help="Run tag")
+    parser.add_argument(
+        "--baseline-tag",
+        type=str,
+        default=None,
+        help="Baseline tag used for comparison",
+    )
+    parser.add_argument(
+        "--baseline-global-tag",
+        type=str,
+        default=None,
+        help="[TASK A-2] UI/랭킹 최종 비교 기준 (Ranking Track용)",
+    )
+    parser.add_argument(
+        "--baseline-pipeline-tag",
+        type=str,
+        default=None,
+        help="[TASK A-2] 백테스트 입력을 보장하는 최신 파이프라인 (Pipeline Track용)",
+    )
+    parser.add_argument(
+        "--change-title", type=str, default=None, help="Change title (PPT용)"
+    )
+    parser.add_argument(
+        "--change-summary",
+        type=str,
+        nargs="*",
+        default=[],
+        help="Change summary (최대 3개)",
+    )
+    parser.add_argument(
+        "--modified-files",
+        type=str,
+        default=None,
+        help="Modified files (comma-separated)",
+    )
+    parser.add_argument(
+        "--modified-functions",
+        type=str,
+        default=None,
+        help="Modified functions (comma-separated)",
+    )
+    parser.add_argument("--root", type=str, default=None, help="Project root directory")
     args = parser.parse_args()
 
     # 루트 경로 결정
@@ -725,9 +848,10 @@ def main():
     # 업서트
     upsert_history_manifest(record, history_dir)
 
-    print(f"\n[History Manifest] [OK] 완료")
+    print("\n[History Manifest] [OK] 완료")
     print(f"Run Tag: {args.run_tag}")
     print(f"Baseline Tag Used: {args.baseline_tag or 'N/A'}")
+
 
 if __name__ == "__main__":
     main()

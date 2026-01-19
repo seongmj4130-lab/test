@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 """
@@ -19,7 +18,6 @@ Example (PowerShell):
 import argparse
 import logging
 from pathlib import Path
-from typing import Dict, List
 
 import pandas as pd
 
@@ -36,7 +34,9 @@ logger = logging.getLogger(__name__)
 STRATEGIES = ["bt20_short", "bt20_ens", "bt120_long", "bt120_ens"]
 
 
-def _validate_track_b_outputs(strategy: str, bt_returns: pd.DataFrame, cfg_l7: Dict) -> List[str]:
+def _validate_track_b_outputs(
+    strategy: str, bt_returns: pd.DataFrame, cfg_l7: dict
+) -> list[str]:
     """
     [개선안 41번] 5개 핵심 작업이 실제 산출물에 반영됐는지(최소) 검증
 
@@ -50,13 +50,15 @@ def _validate_track_b_outputs(strategy: str, bt_returns: pd.DataFrame, cfg_l7: D
     # NOTE: bt_returns는 [Stage13] core/diagnostics로 분리될 수 있다.
     # - 비용/턴오버는 core(bt_returns_{strategy})에 남는 것이 정상
     # - tranche/regime/alpha quality 일부는 diagnostics/metrics 파일에 존재할 수 있다.
-    warns: List[str] = []
+    warns: list[str] = []
 
     cols = set(bt_returns.columns) if isinstance(bt_returns, pd.DataFrame) else set()
     need_cost_cols = {"turnover_oneway", "turnover_cost", "total_cost"}
     missing_cost = [c for c in need_cost_cols if c not in cols]
     if missing_cost:
-        warns.append(f"[{strategy}] 거래비용(턴오버 기반) 핵심 컬럼 누락(bt_returns): {missing_cost}")
+        warns.append(
+            f"[{strategy}] 거래비용(턴오버 기반) 핵심 컬럼 누락(bt_returns): {missing_cost}"
+        )
 
     return warns
 
@@ -65,42 +67,58 @@ def _validate_track_b_artifacts(
     *,
     strategy: str,
     interim_dir: Path,
-    cfg_l7: Dict,
+    cfg_l7: dict,
     bt_metrics: pd.DataFrame,
-) -> List[str]:
+) -> list[str]:
     """
     [개선안 41번] 파일/지표 관점의 기능 검증(5개 작업)
     """
-    warns: List[str] = []
+    warns: list[str] = []
 
     # 1) Alpha Quality는 bt_metrics에 집계되어야 한다.
-    met_cols = set(bt_metrics.columns) if isinstance(bt_metrics, pd.DataFrame) else set()
+    met_cols = (
+        set(bt_metrics.columns) if isinstance(bt_metrics, pd.DataFrame) else set()
+    )
     need_alpha = {"ic", "rank_ic", "icir", "long_short_alpha"}
     miss_alpha = [c for c in need_alpha if c not in met_cols]
     if miss_alpha:
-        warns.append(f"[{strategy}] Alpha Quality 집계 컬럼 누락(bt_metrics): {miss_alpha}")
+        warns.append(
+            f"[{strategy}] Alpha Quality 집계 컬럼 누락(bt_metrics): {miss_alpha}"
+        )
 
     # 2) Regime Robustness는 bt_regime_metrics_{strategy} 아티팩트로 저장되는 것이 정상
-    regime_enabled = isinstance(cfg_l7.get("regime", None), dict) and bool(cfg_l7.get("regime", {}).get("enabled", False))
+    regime_enabled = isinstance(cfg_l7.get("regime", None), dict) and bool(
+        cfg_l7.get("regime", {}).get("enabled", False)
+    )
     if regime_enabled:
         reg_base = interim_dir / f"bt_regime_metrics_{strategy}"
         if not artifact_exists(reg_base):
-            warns.append(f"[{strategy}] regime 활성인데 bt_regime_metrics_{strategy} 아티팩트가 없습니다.")
+            warns.append(
+                f"[{strategy}] regime 활성인데 bt_regime_metrics_{strategy} 아티팩트가 없습니다."
+            )
 
     # 3) BT120 오버래핑 트랜치: tranche 컬럼은 diagnostics에 있을 수 있음
     if bool(cfg_l7.get("overlapping_tranches_enabled", False)):
         diag_base = interim_dir / f"bt_returns_diagnostics_{strategy}"
         if not artifact_exists(diag_base):
             # 하위호환: core bt_returns에 남는 버전도 있음. (둘 다 없으면 경고)
-            warns.append(f"[{strategy}] 오버래핑 트랜치 활성인데 bt_returns_diagnostics_{strategy} 아티팩트가 없습니다.")
+            warns.append(
+                f"[{strategy}] 오버래핑 트랜치 활성인데 bt_returns_diagnostics_{strategy} 아티팩트가 없습니다."
+            )
         else:
             try:
                 diag = load_artifact(diag_base)
                 diag_cols = set(diag.columns)
-                need_tranche = {"tranche_active", "tranche_holding_days", "tranche_max_active"}
+                need_tranche = {
+                    "tranche_active",
+                    "tranche_holding_days",
+                    "tranche_max_active",
+                }
                 miss_tr = [c for c in need_tranche if c not in diag_cols]
                 if miss_tr:
-                    warns.append(f"[{strategy}] tranche 컬럼 누락(bt_returns_diagnostics): {miss_tr}")
+                    warns.append(
+                        f"[{strategy}] tranche 컬럼 누락(bt_returns_diagnostics): {miss_tr}"
+                    )
             except Exception as e:
                 warns.append(f"[{strategy}] bt_returns_diagnostics 로드/검증 실패: {e}")
 
@@ -115,7 +133,7 @@ def run(
     force_track_a: bool = True,
     force_track_b: bool = True,
     export_mode: str = "latest",
-) -> Dict:
+) -> dict:
     """
     [개선안 41번] 투트랙 실행 + Export 실행
 
@@ -130,7 +148,7 @@ def run(
     Returns:
         dict: 실행 결과(경로/경고 포함)
     """
-    results: Dict[str, object] = {"warnings": []}
+    results: dict[str, object] = {"warnings": []}
 
     # 공통 경로 계산(검증용)
     cfg = load_config(config_path)
@@ -155,13 +173,17 @@ def run(
     tb_paths = {}
     for s in STRATEGIES:
         logger.info(f"  - strategy={s}")
-        out = run_track_b_pipeline(config_path=config_path, strategy=s, force_rebuild=force_track_b)
+        out = run_track_b_pipeline(
+            config_path=config_path, strategy=s, force_rebuild=force_track_b
+        )
         tb_paths[s] = out.get("artifacts_path")
 
         cfg_l7 = out.get("config", {}) or {}
 
         # [개선안 41번] 산출물 기반 검증(1) core(bt_returns)
-        warns = _validate_track_b_outputs(strategy=s, bt_returns=out.get("bt_returns"), cfg_l7=cfg_l7)
+        warns = _validate_track_b_outputs(
+            strategy=s, bt_returns=out.get("bt_returns"), cfg_l7=cfg_l7
+        )
         results["warnings"].extend(warns)
 
         # [개선안 41번] 산출물 기반 검증(2) 아티팩트/지표(bt_metrics/diagnostics/regime)
@@ -185,7 +207,9 @@ def run(
 
         generate_summary()
     except Exception as e:
-        results["warnings"].append(f"[summary] track_b_4strategy_final_summary 생성 실패: {e}")
+        results["warnings"].append(
+            f"[summary] track_b_4strategy_final_summary 생성 실패: {e}"
+        )
 
     # 5) Export
     logger.info("[Two-Track] 5) 06_code22 최종 산출물 Export")
@@ -204,12 +228,26 @@ def run(
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description="Two-Track 실행 + 06_code22 최종 산출물 Export")
+    p = argparse.ArgumentParser(
+        description="Two-Track 실행 + 06_code22 최종 산출물 Export"
+    )
     p.add_argument("--config", dest="config_path", default="configs/config.yaml")
-    p.add_argument("--export-dest", dest="export_dest", default=None, help="기본: ../06_code22")
-    p.add_argument("--force-shared", action="store_true", help="L0~L4 캐시 무시(시간 오래)")
-    p.add_argument("--no-force-track-a", action="store_true", help="Track A 캐시 사용(재생성 안 함)")
-    p.add_argument("--no-force-track-b", action="store_true", help="Track B 캐시 사용(재생성 안 함)")
+    p.add_argument(
+        "--export-dest", dest="export_dest", default=None, help="기본: ../06_code22"
+    )
+    p.add_argument(
+        "--force-shared", action="store_true", help="L0~L4 캐시 무시(시간 오래)"
+    )
+    p.add_argument(
+        "--no-force-track-a",
+        action="store_true",
+        help="Track A 캐시 사용(재생성 안 함)",
+    )
+    p.add_argument(
+        "--no-force-track-b",
+        action="store_true",
+        help="Track B 캐시 사용(재생성 안 함)",
+    )
     p.add_argument("--export-mode", default="latest", choices=["latest", "runs"])
     return p
 

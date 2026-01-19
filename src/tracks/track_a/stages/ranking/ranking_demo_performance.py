@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/ranking/ranking_demo_performance.py
 """
 [Stage11] Ranking Demo Performance
@@ -15,8 +14,7 @@ Top20 equal-weight 포트폴리오 성과 곡선 계산
 """
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -28,9 +26,12 @@ def _require_pykrx():
     """
     try:
         from pykrx import stock
+
         return stock
     except Exception as e:
-        raise ImportError("pykrx가 필요합니다. `pip install pykrx` 후 재실행하세요.") from e
+        raise ImportError(
+            "pykrx가 필요합니다. `pip install pykrx` 후 재실행하세요."
+        ) from e
 
 
 def _to_yyyymmdd(s: pd.Timestamp) -> str:
@@ -94,7 +95,9 @@ def build_kospi200_benchmark_returns(
     # pykrx 지수 OHLCV
     idx = stock.get_index_ohlcv_by_date(s, e, str(index_code))
     if idx is None or len(idx) == 0:
-        raise RuntimeError(f"KOSPI200 지수 데이터가 비어있습니다 (index_code={index_code}, {s}~{e})")
+        raise RuntimeError(
+            f"KOSPI200 지수 데이터가 비어있습니다 (index_code={index_code}, {s}~{e})"
+        )
 
     idx = idx.reset_index()
     rename_map = {"날짜": "date", "종가": "close"}
@@ -108,20 +111,27 @@ def build_kospi200_benchmark_returns(
         close_candidates = ["종가", "close", "Close", "CLOSE"]
         close_col = next((c for c in close_candidates if c in idx.columns), None)
         if close_col is None:
-            raise RuntimeError(f"지수 데이터에 close(종가) 컬럼이 없습니다. cols={list(idx.columns)}")
+            raise RuntimeError(
+                f"지수 데이터에 close(종가) 컬럼이 없습니다. cols={list(idx.columns)}"
+            )
         idx = idx.rename(columns={close_col: "close"})
 
     idx["date"] = pd.to_datetime(idx["date"], errors="coerce")
-    idx = idx.dropna(subset=["date", "close"]).sort_values("date").reset_index(drop=True)
+    idx = (
+        idx.dropna(subset=["date", "close"]).sort_values("date").reset_index(drop=True)
+    )
     idx["bench_ret"] = pd.to_numeric(idx["close"], errors="coerce").pct_change()
     idx = idx.dropna(subset=["bench_ret"])
 
     out = idx[["date", "bench_ret"]].copy()
     # 전략 날짜로 필터 (inner join이 누락을 만들 수 있어 left 후 결측은 0 처리)
-    out = pd.DataFrame({date_col: d}).merge(out, left_on=date_col, right_on="date", how="left")
+    out = pd.DataFrame({date_col: d}).merge(
+        out, left_on=date_col, right_on="date", how="left"
+    )
     out = out.drop(columns=["date"])
     out["bench_ret"] = out["bench_ret"].fillna(0.0)
     return out[[date_col, "bench_ret"]].copy()
+
 
 def calculate_returns(
     ohlcv_daily: pd.DataFrame,
@@ -152,6 +162,7 @@ def calculate_returns(
     df = df[df["return"].notna()].copy()
 
     return df[[date_col, ticker_col, "return"]]
+
 
 def build_top20_equal_weight_returns(
     ranking_daily: pd.DataFrame,
@@ -186,7 +197,9 @@ def build_top20_equal_weight_returns(
 
     # rank_total 기준 정렬
     ranking_daily = ranking_daily[ranking_daily["rank_total"].notna()].copy()
-    ranking_daily = ranking_daily.sort_values([date_col, "rank_total"], ascending=[True, True])
+    ranking_daily = ranking_daily.sort_values(
+        [date_col, "rank_total"], ascending=[True, True]
+    )
 
     # 날짜별 Top K 선택
     strategy_returns = []
@@ -205,16 +218,19 @@ def build_top20_equal_weight_returns(
         else:
             strategy_ret = 0.0
 
-        strategy_returns.append({
-            date_col: date,
-            "strategy_ret": strategy_ret,
-            "n_tickers": len(top_tickers),
-        })
+        strategy_returns.append(
+            {
+                date_col: date,
+                "strategy_ret": strategy_ret,
+                "n_tickers": len(top_tickers),
+            }
+        )
 
     df = pd.DataFrame(strategy_returns)
     df = df.sort_values(date_col).reset_index(drop=True)
 
     return df
+
 
 def build_benchmark_returns(
     ohlcv_daily: pd.DataFrame,
@@ -255,8 +271,12 @@ def build_benchmark_returns(
         dates = pd.to_datetime(ohlcv_daily[date_col], errors="coerce")
         index_code = "1028"
         if isinstance(cfg, dict):
-            index_code = str((cfg.get("params", {}) or {}).get("index_code", index_code))
-        return build_kospi200_benchmark_returns(dates=dates, index_code=index_code, date_col=date_col)
+            index_code = str(
+                (cfg.get("params", {}) or {}).get("index_code", index_code)
+            )
+        return build_kospi200_benchmark_returns(
+            dates=dates, index_code=index_code, date_col=date_col
+        )
 
     elif btype == "savings":
         # [개선안 17번] 적금(고정금리) 벤치마크
@@ -265,16 +285,20 @@ def build_benchmark_returns(
         if isinstance(cfg, dict):
             l11 = (cfg.get("l11", {}) if isinstance(cfg, dict) else {}) or {}
             savings_apr = float(l11.get("savings_apr", savings_apr))
-        return build_savings_benchmark_returns(dates=dates, savings_apr=savings_apr, date_col=date_col)
+        return build_savings_benchmark_returns(
+            dates=dates, savings_apr=savings_apr, date_col=date_col
+        )
 
     else:
-        raise ValueError(f"Unknown benchmark_type: {benchmark_type}. expected: universe_mean|kospi200|savings")
+        raise ValueError(
+            f"Unknown benchmark_type: {benchmark_type}. expected: universe_mean|kospi200|savings"
+        )
 
 
 def build_equity_curves_multi(
     *,
     strategy_returns: pd.DataFrame,
-    benchmark_returns_by_type: Dict[str, pd.DataFrame],
+    benchmark_returns_by_type: dict[str, pd.DataFrame],
     date_col: str = "date",
     initial_value: float = 100.0,
 ) -> pd.DataFrame:
@@ -283,11 +307,23 @@ def build_equity_curves_multi(
     """
     rows = []
     for btype, bench_df in benchmark_returns_by_type.items():
-        eq = build_equity_curves(strategy_returns, bench_df, date_col=date_col, initial_value=initial_value)
+        eq = build_equity_curves(
+            strategy_returns, bench_df, date_col=date_col, initial_value=initial_value
+        )
         eq["benchmark_type"] = str(btype)
         rows.append(eq)
     if not rows:
-        return pd.DataFrame(columns=[date_col, "strategy_ret", "bench_ret", "strategy_equity", "bench_equity", "excess_equity", "benchmark_type"])
+        return pd.DataFrame(
+            columns=[
+                date_col,
+                "strategy_ret",
+                "bench_ret",
+                "strategy_equity",
+                "bench_equity",
+                "excess_equity",
+                "benchmark_type",
+            ]
+        )
     out = pd.concat(rows, ignore_index=True)
     return out.sort_values(["benchmark_type", date_col]).reset_index(drop=True)
 
@@ -301,7 +337,9 @@ def calculate_performance_metrics_multi(
     [개선안 17번] 멀티 벤치마크별 성과 지표 계산
     """
     if equity_curves_multi is None or len(equity_curves_multi) == 0:
-        return pd.DataFrame(columns=["benchmark_type", "total_return", "cagr", "vol", "sharpe", "mdd"])
+        return pd.DataFrame(
+            columns=["benchmark_type", "total_return", "cagr", "vol", "sharpe", "mdd"]
+        )
     if "benchmark_type" not in equity_curves_multi.columns:
         m = calculate_performance_metrics(equity_curves_multi, date_col=date_col)
         return pd.DataFrame([{"benchmark_type": "single", **m}])
@@ -310,6 +348,7 @@ def calculate_performance_metrics_multi(
         m = calculate_performance_metrics(g, date_col=date_col)
         rows.append({"benchmark_type": str(btype), **m})
     return pd.DataFrame(rows)
+
 
 def build_equity_curves(
     strategy_returns: pd.DataFrame,
@@ -346,6 +385,7 @@ def build_equity_curves(
 
     return df
 
+
 def calculate_performance_metrics(
     equity_curves: pd.DataFrame,
     date_col: str = "date",
@@ -353,7 +393,7 @@ def calculate_performance_metrics(
     bench_equity_col: str = "bench_equity",
     strategy_ret_col: str = "strategy_ret",
     bench_ret_col: str = "bench_ret",
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     성과 지표 계산
 
@@ -417,6 +457,7 @@ def calculate_performance_metrics(
         "sharpe": sharpe,
         "mdd": mdd,
     }
+
 
 def run_L11_demo_performance(
     cfg: dict,

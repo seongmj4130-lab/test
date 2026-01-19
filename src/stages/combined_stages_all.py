@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import json
@@ -21,8 +20,6 @@ from src.utils.io import artifact_exists, load_artifact
 ################################################################################
 # START OF FILE: audit_l0_l7.py
 ################################################################################
-
-
 
 
 ARTIFACTS = [
@@ -102,19 +99,27 @@ def main():
     _must(set(["date", "ticker"]).issubset(uni.columns), "L0 schema: need date,ticker")
 
     ohlcv = _load(interim, "ohlcv_daily")
-    _must(set(["date", "ticker", "close"]).issubset(ohlcv.columns), "L1 schema: need date,ticker,close")
+    _must(
+        set(["date", "ticker", "close"]).issubset(ohlcv.columns),
+        "L1 schema: need date,ticker,close",
+    )
     _must(ohlcv.duplicated(["date", "ticker"]).sum() == 0, "L1 duplicate (date,ticker)")
 
     fa = _load(interim, "fundamentals_annual")
     _must(set(["date", "ticker"]).issubset(fa.columns), "L2 schema: need date,ticker")
 
     panel = _load(interim, "panel_merged_daily")
-    _must(set(["date", "ticker"]).issubset(panel.columns), "L3 schema: need date,ticker")
+    _must(
+        set(["date", "ticker"]).issubset(panel.columns), "L3 schema: need date,ticker"
+    )
     _must(panel.duplicated(["date", "ticker"]).sum() == 0, "L3 duplicate (date,ticker)")
 
     ds = _load(interim, "dataset_daily")
     _must(set(["date", "ticker"]).issubset(ds.columns), "L4 schema: need date,ticker")
-    _must(("ret_fwd_20d" in ds.columns) and ("ret_fwd_120d" in ds.columns), "L4 targets missing")
+    _must(
+        ("ret_fwd_20d" in ds.columns) and ("ret_fwd_120d" in ds.columns),
+        "L4 targets missing",
+    )
 
     cv_s = _load(interim, "cv_folds_short")
     cv_l = _load(interim, "cv_folds_long")
@@ -126,37 +131,84 @@ def main():
 
     ps = _load(interim, "pred_short_oos")
     pl = _load(interim, "pred_long_oos")
-    need_pred_cols = {"date", "ticker", "y_true", "y_pred", "fold_id", "phase", "horizon"}
-    _must(need_pred_cols.issubset(ps.columns), f"pred_short_oos schema missing: {sorted(need_pred_cols - set(ps.columns))}")
-    _must(need_pred_cols.issubset(pl.columns), f"pred_long_oos schema missing: {sorted(need_pred_cols - set(pl.columns))}")
-    _must(ps[["y_true", "y_pred"]].isna().any(axis=1).mean() == 0.0, "pred_short_oos has NA in y_true/y_pred")
-    _must(pl[["y_true", "y_pred"]].isna().any(axis=1).mean() == 0.0, "pred_long_oos has NA in y_true/y_pred")
+    need_pred_cols = {
+        "date",
+        "ticker",
+        "y_true",
+        "y_pred",
+        "fold_id",
+        "phase",
+        "horizon",
+    }
+    _must(
+        need_pred_cols.issubset(ps.columns),
+        f"pred_short_oos schema missing: {sorted(need_pred_cols - set(ps.columns))}",
+    )
+    _must(
+        need_pred_cols.issubset(pl.columns),
+        f"pred_long_oos schema missing: {sorted(need_pred_cols - set(pl.columns))}",
+    )
+    _must(
+        ps[["y_true", "y_pred"]].isna().any(axis=1).mean() == 0.0,
+        "pred_short_oos has NA in y_true/y_pred",
+    )
+    _must(
+        pl[["y_true", "y_pred"]].isna().any(axis=1).mean() == 0.0,
+        "pred_long_oos has NA in y_true/y_pred",
+    )
 
     mm = _load(interim, "model_metrics")
-    _must(set(["phase", "horizon", "fold_id", "rmse"]).issubset(mm.columns), "model_metrics schema insufficient")
+    _must(
+        set(["phase", "horizon", "fold_id", "rmse"]).issubset(mm.columns),
+        "model_metrics schema insufficient",
+    )
 
     rs = _load(interim, "rebalance_scores")
     rss = _load(interim, "rebalance_scores_summary")
-    _must(set(["date", "ticker", "phase"]).issubset(rs.columns), "rebalance_scores schema: need date,ticker,phase")
-    _must(rs.duplicated(["date", "ticker", "phase"]).sum() == 0, "rebalance_scores duplicate (date,ticker,phase)")
-    _must(set(["date", "phase", "coverage_ticker_pct"]).issubset(rss.columns), "rebalance_scores_summary schema insufficient")
+    _must(
+        set(["date", "ticker", "phase"]).issubset(rs.columns),
+        "rebalance_scores schema: need date,ticker,phase",
+    )
+    _must(
+        rs.duplicated(["date", "ticker", "phase"]).sum() == 0,
+        "rebalance_scores duplicate (date,ticker,phase)",
+    )
+    _must(
+        set(["date", "phase", "coverage_ticker_pct"]).issubset(rss.columns),
+        "rebalance_scores_summary schema insufficient",
+    )
 
     bt_m = _load(interim, "bt_metrics")
-    _must(set(["phase", "net_sharpe", "net_mdd", "net_cagr"]).issubset(bt_m.columns), "bt_metrics missing key cols")
+    _must(
+        set(["phase", "net_sharpe", "net_mdd", "net_cagr"]).issubset(bt_m.columns),
+        "bt_metrics missing key cols",
+    )
 
     print("[PASS] core schema/duplicate/NA checks")
 
     # 3) meta quality keys existence
     m3 = _load_meta(interim, "panel_merged_daily")
-    _must("fundamental" in (m3.get("quality") or {}), "L3 meta missing quality.fundamental")
+    _must(
+        "fundamental" in (m3.get("quality") or {}),
+        "L3 meta missing quality.fundamental",
+    )
 
     m4 = _load_meta(interim, "dataset_daily")
-    _must("walkforward" in (m4.get("quality") or {}), "L4 meta missing quality.walkforward")
+    _must(
+        "walkforward" in (m4.get("quality") or {}),
+        "L4 meta missing quality.walkforward",
+    )
 
     m5s = _load_meta(interim, "pred_short_oos")
     m5l = _load_meta(interim, "pred_long_oos")
-    _must("model_oos" in (m5s.get("quality") or {}), "L5 meta missing quality.model_oos (short)")
-    _must("model_oos" in (m5l.get("quality") or {}), "L5 meta missing quality.model_oos (long)")
+    _must(
+        "model_oos" in (m5s.get("quality") or {}),
+        "L5 meta missing quality.model_oos (short)",
+    )
+    _must(
+        "model_oos" in (m5l.get("quality") or {}),
+        "L5 meta missing quality.model_oos (long)",
+    )
 
     m6 = _load_meta(interim, "rebalance_scores")
     _must("scoring" in (m6.get("quality") or {}), "L6 meta missing quality.scoring")
@@ -180,7 +232,7 @@ if __name__ == "__main__":
 import argparse
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import pandas as pd
 
@@ -193,7 +245,7 @@ def _project_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
-def _load_meta(meta_path: Path) -> Dict[str, Any]:
+def _load_meta(meta_path: Path) -> dict[str, Any]:
     with meta_path.open("r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -206,7 +258,9 @@ def _read_artifact(snapshot_dir: Path, name: str) -> pd.DataFrame:
         return pd.read_parquet(p_parq)
     if p_csv.exists():
         return pd.read_csv(p_csv, low_memory=False)
-    raise FileNotFoundError(f"Missing data for artifact='{name}' in snapshot_dir={snapshot_dir}")
+    raise FileNotFoundError(
+        f"Missing data for artifact='{name}' in snapshot_dir={snapshot_dir}"
+    )
 
 
 def _normalize_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -249,13 +303,36 @@ def _get_snapshots_dir(cfg: dict, root: Path, snapshots_dir_arg: str = "") -> Pa
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Combine snapshot outputs into ONE table (parquet + csv).")
+    parser = argparse.ArgumentParser(
+        description="Combine snapshot outputs into ONE table (parquet + csv)."
+    )
     parser.add_argument("--config", type=str, default="configs/config.yaml")
-    parser.add_argument("--tag", type=str, required=True, help="snapshot tag folder name (e.g., baseline_after_L7BCD)")
-    parser.add_argument("--out-name", type=str, default="", help="base output name (no extension). default=combined__<tag>")
-    parser.add_argument("--out-dir", type=str, default="", help="optional override output directory")
-    parser.add_argument("--snapshots-dir", type=str, default="", help="optional override snapshots base dir")
-    parser.add_argument("--include-meta-cols", action="store_true", help="attach meta.stage/meta.run_id as columns")
+    parser.add_argument(
+        "--tag",
+        type=str,
+        required=True,
+        help="snapshot tag folder name (e.g., baseline_after_L7BCD)",
+    )
+    parser.add_argument(
+        "--out-name",
+        type=str,
+        default="",
+        help="base output name (no extension). default=combined__<tag>",
+    )
+    parser.add_argument(
+        "--out-dir", type=str, default="", help="optional override output directory"
+    )
+    parser.add_argument(
+        "--snapshots-dir",
+        type=str,
+        default="",
+        help="optional override snapshots base dir",
+    )
+    parser.add_argument(
+        "--include-meta-cols",
+        action="store_true",
+        help="attach meta.stage/meta.run_id as columns",
+    )
     args = parser.parse_args()
 
     root = _project_root()
@@ -270,7 +347,9 @@ def main():
         if alt.exists():
             snapshot_dir = alt
         else:
-            raise FileNotFoundError(f"Snapshot folder not found: {snapshot_dir} (also tried: {alt})")
+            raise FileNotFoundError(
+                f"Snapshot folder not found: {snapshot_dir} (also tried: {alt})"
+            )
 
     out_name = args.out_name.strip() or f"combined__{args.tag}"
     if args.out_dir.strip():
@@ -291,8 +370,8 @@ def main():
     if not meta_files:
         raise FileNotFoundError(f"No meta files found in snapshot: {snapshot_dir}")
 
-    dfs: List[pd.DataFrame] = []
-    manifest_rows: List[dict] = []
+    dfs: list[pd.DataFrame] = []
+    manifest_rows: list[dict] = []
 
     for mp in meta_files:
         name = mp.name.replace("__meta.json", "")
@@ -310,19 +389,23 @@ def main():
 
         dfs.append(df)
 
-        manifest_rows.append({
-            "artifact": name,
-            "rows": int(df.shape[0]),
-            "cols": int(df.shape[1]),
-            "has_date": bool("date" in df.columns),
-            "meta_stage": meta.get("stage", None),
-            "meta_run_id": meta.get("run_id", None),
-        })
+        manifest_rows.append(
+            {
+                "artifact": name,
+                "rows": int(df.shape[0]),
+                "cols": int(df.shape[1]),
+                "has_date": bool("date" in df.columns),
+                "meta_stage": meta.get("stage", None),
+                "meta_run_id": meta.get("run_id", None),
+            }
+        )
 
         print(f"- loaded: {name:30s} shape={df.shape}")
 
     combined = pd.concat(dfs, ignore_index=True, sort=False)
-    manifest = pd.DataFrame(manifest_rows).sort_values(["artifact"]).reset_index(drop=True)
+    manifest = (
+        pd.DataFrame(manifest_rows).sort_values(["artifact"]).reset_index(drop=True)
+    )
 
     out_base = out_dir / out_name
     save_artifact(combined, out_base, force=True, formats=["parquet", "csv"])
@@ -354,9 +437,12 @@ import pandas as pd
 def _require_pykrx():
     try:
         from pykrx import stock
+
         return stock
     except Exception as e:
-        raise ImportError("pykrx가 필요합니다. `pip install pykrx` 후 재실행하세요.") from e
+        raise ImportError(
+            "pykrx가 필요합니다. `pip install pykrx` 후 재실행하세요."
+        ) from e
 
 
 def _to_yyyymmdd(s: str) -> str:
@@ -367,7 +453,7 @@ def build_k200_membership_month_end(
     *,
     start_date: str,
     end_date: str,
-    index_code: str = "1028",   # KOSPI200
+    index_code: str = "1028",  # KOSPI200
     anchor_ticker: str = "005930",
 ) -> pd.DataFrame:
     """
@@ -382,7 +468,9 @@ def build_k200_membership_month_end(
     # trading calendar (삼성전자 기준)
     cal = stock.get_market_ohlcv_by_date(s, e, anchor_ticker)
     if cal is None or len(cal) == 0:
-        raise RuntimeError("거래일 캘린더를 생성하지 못했습니다. start/end/anchor_ticker 확인 필요")
+        raise RuntimeError(
+            "거래일 캘린더를 생성하지 못했습니다. start/end/anchor_ticker 확인 필요"
+        )
 
     dates = pd.to_datetime(cal.index)
     month_end = (
@@ -405,7 +493,9 @@ def build_k200_membership_month_end(
             tickers = stock.get_index_portfolio_deposit_file(index_code, ymd)
 
         if tickers is None or len(tickers) == 0:
-            raise RuntimeError(f"KOSPI200 구성종목 조회 실패: index={index_code}, date={ymd}")
+            raise RuntimeError(
+                f"KOSPI200 구성종목 조회 실패: index={index_code}, date={ymd}"
+            )
 
         for t in tickers:
             records.append({"date": d.strftime("%Y-%m-%d"), "ticker": str(t).zfill(6)})
@@ -427,9 +517,12 @@ import pandas as pd
 def _require_pykrx():
     try:
         from pykrx import stock
+
         return stock
     except Exception as e:
-        raise ImportError("pykrx가 필요합니다. `pip install pykrx` 후 재실행하세요.") from e
+        raise ImportError(
+            "pykrx가 필요합니다. `pip install pykrx` 후 재실행하세요."
+        ) from e
 
 
 def _to_yyyymmdd(s: str) -> str:
@@ -487,7 +580,9 @@ def download_ohlcv_panel(
         frames.append(df)
 
     if not frames:
-        raise RuntimeError("OHLCV 다운로드 결과가 비었습니다. tickers/start/end 확인 필요")
+        raise RuntimeError(
+            "OHLCV 다운로드 결과가 비었습니다. tickers/start/end 확인 필요"
+        )
 
     out = pd.concat(frames, ignore_index=True)
     out = out.sort_values(["date", "ticker"]).reset_index(drop=True)
@@ -518,6 +613,7 @@ logger = logging.getLogger(__name__)
 def _require_opendart():
     try:
         import OpenDartReader
+
         return OpenDartReader
     except Exception as e:
         raise ImportError(
@@ -585,7 +681,9 @@ def _load_corp_map(dart) -> dict[str, str]:
     return dict(zip(c["stock_code"], c["corp_code"]))
 
 
-def _call_finstate_safely(dart, corp_code: str, year: int, *, reprt_code: str, fs_div: str | None):
+def _call_finstate_safely(
+    dart, corp_code: str, year: int, *, reprt_code: str, fs_div: str | None
+):
     """
     - OpenDartReader가 '조회 없음'을 dict(status=013)로 반환/출력하는 케이스 방어
     - stdout(불필요 출력) 억제
@@ -597,7 +695,9 @@ def _call_finstate_safely(dart, corp_code: str, year: int, *, reprt_code: str, f
             # fs_div 지원 여부가 버전마다 다를 수 있으므로 TypeError 방어
             if fs_div is not None:
                 try:
-                    res = dart.finstate(corp_code, year, reprt_code=reprt_code, fs_div=fs_div)
+                    res = dart.finstate(
+                        corp_code, year, reprt_code=reprt_code, fs_div=fs_div
+                    )
                 except TypeError:
                     res = dart.finstate(corp_code, year, reprt_code=reprt_code)
             else:
@@ -629,10 +729,10 @@ def download_annual_fundamentals(
     api_key: str | None = None,
     sleep_sec: float = 0.2,
     # --- 추가 옵션 (기본값 유지: 기존 호출 깨지지 않음) ---
-    reprt_code: str = "11011",           # 사업보고서
+    reprt_code: str = "11011",  # 사업보고서
     fs_div_order: tuple[str, ...] = ("CFS", "OFS"),  # 연결 우선 -> 개별 fallback
-    log_every: int = 100,                # 진행 로그 빈도
-    min_success_ratio: float = 0.03,     # 성공률이 너무 낮으면 버그로 판단
+    log_every: int = 100,  # 진행 로그 빈도
+    min_success_ratio: float = 0.03,  # 성공률이 너무 낮으면 버그로 판단
 ) -> pd.DataFrame:
     """
     출력:
@@ -660,12 +760,16 @@ def download_annual_fundamentals(
     corp_map = _load_corp_map(dart)
 
     # ticker 정규화
-    norm_tickers = sorted({str(t).strip().zfill(6) for t in tickers if str(t).strip() != ""})
+    norm_tickers = sorted(
+        {str(t).strip().zfill(6) for t in tickers if str(t).strip() != ""}
+    )
 
     # 매핑 성공률 체크(초기 버그 탐지)
     mapped = [t for t in norm_tickers if t in corp_map]
-    map_ratio = (len(mapped) / max(len(norm_tickers), 1))
-    logger.info(f"[L2] corp_code mapping: {len(mapped)}/{len(norm_tickers)} ({map_ratio:.1%})")
+    map_ratio = len(mapped) / max(len(norm_tickers), 1)
+    logger.info(
+        f"[L2] corp_code mapping: {len(mapped)}/{len(norm_tickers)} ({map_ratio:.1%})"
+    )
 
     if len(mapped) == 0:
         raise RuntimeError(
@@ -776,7 +880,9 @@ def download_annual_fundamentals(
 
     # 최종 품질 체크(너가 원한 '검증을 강제'하는 부분)
     if req_cnt == 0:
-        raise RuntimeError("[L2] 요청 건수가 0입니다. tickers/start_year/end_year 입력을 확인하세요.")
+        raise RuntimeError(
+            "[L2] 요청 건수가 0입니다. tickers/start_year/end_year 입력을 확인하세요."
+        )
 
     success_ratio = ok_cnt / max(req_cnt, 1)
     logger.info(
@@ -844,10 +950,16 @@ def build_panel_merged_daily(
     if ohlcv_daily is None or ohlcv_daily.empty:
         raise ValueError("ohlcv_daily가 비었습니다.")
     if fundamentals_annual is None or fundamentals_annual.empty:
-        warns.append("fundamentals_annual이 비었습니다. 머지는 되지만 재무컬럼은 대부분 NaN이 됩니다.")
+        warns.append(
+            "fundamentals_annual이 비었습니다. 머지는 되지만 재무컬럼은 대부분 NaN이 됩니다."
+        )
 
     o = ohlcv_daily.copy()
-    f = fundamentals_annual.copy() if fundamentals_annual is not None else pd.DataFrame()
+    f = (
+        fundamentals_annual.copy()
+        if fundamentals_annual is not None
+        else pd.DataFrame()
+    )
 
     # -------------------------
     # 1) 키 표준화
@@ -861,7 +973,9 @@ def build_panel_merged_daily(
 
     if not f.empty:
         if "date" not in f.columns or "ticker" not in f.columns:
-            raise ValueError(f"fundamentals_annual에 date/ticker가 없습니다: {list(f.columns)}")
+            raise ValueError(
+                f"fundamentals_annual에 date/ticker가 없습니다: {list(f.columns)}"
+            )
 
         f["date"] = pd.to_datetime(f["date"], errors="coerce")
         f["ticker"] = f["ticker"].astype(str).str.zfill(6)
@@ -871,22 +985,32 @@ def build_panel_merged_daily(
         dup = f.duplicated(["ticker", "date"])
         if dup.any():
             ndup = int(dup.sum())
-            warns.append(f"fundamentals_annual duplicate (ticker,date)={ndup} -> keep='last'로 제거")
-            f = (
-                f.sort_values(["ticker", "date"], kind="mergesort")
-                 .drop_duplicates(["ticker", "date"], keep="last")
+            warns.append(
+                f"fundamentals_annual duplicate (ticker,date)={ndup} -> keep='last'로 제거"
+            )
+            f = f.sort_values(["ticker", "date"], kind="mergesort").drop_duplicates(
+                ["ticker", "date"], keep="last"
             )
 
         # 지연 반영
-        f["effective_date"] = f["date"] + pd.to_timedelta(int(fundamental_lag_days), unit="D")
+        f["effective_date"] = f["date"] + pd.to_timedelta(
+            int(fundamental_lag_days), unit="D"
+        )
 
     # -------------------------
     # 2) (옵션) K200 멤버만 필터
     # -------------------------
     # 지금은 기본 False로 두고, 필요 시 확장.
     # (월말 멤버십을 일별로 정교하게 매핑하려면 별도 정책 정의가 필요)
-    if filter_k200_members_only and universe_membership_monthly is not None and not universe_membership_monthly.empty:
-        if "date" in universe_membership_monthly.columns and "ticker" in universe_membership_monthly.columns:
+    if (
+        filter_k200_members_only
+        and universe_membership_monthly is not None
+        and not universe_membership_monthly.empty
+    ):
+        if (
+            "date" in universe_membership_monthly.columns
+            and "ticker" in universe_membership_monthly.columns
+        ):
             u = universe_membership_monthly.copy()
             u["date"] = pd.to_datetime(u["date"], errors="coerce")
             u["ticker"] = u["ticker"].astype(str).str.zfill(6)
@@ -899,7 +1023,9 @@ def build_panel_merged_daily(
             after = len(o)
             warns.append(f"filter_k200_members_only 적용: rows {before} -> {after}")
         else:
-            warns.append("filter_k200_members_only 요청했으나 universe_membership_monthly 스키마가 달라 스킵")
+            warns.append(
+                "filter_k200_members_only 요청했으나 universe_membership_monthly 스키마가 달라 스킵"
+            )
 
     # -------------------------
     # 3) merge_asof (핵심 수정 포인트)
@@ -909,14 +1035,12 @@ def build_panel_merged_daily(
     if f.empty:
         merged = o
     else:
-        o_sorted = (
-            o.sort_values(["date", "ticker"], kind="mergesort")
-             .reset_index(drop=True)
+        o_sorted = o.sort_values(["date", "ticker"], kind="mergesort").reset_index(
+            drop=True
         )
-        f_sorted = (
-            f.sort_values(["effective_date", "ticker"], kind="mergesort")
-             .reset_index(drop=True)
-        )
+        f_sorted = f.sort_values(
+            ["effective_date", "ticker"], kind="mergesort"
+        ).reset_index(drop=True)
 
         # right의 원래 date는 남기면 혼동이 생기니 제거(필요 시 fiscal_year 같은 컬럼으로 따로 남길 것)
         f_join = f_sorted.drop(columns=["date"], errors="ignore")
@@ -937,7 +1061,9 @@ def build_panel_merged_daily(
     # -------------------------
     # 4) 후처리: downstream 편의 위해 ticker-date 정렬로 되돌림
     # -------------------------
-    merged = merged.sort_values(["ticker", "date"], kind="mergesort").reset_index(drop=True)
+    merged = merged.sort_values(["ticker", "date"], kind="mergesort").reset_index(
+        drop=True
+    )
 
     return merged, warns
 
@@ -967,7 +1093,12 @@ def _sanitize_panel(panel: pd.DataFrame, price_col: str | None = None):
 
     # date/ticker 타입 강제
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df["ticker"] = df["ticker"].astype(str).str.extract(r"(\d{6})", expand=False).fillna(df["ticker"].astype(str))
+    df["ticker"] = (
+        df["ticker"]
+        .astype(str)
+        .str.extract(r"(\d{6})", expand=False)
+        .fillna(df["ticker"].astype(str))
+    )
     df["ticker"] = df["ticker"].astype(str).str.zfill(6)
 
     # 가격 컬럼 결정
@@ -987,7 +1118,9 @@ def _sanitize_panel(panel: pd.DataFrame, price_col: str | None = None):
 
     # 필수 결측 체크(너무 심하면 중단)
     if df["date"].isna().mean() > 0.01:
-        raise RuntimeError("Too many NaT in date after parsing. Check panel_merged_daily['date'].")
+        raise RuntimeError(
+            "Too many NaT in date after parsing. Check panel_merged_daily['date']."
+        )
 
     return df, px
 
@@ -1025,7 +1158,9 @@ def build_targets_and_folds(
     # 타깃 결측(마지막 horizon 구간)은 정상이나, 비율 로그용으로 경고만 남김
     miss_s = df[f"ret_fwd_{horizon_short}d"].isna().mean()
     miss_l = df[f"ret_fwd_{horizon_long}d"].isna().mean()
-    warnings.append(f"[L4] target_missing ret_fwd_{horizon_short}d={miss_s:.2%}, ret_fwd_{horizon_long}d={miss_l:.2%}")
+    warnings.append(
+        f"[L4] target_missing ret_fwd_{horizon_short}d={miss_s:.2%}, ret_fwd_{horizon_long}d={miss_l:.2%}"
+    )
 
     # trading dates
     dates = pd.DatetimeIndex(pd.unique(df["date"].dropna())).sort_values()
@@ -1036,7 +1171,13 @@ def build_targets_and_folds(
     holdout_threshold = overall_end - pd.DateOffset(years=holdout_years)
     holdout_start = dates[dates.searchsorted(holdout_threshold, side="left")]
 
-    def _build_folds(train_years: int, horizon_days: int, segment: str, seg_start: pd.Timestamp, seg_end: pd.Timestamp):
+    def _build_folds(
+        train_years: int,
+        horizon_days: int,
+        segment: str,
+        seg_start: pd.Timestamp,
+        seg_end: pd.Timestamp,
+    ):
         seg_start = dates[dates.searchsorted(seg_start, side="left")]
         seg_end = dates[dates.searchsorted(seg_end, side="right") - 1]
 
@@ -1059,23 +1200,27 @@ def build_targets_and_folds(
 
             train_end = dates[train_end_pos]
             train_start_threshold = train_end - pd.DateOffset(years=train_years)
-            train_start_pos = int(dates.searchsorted(train_start_threshold, side="left"))
+            train_start_pos = int(
+                dates.searchsorted(train_start_threshold, side="left")
+            )
             train_start = dates[train_start_pos]
 
             fold_i += 1
-            folds.append({
-                "fold_id": f"{segment}_{fold_i:04d}",
-                "segment": segment,
-                "train_start": train_start,
-                "train_end": train_end,
-                "test_start": dates[test_start_pos],
-                "test_end": dates[test_end_pos],
-                "train_years": train_years,
-                "horizon_days": horizon_days,
-                "embargo_days": embargo_days,
-                "step_days": step_days,
-                "test_window_days": test_window_days,
-            })
+            folds.append(
+                {
+                    "fold_id": f"{segment}_{fold_i:04d}",
+                    "segment": segment,
+                    "train_start": train_start,
+                    "train_end": train_end,
+                    "test_start": dates[test_start_pos],
+                    "test_end": dates[test_end_pos],
+                    "train_years": train_years,
+                    "horizon_days": horizon_days,
+                    "embargo_days": embargo_days,
+                    "step_days": step_days,
+                    "test_window_days": test_window_days,
+                }
+            )
             pos += step_days
 
         return pd.DataFrame(folds)
@@ -1083,18 +1228,42 @@ def build_targets_and_folds(
     dev_start = dates[0]
     dev_end = holdout_start - pd.Timedelta(days=1)
 
-    cv_short = pd.concat([
-        _build_folds(rolling_train_years_short, horizon_short, "dev", dev_start, dev_end),
-        _build_folds(rolling_train_years_short, horizon_short, "holdout", holdout_start, overall_end),
-    ], ignore_index=True)
+    cv_short = pd.concat(
+        [
+            _build_folds(
+                rolling_train_years_short, horizon_short, "dev", dev_start, dev_end
+            ),
+            _build_folds(
+                rolling_train_years_short,
+                horizon_short,
+                "holdout",
+                holdout_start,
+                overall_end,
+            ),
+        ],
+        ignore_index=True,
+    )
 
-    cv_long = pd.concat([
-        _build_folds(rolling_train_years_long, horizon_long, "dev", dev_start, dev_end),
-        _build_folds(rolling_train_years_long, horizon_long, "holdout", holdout_start, overall_end),
-    ], ignore_index=True)
+    cv_long = pd.concat(
+        [
+            _build_folds(
+                rolling_train_years_long, horizon_long, "dev", dev_start, dev_end
+            ),
+            _build_folds(
+                rolling_train_years_long,
+                horizon_long,
+                "holdout",
+                holdout_start,
+                overall_end,
+            ),
+        ],
+        ignore_index=True,
+    )
 
     # fold 개수 로그용 경고(메타에 남기기 좋음)
-    warnings.append(f"[L4] folds_short={len(cv_short):,}, folds_long={len(cv_long):,}, holdout_start={holdout_start.date()}")
+    warnings.append(
+        f"[L4] folds_short={len(cv_short):,}, folds_long={len(cv_long):,}, holdout_start={holdout_start.date()}"
+    )
 
     return df, cv_short, cv_long, warnings
 
@@ -1110,7 +1279,6 @@ def build_targets_and_folds(
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Set, Tuple
 
 import numpy as np
 import pandas as pd
@@ -1147,17 +1315,23 @@ def _infer_phase(phase_raw: str, fold_id: str) -> str:
     return "dev"
 
 
-def _standardize_folds(folds: pd.DataFrame) -> List[FoldSpec]:
+def _standardize_folds(folds: pd.DataFrame) -> list[FoldSpec]:
     if folds is None or not isinstance(folds, pd.DataFrame) or folds.empty:
         raise ValueError("cv_folds is empty or not a DataFrame.")
 
-    phase_col = "phase" if "phase" in folds.columns else ("segment" if "segment" in folds.columns else None)
+    phase_col = (
+        "phase"
+        if "phase" in folds.columns
+        else ("segment" if "segment" in folds.columns else None)
+    )
     required = ["fold_id", "train_start", "train_end", "test_start", "test_end"]
     missing = [c for c in required if c not in folds.columns]
     if phase_col is None:
         missing.append("phase(or segment)")
     if missing:
-        raise ValueError(f"cv_folds schema missing columns: {missing}. got={list(folds.columns)}")
+        raise ValueError(
+            f"cv_folds schema missing columns: {missing}. got={list(folds.columns)}"
+        )
 
     f = folds.copy()
     f["train_start"] = _to_datetime(f["train_start"])
@@ -1171,7 +1345,7 @@ def _standardize_folds(folds: pd.DataFrame) -> List[FoldSpec]:
         ex = bad.head(5)
         raise ValueError(f"cv_folds has invalid date ranges. examples:\n{ex}")
 
-    specs: List[FoldSpec] = []
+    specs: list[FoldSpec] = []
     for _, r in f.iterrows():
         fid = str(r["fold_id"]).strip()
         ph = _infer_phase(str(r[phase_col]), fid)
@@ -1188,14 +1362,19 @@ def _standardize_folds(folds: pd.DataFrame) -> List[FoldSpec]:
     return specs
 
 
-def _pick_feature_cols(df: pd.DataFrame, *, target_col: str) -> List[str]:
+def _pick_feature_cols(df: pd.DataFrame, *, target_col: str) -> list[str]:
     exclude = {
-        "date", "ticker",
+        "date",
+        "ticker",
         target_col,
-        "ret_fwd_20d", "ret_fwd_120d",
-        "split", "phase", "segment", "fold_id"
+        "ret_fwd_20d",
+        "ret_fwd_120d",
+        "split",
+        "phase",
+        "segment",
+        "fold_id",
     }
-    cols: List[str] = []
+    cols: list[str] = []
     for c in df.columns:
         if c in exclude:
             continue
@@ -1203,7 +1382,9 @@ def _pick_feature_cols(df: pd.DataFrame, *, target_col: str) -> List[str]:
             cols.append(c)
 
     if not cols:
-        raise ValueError("No numeric feature columns found after excluding identifiers/targets.")
+        raise ValueError(
+            "No numeric feature columns found after excluding identifiers/targets."
+        )
     return cols
 
 
@@ -1214,28 +1395,32 @@ def _rank_ic(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     return 0.0 if np.isnan(v) else v
 
 
-def _metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
+def _metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
     err = y_pred - y_true
-    rmse = float(np.sqrt(np.mean(err ** 2)))
+    rmse = float(np.sqrt(np.mean(err**2)))
     mae = float(np.mean(np.abs(err)))
     ic = _rank_ic(y_true, y_pred)
     hit = float(np.mean(np.sign(y_true) == np.sign(y_pred)))
     return {"rmse": rmse, "mae": mae, "ic_rank": ic, "hit_ratio": hit}
 
 
-def _build_model(cfg: dict) -> Tuple[Pipeline, str]:
+def _build_model(cfg: dict) -> tuple[Pipeline, str]:
     l5 = (cfg.get("l5", {}) if isinstance(cfg, dict) else {}) or {}
     ridge_alpha = float(l5.get("ridge_alpha", 1.0))
 
-    pipe = Pipeline([
-        ("imputer", SimpleImputer(strategy="median")),
-        ("scaler", StandardScaler(with_mean=True)),
-        ("model", Ridge(alpha=ridge_alpha)),
-    ])
+    pipe = Pipeline(
+        [
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler(with_mean=True)),
+            ("model", Ridge(alpha=ridge_alpha)),
+        ]
+    )
     return pipe, f"ridge(alpha={ridge_alpha})"
 
 
-def _slice_by_date_sorted(df: pd.DataFrame, date_arr: np.ndarray, start: pd.Timestamp, end: pd.Timestamp) -> pd.DataFrame:
+def _slice_by_date_sorted(
+    df: pd.DataFrame, date_arr: np.ndarray, start: pd.Timestamp, end: pd.Timestamp
+) -> pd.DataFrame:
     # df는 date 기준 오름차순 정렬되어 있어야 함
     left = np.searchsorted(date_arr, np.datetime64(start), side="left")
     right = np.searchsorted(date_arr, np.datetime64(end), side="right")
@@ -1251,8 +1436,8 @@ def train_oos_predictions(
     cfg: dict,
     target_col: str,
     horizon: int,
-) -> Tuple[pd.DataFrame, pd.DataFrame, Dict, List[str]]:
-    warns: List[str] = []
+) -> tuple[pd.DataFrame, pd.DataFrame, dict, list[str]]:
+    warns: list[str] = []
 
     df = dataset_daily.copy()
 
@@ -1275,12 +1460,12 @@ def train_oos_predictions(
 
     model, model_name = _build_model(cfg)
 
-    pred_rows: List[pd.DataFrame] = []
-    metric_rows: List[dict] = []
+    pred_rows: list[pd.DataFrame] = []
+    metric_rows: list[dict] = []
 
     possible_test_rows = 0
     predicted_rows = 0
-    dropped_all_nan_union: Set[str] = set()
+    dropped_all_nan_union: set[str] = set()
 
     for fs in fold_specs:
         dtrain_all = _slice_by_date_sorted(df, date_arr, fs.train_start, fs.train_end)
@@ -1293,10 +1478,14 @@ def train_oos_predictions(
         possible_test_rows += int(dtest.shape[0])
 
         if dtrain.shape[0] < 2000:
-            warns.append(f"[L5] fold={fs.fold_id} horizon={horizon}: too few train rows={dtrain.shape[0]}")
+            warns.append(
+                f"[L5] fold={fs.fold_id} horizon={horizon}: too few train rows={dtrain.shape[0]}"
+            )
             continue
         if dtest.shape[0] < 200:
-            warns.append(f"[L5] fold={fs.fold_id} horizon={horizon}: too few test rows={dtest.shape[0]}")
+            warns.append(
+                f"[L5] fold={fs.fold_id} horizon={horizon}: too few test rows={dtest.shape[0]}"
+            )
             continue
 
         # ✅ ALL-NaN 피처 제거(폴드별)
@@ -1306,7 +1495,9 @@ def train_oos_predictions(
             dropped_all_nan_union.update(dropped)
 
         if len(use_cols) < 5:
-            warns.append(f"[L5] fold={fs.fold_id} horizon={horizon}: too few usable features={len(use_cols)}")
+            warns.append(
+                f"[L5] fold={fs.fold_id} horizon={horizon}: too few usable features={len(use_cols)}"
+            )
             continue
 
         X_train = dtrain[use_cols].to_numpy(dtype=np.float32, copy=False)
@@ -1318,17 +1509,19 @@ def train_oos_predictions(
         y_pred = model.predict(X_test).astype(np.float32)
 
         m = _metrics(y_test, y_pred)
-        metric_rows.append({
-            "horizon": int(horizon),
-            "target_col": target_col,
-            "model": model_name,
-            "fold_id": fs.fold_id,
-            "phase": fs.phase,
-            "n_train": int(dtrain.shape[0]),
-            "n_test": int(dtest.shape[0]),
-            "n_features": int(len(use_cols)),
-            **m,
-        })
+        metric_rows.append(
+            {
+                "horizon": int(horizon),
+                "target_col": target_col,
+                "model": model_name,
+                "fold_id": fs.fold_id,
+                "phase": fs.phase,
+                "n_train": int(dtrain.shape[0]),
+                "n_test": int(dtest.shape[0]),
+                "n_features": int(len(use_cols)),
+                **m,
+            }
+        )
 
         out = dtest[["date", "ticker"]].copy()
         out["y_true"] = y_test
@@ -1352,9 +1545,11 @@ def train_oos_predictions(
     if dup > 0:
         raise RuntimeError(f"OOS predictions have duplicate (date,ticker) rows: {dup}")
 
-    coverage = (predicted_rows / possible_test_rows * 100.0) if possible_test_rows > 0 else 0.0
+    coverage = (
+        (predicted_rows / possible_test_rows * 100.0) if possible_test_rows > 0 else 0.0
+    )
 
-    report: Dict = {
+    report: dict = {
         "horizon": int(horizon),
         "target_col": target_col,
         "model": model_name,
@@ -1362,9 +1557,15 @@ def train_oos_predictions(
         "predicted_rows": int(predicted_rows),
         "oos_coverage_pct": round(float(coverage), 4),
         "folds_total": int(len(fold_specs)),
-        "folds_used": int(metrics_df["fold_id"].nunique()) if not metrics_df.empty else 0,
-        "dev_folds": int((metrics_df["phase"] == "dev").sum()) if not metrics_df.empty else 0,
-        "holdout_folds": int((metrics_df["phase"] == "holdout").sum()) if not metrics_df.empty else 0,
+        "folds_used": (
+            int(metrics_df["fold_id"].nunique()) if not metrics_df.empty else 0
+        ),
+        "dev_folds": (
+            int((metrics_df["phase"] == "dev").sum()) if not metrics_df.empty else 0
+        ),
+        "holdout_folds": (
+            int((metrics_df["phase"] == "holdout").sum()) if not metrics_df.empty else 0
+        ),
         "dropped_all_nan_features": sorted(list(dropped_all_nan_union)),
     }
 
@@ -1374,7 +1575,9 @@ def train_oos_predictions(
             if len(sub) > 0:
                 report[f"{ph}_rmse_mean"] = round(float(sub["rmse"].mean()), 8)
                 report[f"{ph}_ic_rank_mean"] = round(float(sub["ic_rank"].mean()), 8)
-                report[f"{ph}_hit_ratio_mean"] = round(float(sub["hit_ratio"].mean()), 8)
+                report[f"{ph}_hit_ratio_mean"] = round(
+                    float(sub["hit_ratio"].mean()), 8
+                )
 
     return pred_oos, metrics_df, report, warns
 
@@ -1424,8 +1627,8 @@ def _agg_across_models(df: pd.DataFrame, score_col: str = "y_pred") -> pd.DataFr
 
     out = (
         df.groupby(gcols, sort=False, as_index=False)
-          .agg(agg)
-          .rename(columns={score_col: "score", "y_true": "true"})
+        .agg(agg)
+        .rename(columns={score_col: "score", "y_true": "true"})
     )
     return out
 
@@ -1438,11 +1641,13 @@ def _pick_rebalance_rows_by_fold_end(df: pd.DataFrame) -> pd.DataFrame:
     # fold_end 계산
     end = (
         df.groupby(["fold_id", "phase", "horizon"], sort=False)["date"]
-          .max()
-          .rename("rebalance_date")
-          .reset_index()
+        .max()
+        .rename("rebalance_date")
+        .reset_index()
     )
-    out = df.merge(end, on=["fold_id", "phase", "horizon"], how="inner", validate="many_to_one")
+    out = df.merge(
+        end, on=["fold_id", "phase", "horizon"], how="inner", validate="many_to_one"
+    )
     out = out.loc[out["date"] == out["rebalance_date"]].copy()
     out.drop(columns=["date"], inplace=True)
     out.rename(columns={"rebalance_date": "date"}, inplace=True)
@@ -1451,8 +1656,12 @@ def _pick_rebalance_rows_by_fold_end(df: pd.DataFrame) -> pd.DataFrame:
 
 def _rank_within_date(df: pd.DataFrame, col: str, suffix: str) -> pd.DataFrame:
     # 높은 점수 = 상위
-    df[f"rank_{suffix}"] = df.groupby(["date", "phase"], sort=False)[col].rank(ascending=False, method="first")
-    df[f"pct_{suffix}"] = df.groupby(["date", "phase"], sort=False)[col].rank(pct=True, ascending=False, method="first")
+    df[f"rank_{suffix}"] = df.groupby(["date", "phase"], sort=False)[col].rank(
+        ascending=False, method="first"
+    )
+    df[f"pct_{suffix}"] = df.groupby(["date", "phase"], sort=False)[col].rank(
+        pct=True, ascending=False, method="first"
+    )
     return df
 
 
@@ -1499,7 +1708,9 @@ def build_rebalance_scores(
     out = ps2.merge(pl2, on=key, how="outer", validate="one_to_one")
 
     # 앙상블 점수
-    out["score_ens"] = weight_short * out["score_short"] + weight_long * out["score_long"]
+    out["score_ens"] = (
+        weight_short * out["score_short"] + weight_long * out["score_long"]
+    )
 
     # 랭킹
     out = _rank_within_date(out, "score_ens", "ens")
@@ -1513,15 +1724,15 @@ def build_rebalance_scores(
     uni_tickers = int(out["ticker"].nunique())
     summary = (
         out.groupby(["date", "phase"], sort=False)
-           .agg(
-               n_tickers=("ticker", "nunique"),
-               score_ens_mean=("score_ens", "mean"),
-               score_ens_std=("score_ens", "std"),
-               score_short_missing=("score_short", lambda s: float(s.isna().mean())),
-               score_long_missing=("score_long", lambda s: float(s.isna().mean())),
-               score_ens_missing=("score_ens", lambda s: float(s.isna().mean())),
-           )
-           .reset_index()
+        .agg(
+            n_tickers=("ticker", "nunique"),
+            score_ens_mean=("score_ens", "mean"),
+            score_ens_std=("score_ens", "std"),
+            score_short_missing=("score_short", lambda s: float(s.isna().mean())),
+            score_long_missing=("score_long", lambda s: float(s.isna().mean())),
+            score_ens_missing=("score_ens", lambda s: float(s.isna().mean())),
+        )
+        .reset_index()
     )
     summary["coverage_ticker_pct"] = summary["n_tickers"] / uni_tickers * 100.0
 
@@ -1532,10 +1743,18 @@ def build_rebalance_scores(
             "unique_tickers": int(uni_tickers),
             "unique_dates": int(out["date"].nunique()),
             "phases": sorted(out["phase"].dropna().unique().tolist()),
-            "avg_coverage_ticker_pct": float(round(summary["coverage_ticker_pct"].mean(), 4)),
-            "avg_score_short_missing_pct": float(round(summary["score_short_missing"].mean() * 100.0, 6)),
-            "avg_score_long_missing_pct": float(round(summary["score_long_missing"].mean() * 100.0, 6)),
-            "avg_score_ens_missing_pct": float(round(summary["score_ens_missing"].mean() * 100.0, 6)),
+            "avg_coverage_ticker_pct": float(
+                round(summary["coverage_ticker_pct"].mean(), 4)
+            ),
+            "avg_score_short_missing_pct": float(
+                round(summary["score_short_missing"].mean() * 100.0, 6)
+            ),
+            "avg_score_long_missing_pct": float(
+                round(summary["score_long_missing"].mean() * 100.0, 6)
+            ),
+            "avg_score_ens_missing_pct": float(
+                round(summary["score_ens_missing"].mean() * 100.0, 6)
+            ),
             "weights": {"short": float(weight_short), "long": float(weight_long)},
         }
     }
@@ -1554,7 +1773,7 @@ def build_rebalance_scores(
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -1583,7 +1802,9 @@ def _pick_score_col(df: pd.DataFrame, preferred: str) -> str:
     for c in ["score_ens", "score", "score_total", "score_ensemble"]:
         if c in df.columns:
             return c
-    raise KeyError(f"score column not found. tried: {preferred}, score_ens, score, score_total, score_ensemble")
+    raise KeyError(
+        f"score column not found. tried: {preferred}, score_ens, score, score_total, score_ensemble"
+    )
 
 
 def _pick_ret_col(df: pd.DataFrame, preferred: str) -> str:
@@ -1592,10 +1813,14 @@ def _pick_ret_col(df: pd.DataFrame, preferred: str) -> str:
     for c in ["true_short", "y_true", "ret_fwd_20d", "ret"]:
         if c in df.columns:
             return c
-    raise KeyError(f"return/true column not found. tried: {preferred}, true_short, y_true, ret_fwd_20d, ret")
+    raise KeyError(
+        f"return/true column not found. tried: {preferred}, true_short, y_true, ret_fwd_20d, ret"
+    )
 
 
-def _compute_turnover_oneway(prev_w: Dict[str, float], new_w: Dict[str, float]) -> float:
+def _compute_turnover_oneway(
+    prev_w: dict[str, float], new_w: dict[str, float]
+) -> float:
     keys = set(prev_w) | set(new_w)
     s = 0.0
     for k in keys:
@@ -1632,8 +1857,8 @@ def run_backtest(
     date_col: str = "date",
     ticker_col: str = "ticker",
     phase_col: str = "phase",
-) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, dict, List[str]]:
-    warns: List[str] = []
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, dict, list[str]]:
+    warns: list[str] = []
 
     need_cols = [date_col, ticker_col, phase_col]
     for c in need_cols:
@@ -1656,23 +1881,30 @@ def run_backtest(
         warns.append(f"dropped {dropped} rows with NA {ret_col}")
 
     # date,phase별로 top_k 선택 (점수 내림차순, 동률은 ticker로 안정화)
-    df_sorted = df.sort_values([phase_col, date_col, score_col, ticker_col], ascending=[True, True, False, True])
+    df_sorted = df.sort_values(
+        [phase_col, date_col, score_col, ticker_col],
+        ascending=[True, True, False, True],
+    )
 
     # groupby.head는 pandas warning 없이 동작
     picked = (
-        df_sorted.groupby([phase_col, date_col], sort=False, as_index=False, group_keys=False)
+        df_sorted.groupby(
+            [phase_col, date_col], sort=False, as_index=False, group_keys=False
+        )
         .head(int(cfg.top_k))
         .copy()
     )
 
     # weights
-    positions_rows: List[dict] = []
-    returns_rows: List[dict] = []
+    positions_rows: list[dict] = []
+    returns_rows: list[dict] = []
 
     for phase, dphase in picked.groupby(phase_col, sort=False):
-        prev_w: Dict[str, float] = {}
+        prev_w: dict[str, float] = {}
         for dt, g in dphase.groupby(date_col, sort=True):
-            g = g.sort_values([score_col, ticker_col], ascending=[False, True]).reset_index(drop=True)
+            g = g.sort_values(
+                [score_col, ticker_col], ascending=[False, True]
+            ).reset_index(drop=True)
             scores = g[score_col]
             w = _weights_from_scores(scores, cfg.weighting, cfg.softmax_temp)
 
@@ -1716,24 +1948,34 @@ def run_backtest(
 
             prev_w = new_w
 
-    bt_positions = pd.DataFrame(positions_rows).sort_values(["phase", "date", "ticker"]).reset_index(drop=True)
-    bt_returns = pd.DataFrame(returns_rows).sort_values(["phase", "date"]).reset_index(drop=True)
+    bt_positions = (
+        pd.DataFrame(positions_rows)
+        .sort_values(["phase", "date", "ticker"])
+        .reset_index(drop=True)
+    )
+    bt_returns = (
+        pd.DataFrame(returns_rows).sort_values(["phase", "date"]).reset_index(drop=True)
+    )
 
     # equity curve
-    eq_rows: List[dict] = []
+    eq_rows: list[dict] = []
     for phase, g in bt_returns.groupby("phase", sort=False):
         g = g.sort_values("date").reset_index(drop=True)
         eq = 1.0
         peak = 1.0
         for dt, r in zip(g["date"], g["net_return"]):
-            eq *= (1.0 + float(r))
+            eq *= 1.0 + float(r)
             peak = max(peak, eq)
             dd = (eq / peak) - 1.0
-            eq_rows.append({"date": dt, "phase": phase, "equity": float(eq), "drawdown": float(dd)})
-    bt_equity_curve = pd.DataFrame(eq_rows).sort_values(["phase", "date"]).reset_index(drop=True)
+            eq_rows.append(
+                {"date": dt, "phase": phase, "equity": float(eq), "drawdown": float(dd)}
+            )
+    bt_equity_curve = (
+        pd.DataFrame(eq_rows).sort_values(["phase", "date"]).reset_index(drop=True)
+    )
 
     # metrics
-    met_rows: List[dict] = []
+    met_rows: list[dict] = []
     periods_per_year = 252.0 / float(cfg.holding_days) if cfg.holding_days > 0 else 12.6
 
     for phase, g in bt_returns.groupby("phase", sort=False):
@@ -1751,18 +1993,40 @@ def run_backtest(
         gross_cagr = float(eq_g ** (1.0 / years) - 1.0)
         net_cagr = float(eq_n ** (1.0 / years) - 1.0)
 
-        gross_vol = float(np.std(r_gross, ddof=1) * np.sqrt(periods_per_year)) if len(r_gross) > 1 else 0.0
-        net_vol = float(np.std(r_net, ddof=1) * np.sqrt(periods_per_year)) if len(r_net) > 1 else 0.0
+        gross_vol = (
+            float(np.std(r_gross, ddof=1) * np.sqrt(periods_per_year))
+            if len(r_gross) > 1
+            else 0.0
+        )
+        net_vol = (
+            float(np.std(r_net, ddof=1) * np.sqrt(periods_per_year))
+            if len(r_net) > 1
+            else 0.0
+        )
 
-        gross_sharpe = float((np.mean(r_gross) / (np.std(r_gross, ddof=1) + 1e-12)) * np.sqrt(periods_per_year)) if len(r_gross) > 1 else 0.0
-        net_sharpe = float((np.mean(r_net) / (np.std(r_net, ddof=1) + 1e-12)) * np.sqrt(periods_per_year)) if len(r_net) > 1 else 0.0
+        gross_sharpe = (
+            float(
+                (np.mean(r_gross) / (np.std(r_gross, ddof=1) + 1e-12))
+                * np.sqrt(periods_per_year)
+            )
+            if len(r_gross) > 1
+            else 0.0
+        )
+        net_sharpe = (
+            float(
+                (np.mean(r_net) / (np.std(r_net, ddof=1) + 1e-12))
+                * np.sqrt(periods_per_year)
+            )
+            if len(r_net) > 1
+            else 0.0
+        )
 
         # MDD from equity curve
         eq = 1.0
         peak = 1.0
         mdd_g = 0.0
         for r in r_gross:
-            eq *= (1.0 + float(r))
+            eq *= 1.0 + float(r)
             peak = max(peak, eq)
             mdd_g = min(mdd_g, (eq / peak) - 1.0)
 
@@ -1770,7 +2034,7 @@ def run_backtest(
         peak = 1.0
         mdd_n = 0.0
         for r in r_net:
-            eq *= (1.0 + float(r))
+            eq *= 1.0 + float(r)
             peak = max(peak, eq)
             mdd_n = min(mdd_n, (eq / peak) - 1.0)
 
@@ -1791,7 +2055,9 @@ def run_backtest(
                 "net_sharpe": net_sharpe,
                 "gross_mdd": float(mdd_g),
                 "net_mdd": float(mdd_n),
-                "gross_hit_ratio": float((r_gross > 0).mean()) if len(r_gross) else np.nan,
+                "gross_hit_ratio": (
+                    float((r_gross > 0).mean()) if len(r_gross) else np.nan
+                ),
                 "net_hit_ratio": float((r_net > 0).mean()) if len(r_net) else np.nan,
                 "avg_turnover_oneway": float(g["turnover_oneway"].mean()),
                 "avg_n_tickers": float(g["n_tickers"].mean()),
@@ -1830,8 +2096,6 @@ def run_backtest(
 # src/stages/l7b_sensitivity.py
 from __future__ import annotations
 
-from typing import List, Tuple
-
 import pandas as pd
 
 from src.stages.backtest.l7_backtest import BacktestConfig, run_backtest
@@ -1841,13 +2105,13 @@ def run_sensitivity(
     rebalance_scores: pd.DataFrame,
     *,
     holding_days: int,
-    top_k_grid: List[int],
-    cost_bps_grid: List[float],
-    weighting_grid: List[str],
+    top_k_grid: list[int],
+    cost_bps_grid: list[float],
+    weighting_grid: list[str],
     score_col: str,
     ret_col: str,
-) -> Tuple[pd.DataFrame, dict, List[str]]:
-    warns: List[str] = []
+) -> tuple[pd.DataFrame, dict, list[str]]:
+    warns: list[str] = []
     rows = []
 
     for w in weighting_grid:
@@ -1892,13 +2156,13 @@ def run_sensitivity(
 # src/stages/l7c_benchmark.py
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import pandas as pd
 
 
-def _pick_strategy_return_series(bt_returns: pd.DataFrame) -> Tuple[pd.Series, str]:
+def _pick_strategy_return_series(bt_returns: pd.DataFrame) -> tuple[pd.Series, str]:
     """
     bt_returns에서 전략 수익률(리밸런스 단위)을 의미하는 컬럼을 '확정적으로' 확보한다.
     우선순위:
@@ -1910,8 +2174,13 @@ def _pick_strategy_return_series(bt_returns: pd.DataFrame) -> Tuple[pd.Series, s
 
     # 1) net_return 후보
     net_candidates = [
-        "net_return", "ret_net", "net_ret", "return_net",
-        "net", "net_r", "portfolio_net_return",
+        "net_return",
+        "ret_net",
+        "net_ret",
+        "return_net",
+        "net",
+        "net_r",
+        "portfolio_net_return",
     ]
     for c in net_candidates:
         if c in cols:
@@ -1940,7 +2209,11 @@ def _pick_strategy_return_series(bt_returns: pd.DataFrame) -> Tuple[pd.Series, s
         tcol = next((c for c in turnover_candidates if c in cols), None)
         cbps = next((c for c in cost_bps_candidates if c in cols), None)
         if tcol is not None and cbps is not None:
-            cost = bt_returns[tcol].astype(float) * bt_returns[cbps].astype(float) / 10000.0
+            cost = (
+                bt_returns[tcol].astype(float)
+                * bt_returns[cbps].astype(float)
+                / 10000.0
+            )
             return (g - cost), f"{gross_col}-({tcol}*{cbps}/10000)"
 
         # 3) gross_return만 사용
@@ -1953,8 +2226,7 @@ def _pick_strategy_return_series(bt_returns: pd.DataFrame) -> Tuple[pd.Series, s
             return bt_returns[c].astype(float), c
 
     raise KeyError(
-        "bt_returns에 전략 수익률 컬럼이 없습니다. "
-        f"현재 컬럼={sorted(list(cols))}"
+        "bt_returns에 전략 수익률 컬럼이 없습니다. " f"현재 컬럼={sorted(list(cols))}"
     )
 
 
@@ -1980,7 +2252,9 @@ def build_universe_benchmark_returns(
             ret_col = c
             break
     if ret_col is None:
-        raise KeyError(f"no benchmark return col in rebalance_scores. tried={ret_col_candidates}")
+        raise KeyError(
+            f"no benchmark return col in rebalance_scores. tried={ret_col_candidates}"
+        )
 
     df = rebalance_scores[[date_col, phase_col, ticker_col, ret_col]].copy()
     df[date_col] = pd.to_datetime(df[date_col])
@@ -2000,7 +2274,9 @@ def build_universe_benchmark_returns(
     bench["bench_equity"] = 1.0
     for phase, g in bench.groupby(phase_col, sort=False):
         idx = g.index
-        bench.loc[idx, "bench_equity"] = (1.0 + g["bench_return"].astype(float)).cumprod().values
+        bench.loc[idx, "bench_equity"] = (
+            (1.0 + g["bench_return"].astype(float)).cumprod().values
+        )
 
     return bench
 
@@ -2010,8 +2286,8 @@ def compare_strategy_vs_benchmark(
     bench_returns: pd.DataFrame,
     *,
     holding_days: int,
-) -> Tuple[pd.DataFrame, pd.DataFrame, dict, List[str]]:
-    warns: List[str] = []
+) -> tuple[pd.DataFrame, pd.DataFrame, dict, list[str]]:
+    warns: list[str] = []
 
     br = bt_returns.copy()
     br["date"] = pd.to_datetime(br["date"])
@@ -2024,25 +2300,43 @@ def compare_strategy_vs_benchmark(
     strat_ret, used_col = _pick_strategy_return_series(br)
     br["_strategy_return_"] = strat_ret
 
-    m = br.merge(bench[["phase", "date", "bench_return"]], on=["phase", "date"], how="inner")
+    m = br.merge(
+        bench[["phase", "date", "bench_return"]], on=["phase", "date"], how="inner"
+    )
     if len(m) == 0:
         raise ValueError("no overlapping dates between bt_returns and benchmark")
 
-    m["excess_return"] = m["_strategy_return_"].astype(float) - m["bench_return"].astype(float)
+    m["excess_return"] = m["_strategy_return_"].astype(float) - m[
+        "bench_return"
+    ].astype(float)
 
     periods_per_year = 252.0 / float(holding_days) if holding_days > 0 else 12.6
 
     rows = []
     for phase, g in m.groupby("phase", sort=False):
         ex = g["excess_return"].astype(float).to_numpy()
-        te = float(np.std(ex, ddof=1) * np.sqrt(periods_per_year)) if len(ex) > 1 else 0.0
-        ir = float((np.mean(ex) / (np.std(ex, ddof=1) + 1e-12)) * np.sqrt(periods_per_year)) if len(ex) > 1 else 0.0
+        te = (
+            float(np.std(ex, ddof=1) * np.sqrt(periods_per_year))
+            if len(ex) > 1
+            else 0.0
+        )
+        ir = (
+            float(
+                (np.mean(ex) / (np.std(ex, ddof=1) + 1e-12)) * np.sqrt(periods_per_year)
+            )
+            if len(ex) > 1
+            else 0.0
+        )
 
         strat = g["_strategy_return_"].astype(float).to_numpy()
         b = g["bench_return"].astype(float).to_numpy()
 
         corr = float(np.corrcoef(strat, b)[0, 1]) if len(ex) > 1 else np.nan
-        beta = float(np.cov(strat, b, ddof=1)[0, 1] / (np.var(b, ddof=1) + 1e-12)) if len(ex) > 1 else np.nan
+        beta = (
+            float(np.cov(strat, b, ddof=1)[0, 1] / (np.var(b, ddof=1) + 1e-12))
+            if len(ex) > 1
+            else np.nan
+        )
 
         rows.append(
             {
@@ -2067,7 +2361,12 @@ def compare_strategy_vs_benchmark(
             "strategy_return_col_used": used_col,
         }
     }
-    return m.sort_values(["phase", "date"]).reset_index(drop=True), compare_metrics, quality, warns
+    return (
+        m.sort_values(["phase", "date"]).reset_index(drop=True),
+        compare_metrics,
+        quality,
+        warns,
+    )
 
 
 # END OF FILE: l7c_benchmark.py
@@ -2082,7 +2381,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -2094,7 +2393,11 @@ class L7DConfig:
     date_col: str = "date"
     phase_col: str = "phase"
     # bt_returns에서 사용할 net return 컬럼 후보(앞에서부터 우선)
-    net_return_candidates: Tuple[str, ...] = ("net_return", "net_ret", "net_period_return")
+    net_return_candidates: tuple[str, ...] = (
+        "net_return",
+        "net_ret",
+        "net_period_return",
+    )
 
 
 def _ensure_datetime(df: pd.DataFrame, col: str) -> pd.DataFrame:
@@ -2161,7 +2464,9 @@ def build_bt_yearly_metrics(
 
     used_col = net_return_col if net_return_col else _pick_net_return_col(df, cfg)
     if used_col not in df.columns:
-        raise KeyError(f"[L7D] net_return_col='{used_col}' not found in bt_returns columns.")
+        raise KeyError(
+            f"[L7D] net_return_col='{used_col}' not found in bt_returns columns."
+        )
 
     # 숫자형 강제
     df[used_col] = pd.to_numeric(df[used_col], errors="coerce")
@@ -2171,7 +2476,7 @@ def build_bt_yearly_metrics(
 
     ann_factor = math.sqrt(252.0 / float(cfg.holding_days))
 
-    rows: List[dict] = []
+    rows: list[dict] = []
     g = df.groupby([cfg.phase_col, "year"], sort=True)
 
     for (phase, year), d in g:
@@ -2246,7 +2551,7 @@ def run_l7d_stability_from_artifacts(
     *,
     bt_returns: pd.DataFrame,
     holding_days: int = 20,
-) -> Tuple[pd.DataFrame, list]:
+) -> tuple[pd.DataFrame, list]:
     """
     run_all에서 바로 호출하기 위한 래퍼
     """
@@ -2254,12 +2559,13 @@ def run_l7d_stability_from_artifacts(
     warns: list = []
     return yearly, warns
 
+
 def build_bt_rolling_sharpe(bt_returns, cfg):
     import numpy as np
     import pandas as pd
 
-    l7 = (cfg.get("l7", {}) or {})
-    l7d = (cfg.get("l7d", {}) or {})
+    l7 = cfg.get("l7", {}) or {}
+    l7d = cfg.get("l7d", {}) or {}
 
     holding_days = int(l7.get("holding_days", 20))
     window_rebalances = int(l7d.get("rolling_window_rebalances", 12))
@@ -2308,15 +2614,21 @@ def build_bt_rolling_sharpe(bt_returns, cfg):
 
         roll_sharpe = ratio * ann_factor
 
-        out.append(pd.DataFrame({
-            "phase": phase,
-            "date": s["date"],
-            "net_rolling_n": roll_n.astype(int),
-            "net_rolling_mean": roll_mean.astype(float),
-            "net_rolling_vol_ann": roll_vol_ann.astype(float),
-            "net_rolling_sharpe": pd.Series(roll_sharpe, index=s.index).astype(float),
-            "net_return_col_used": return_col,
-        }))
+        out.append(
+            pd.DataFrame(
+                {
+                    "phase": phase,
+                    "date": s["date"],
+                    "net_rolling_n": roll_n.astype(int),
+                    "net_rolling_mean": roll_mean.astype(float),
+                    "net_rolling_vol_ann": roll_vol_ann.astype(float),
+                    "net_rolling_sharpe": pd.Series(roll_sharpe, index=s.index).astype(
+                        float
+                    ),
+                    "net_return_col_used": return_col,
+                }
+            )
+        )
 
     res = pd.concat(out, ignore_index=True)
 
@@ -2327,7 +2639,9 @@ def build_bt_rolling_sharpe(bt_returns, cfg):
 
     keys = ["date", "phase", "net_return_col_used"]
     if res.duplicated(keys).any():
-        raise ValueError("bt_rolling_sharpe must be unique on (date,phase,net_return_col_used)")
+        raise ValueError(
+            "bt_rolling_sharpe must be unique on (date,phase,net_return_col_used)"
+        )
 
     return res
 
@@ -2376,7 +2690,9 @@ def compute_bt_rolling_sharpe(
     if df["date"].isna().any():
         raise SystemExit("[FAIL] bt_returns has invalid 'date' (NaT)")
     df["phase"] = df["phase"].astype(str)
-    df[return_col] = pd.to_numeric(df[return_col], errors="coerce").replace([np.inf, -np.inf], np.nan)
+    df[return_col] = pd.to_numeric(df[return_col], errors="coerce").replace(
+        [np.inf, -np.inf], np.nan
+    )
 
     periods_per_year = 252.0 / float(holding_days)
     ann_factor = np.sqrt(periods_per_year)
@@ -2410,7 +2726,9 @@ def compute_bt_rolling_sharpe(
                 "net_rolling_n": roll_n.astype(int),
                 "net_rolling_mean": roll_mean.astype(float),
                 "net_rolling_vol_ann": roll_vol_ann.astype(float),
-                "net_rolling_sharpe": pd.Series(roll_sharpe, index=s.index).astype(float),
+                "net_rolling_sharpe": pd.Series(roll_sharpe, index=s.index).astype(
+                    float
+                ),
                 "net_return_col_used": return_col,
             }
         )
@@ -2421,13 +2739,20 @@ def compute_bt_rolling_sharpe(
     keys = ["date", "phase", "net_return_col_used"]
     if res.duplicated(keys).any():
         dup = res.loc[res.duplicated(keys, keep=False), keys].head(20)
-        raise SystemExit(f"[FAIL] rolling sharpe rebuild has duplicates on {keys}. sample:\n{dup}")
+        raise SystemExit(
+            f"[FAIL] rolling sharpe rebuild has duplicates on {keys}. sample:\n{dup}"
+        )
 
     # finite 강제
     for c in ["net_rolling_mean", "net_rolling_vol_ann", "net_rolling_sharpe"]:
-        res[c] = pd.to_numeric(res[c], errors="coerce").replace([np.inf, -np.inf], np.nan).fillna(0.0)
+        res[c] = (
+            pd.to_numeric(res[c], errors="coerce")
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0.0)
+        )
 
     return res
+
 
 def main():
     print("=== REBUILD bt_rolling_sharpe from bt_returns ===")
@@ -2450,18 +2775,22 @@ def main():
 
     bt_returns = load_artifact(base_returns)
     if not isinstance(bt_returns, pd.DataFrame) or bt_returns.shape[0] == 0:
-        raise SystemExit(f"[FAIL] bt_returns invalid: shape={getattr(bt_returns,'shape',None)}")
+        raise SystemExit(
+            f"[FAIL] bt_returns invalid: shape={getattr(bt_returns,'shape',None)}"
+        )
 
     # 설정값: config 우선, 없으면 프로젝트 기본값(월 리밸=20, 12개월=12스텝)
-    l7 = (cfg.get("l7", {}) or {})
-    l7d = (cfg.get("l7d", {}) or {})
+    l7 = cfg.get("l7", {}) or {}
+    l7d = cfg.get("l7d", {}) or {}
     holding_days = int(l7.get("holding_days", 20))
     window_rebalances = int(l7d.get("rolling_window_rebalances", 12))
 
     # bt_returns 컬럼은 L7C에서 이미 사용되므로 여기서는 고정
     return_col = "net_return"
     if return_col not in bt_returns.columns:
-        raise SystemExit(f"[FAIL] bt_returns missing '{return_col}'. cols={bt_returns.columns.tolist()}")
+        raise SystemExit(
+            f"[FAIL] bt_returns missing '{return_col}'. cols={bt_returns.columns.tolist()}"
+        )
 
     rebuilt = compute_bt_rolling_sharpe(
         bt_returns,
@@ -2479,15 +2808,19 @@ def main():
         run_id="rebuild_bt_rolling_sharpe",
         df=rebuilt,
         out_base_path=out_base,
-        warnings=[f"rebuilt from bt_returns with holding_days={holding_days}, window_rebalances={window_rebalances}"],
+        warnings=[
+            f"rebuilt from bt_returns with holding_days={holding_days}, window_rebalances={window_rebalances}"
+        ],
         inputs={"source": "bt_returns"},
         repo_dir=get_path(cfg, "base_dir"),
-        quality={"stability": {
-            "holding_days": holding_days,
-            "window_rebalances": window_rebalances,
-            "net_return_col_used": return_col,
-            "rows": int(rebuilt.shape[0]),
-        }},
+        quality={
+            "stability": {
+                "holding_days": holding_days,
+                "window_rebalances": window_rebalances,
+                "net_return_col_used": return_col,
+                "rows": int(rebuilt.shape[0]),
+            }
+        },
     )
     save_meta(out_base, meta, force=True)
 
@@ -2534,8 +2867,15 @@ def _infer_keys(df: pd.DataFrame) -> list[str]:
 
     # 만약 실제로 window/series 컬럼이 존재한다면 키에 포함(있으면 더 안전)
     extra_candidates = [
-        "window_days", "window", "lookback_days", "lookback",
-        "rolling_window", "series", "kind", "metric", "return_col"
+        "window_days",
+        "window",
+        "lookback_days",
+        "lookback",
+        "rolling_window",
+        "series",
+        "kind",
+        "metric",
+        "return_col",
     ]
     for c in extra_candidates:
         if c in df.columns and c not in keys:
@@ -2544,7 +2884,9 @@ def _infer_keys(df: pd.DataFrame) -> list[str]:
     return keys
 
 
-def _check_conflicting_duplicates(df: pd.DataFrame, keys: list[str]) -> tuple[bool, pd.DataFrame]:
+def _check_conflicting_duplicates(
+    df: pd.DataFrame, keys: list[str]
+) -> tuple[bool, pd.DataFrame]:
     """
     keys가 동일한데 다른 값(충돌)이 있는지 검사.
     - 충돌이 없으면 (True, empty)
@@ -2591,7 +2933,9 @@ def main():
 
     df = load_artifact(base)
     if not isinstance(df, pd.DataFrame) or df.shape[0] == 0:
-        raise SystemExit(f"[FAIL] invalid DataFrame loaded: shape={getattr(df,'shape',None)}")
+        raise SystemExit(
+            f"[FAIL] invalid DataFrame loaded: shape={getattr(df,'shape',None)}"
+        )
 
     # 타입 정리
     if "date" in df.columns:
@@ -2609,14 +2953,20 @@ def main():
     dup_cnt = int(df.duplicated(keys, keep=False).sum())
 
     print(f"keys used: {keys}")
-    print(f"rows(before)={before_rows}, unique_keys(before)={before_unique_keys}, dup_rows={dup_cnt}")
+    print(
+        f"rows(before)={before_rows}, unique_keys(before)={before_unique_keys}, dup_rows={dup_cnt}"
+    )
 
     # 충돌 여부 확인 (같은 key인데 값이 다르면 여기서 FAIL)
     ok, sample = _check_conflicting_duplicates(df, keys)
     if not ok:
-        print("\n[FAIL] Found conflicting duplicates (same keys, different values). Sample:")
+        print(
+            "\n[FAIL] Found conflicting duplicates (same keys, different values). Sample:"
+        )
         print(sample)
-        raise SystemExit("[FAIL] cannot auto-dedup safely. Fix L7D generation logic first.")
+        raise SystemExit(
+            "[FAIL] cannot auto-dedup safely. Fix L7D generation logic first."
+        )
 
     # 안전한 dedup: "완전히 동일한 행" 제거 → 그 다음에도 key 중복 있으면 key 기준 집계
     df2 = df.drop_duplicates().copy()
@@ -2636,7 +2986,9 @@ def main():
     after_rows = int(df2.shape[0])
     after_unique_keys = int(df2[keys].drop_duplicates().shape[0])
     if after_rows != after_unique_keys:
-        raise SystemExit(f"[FAIL] dedup failed: rows(after)={after_rows} != unique_keys(after)={after_unique_keys}")
+        raise SystemExit(
+            f"[FAIL] dedup failed: rows(after)={after_rows} != unique_keys(after)={after_unique_keys}"
+        )
 
     print(f"rows(after)={after_rows}, unique_keys(after)={after_unique_keys}")
 
@@ -2652,12 +3004,14 @@ def main():
         warnings=[f"dedup applied: rows {before_rows} -> {after_rows} on keys={keys}"],
         inputs={"source": "bt_rolling_sharpe (existing)"},
         repo_dir=get_path(cfg, "base_dir"),
-        quality={"repair": {
-            "keys": keys,
-            "rows_before": before_rows,
-            "rows_after": after_rows,
-            "dup_rows_before": dup_cnt,
-        }},
+        quality={
+            "repair": {
+                "keys": keys,
+                "rows_before": before_rows,
+                "rows_after": after_rows,
+                "dup_rows_before": dup_cnt,
+            }
+        },
     )
     save_meta(base, meta, force=True)
 
@@ -2698,7 +3052,7 @@ from src.utils.validate import raise_if_invalid, validate_df
 logging.basicConfig(
     level=logging.INFO,
     format="[%(asctime)s] [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
 
@@ -2874,7 +3228,9 @@ def run_L6_scoring(cfg, artifacts, *, force=False):
     )
 
     # meta.quality에 실어줄 scoring quality 임시 저장
-    artifacts["_l6_quality"] = {"scoring": quality} if isinstance(quality, dict) else {"scoring": quality}
+    artifacts["_l6_quality"] = (
+        {"scoring": quality} if isinstance(quality, dict) else {"scoring": quality}
+    )
 
     return {
         "rebalance_scores": scores,
@@ -2897,7 +3253,12 @@ def run_L7_backtest(cfg, artifacts, *, force=False):
     rebalance_scores_summary = artifacts.get("rebalance_scores_summary")
 
     # 후보 함수명들(프로젝트 코드 변화에 대비)
-    candidates = ["build_backtest_outputs", "run_backtest", "backtest_from_scores", "build_backtest"]
+    candidates = [
+        "build_backtest_outputs",
+        "run_backtest",
+        "backtest_from_scores",
+        "build_backtest",
+    ]
     fn = None
     for name in candidates:
         if hasattr(l7m, name):
@@ -2959,7 +3320,9 @@ def run_L7B_sensitivity(cfg, artifacts, *, force=False):
             fn = getattr(m, name)
             break
     if fn is None:
-        raise AttributeError(f"[L7B] stages.l7b_sensitivity missing any of {candidates}")
+        raise AttributeError(
+            f"[L7B] stages.l7b_sensitivity missing any of {candidates}"
+        )
 
     try:
         out = fn(rebalance_scores=artifacts["rebalance_scores"], cfg=cfg)
@@ -3056,7 +3419,10 @@ REQUIRED_INPUTS = {
     "L7": ["rebalance_scores", "rebalance_scores_summary"],
     "L7B": ["rebalance_scores"],
     "L7C": ["rebalance_scores", "bt_returns"],
-    "L7D": ["bt_returns", "bt_equity_curve"],  # bt_equity_curve는 안정성 확장에 필요할 수 있어 preload 유지
+    "L7D": [
+        "bt_returns",
+        "bt_equity_curve",
+    ],  # bt_equity_curve는 안정성 확장에 필요할 수 있어 preload 유지
 }
 
 # stage별 대표 output(스킵 판정용)
@@ -3080,22 +3446,63 @@ REQUIRED_COLS_BY_OUTPUT = {
     "fundamentals_annual": ["date", "ticker"],
     "panel_merged_daily": ["date", "ticker"],
     "dataset_daily": ["date", "ticker"],
-    "cv_folds_short": ["fold_id", "segment", "train_start", "train_end", "test_start", "test_end"],
-    "cv_folds_long": ["fold_id", "segment", "train_start", "train_end", "test_start", "test_end"],
-    "pred_short_oos": ["date", "ticker", "y_true", "y_pred", "fold_id", "phase", "horizon"],
-    "pred_long_oos": ["date", "ticker", "y_true", "y_pred", "fold_id", "phase", "horizon"],
+    "cv_folds_short": [
+        "fold_id",
+        "segment",
+        "train_start",
+        "train_end",
+        "test_start",
+        "test_end",
+    ],
+    "cv_folds_long": [
+        "fold_id",
+        "segment",
+        "train_start",
+        "train_end",
+        "test_start",
+        "test_end",
+    ],
+    "pred_short_oos": [
+        "date",
+        "ticker",
+        "y_true",
+        "y_pred",
+        "fold_id",
+        "phase",
+        "horizon",
+    ],
+    "pred_long_oos": [
+        "date",
+        "ticker",
+        "y_true",
+        "y_pred",
+        "fold_id",
+        "phase",
+        "horizon",
+    ],
     "model_metrics": ["horizon", "fold_id", "phase", "rmse"],
     "rebalance_scores": ["date", "ticker", "phase"],
     "rebalance_scores_summary": ["date", "phase", "n_tickers", "coverage_ticker_pct"],
     "bt_positions": ["date", "phase", "ticker"],
-    "bt_returns": ["date", "phase"],         # net_return 등은 구현에 따라 달라질 수 있어 최소만 강제
+    "bt_returns": [
+        "date",
+        "phase",
+    ],  # net_return 등은 구현에 따라 달라질 수 있어 최소만 강제
     "bt_equity_curve": ["date", "phase"],
     "bt_metrics": ["phase", "net_total_return", "net_sharpe", "net_mdd"],
     # ✅ L7D는 실제 산출물 결과(untitled35) 기준으로 11개 컬럼을 고정
     "bt_yearly_metrics": [
-        "phase", "year", "n_rebalances",
-        "net_total_return", "net_vol_ann", "net_sharpe", "net_mdd", "net_hit_ratio",
-        "date_start", "date_end", "net_return_col_used"
+        "phase",
+        "year",
+        "n_rebalances",
+        "net_total_return",
+        "net_vol_ann",
+        "net_sharpe",
+        "net_mdd",
+        "net_hit_ratio",
+        "date_start",
+        "date_end",
+        "net_return_col_used",
     ],
 }
 
@@ -3107,12 +3514,21 @@ def _preload_required_inputs(stage_name: str, interim_dir: Path, artifacts: dict
         base = interim_dir / name
         if artifact_exists(base):
             artifacts[name] = load_artifact(base)
-            logger.info(f"[PRELOAD] {stage_name} <- loaded required input from interim: {name}")
+            logger.info(
+                f"[PRELOAD] {stage_name} <- loaded required input from interim: {name}"
+            )
         else:
             raise KeyError(f"{stage_name} requires '{name}' but not found: {base}")
 
 
-def _maybe_skip_stage(stage_name: str, interim_dir: Path, artifacts: dict, *, force: bool, skip_if_exists: bool) -> bool:
+def _maybe_skip_stage(
+    stage_name: str,
+    interim_dir: Path,
+    artifacts: dict,
+    *,
+    force: bool,
+    skip_if_exists: bool,
+) -> bool:
     if force or (not skip_if_exists):
         return False
     outs = STAGE_OUTPUTS.get(stage_name, [])
@@ -3149,7 +3565,7 @@ def main():
     else:
         start_idx = stage_names.index(args.from_stage)
         end_idx = stage_names.index(args.to_stage)
-        target_stages = stage_names[start_idx:end_idx + 1]
+        target_stages = stage_names[start_idx : end_idx + 1]
 
     logger.info(f"🚀 Start Pipeline | Run ID: {args.run_id}")
     logger.info(f"Target Stages: {target_stages}")
@@ -3163,7 +3579,9 @@ def main():
     interim_dir.mkdir(parents=True, exist_ok=True)
 
     save_formats = cfg.get("run", {}).get("save_formats", ["parquet", "csv"])
-    fail_on_validation_error = bool(cfg.get("run", {}).get("fail_on_validation_error", True))
+    fail_on_validation_error = bool(
+        cfg.get("run", {}).get("fail_on_validation_error", True)
+    )
     write_meta = bool(cfg.get("run", {}).get("write_meta", True))
     skip_if_exists = bool(cfg.get("run", {}).get("skip_if_exists", True))
 
@@ -3173,14 +3591,22 @@ def main():
         try:
             _preload_required_inputs(stage_name, interim_dir, artifacts)
 
-            if _maybe_skip_stage(stage_name, interim_dir, artifacts, force=args.force, skip_if_exists=skip_if_exists):
+            if _maybe_skip_stage(
+                stage_name,
+                interim_dir,
+                artifacts,
+                force=args.force,
+                skip_if_exists=skip_if_exists,
+            ):
                 continue
 
             func = STAGES[stage_name]
             outputs, stage_warnings = func(cfg, artifacts, force=args.force)
 
             if not isinstance(outputs, dict) or not outputs:
-                raise ValueError(f"{stage_name} must return dict[str, DataFrame] with at least one output.")
+                raise ValueError(
+                    f"{stage_name} must return dict[str, DataFrame] with at least one output."
+                )
 
             for out_name, df in outputs.items():
                 out_base = interim_dir / out_name
@@ -3208,8 +3634,12 @@ def main():
                 if stage_name == "L4" and out_name == "dataset_daily":
                     quality["walkforward"] = walkforward_quality_report(
                         dataset_daily=df,
-                        cv_folds_short=outputs.get("cv_folds_short", artifacts.get("cv_folds_short")),
-                        cv_folds_long=outputs.get("cv_folds_long", artifacts.get("cv_folds_long")),
+                        cv_folds_short=outputs.get(
+                            "cv_folds_short", artifacts.get("cv_folds_short")
+                        ),
+                        cv_folds_long=outputs.get(
+                            "cv_folds_long", artifacts.get("cv_folds_long")
+                        ),
                         cfg=cfg,
                     )
 
@@ -3274,7 +3704,7 @@ import shutil
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 from src.utils.config import get_path, load_config
 
@@ -3350,7 +3780,7 @@ def _safe_mkdir(p: Path) -> None:
     p.mkdir(parents=True, exist_ok=True)
 
 
-def _discover_artifacts_from_meta(interim: Path) -> List[str]:
+def _discover_artifacts_from_meta(interim: Path) -> list[str]:
     names = []
     for mp in sorted(interim.glob("*__meta.json")):
         # e.g., pred_short_oos__meta.json -> pred_short_oos
@@ -3372,7 +3802,7 @@ def _copy_if_exists(src: Path, dst: Path) -> bool:
     return True
 
 
-def _parse_meta(meta_path: Path) -> Tuple[str, str, int, int]:
+def _parse_meta(meta_path: Path) -> tuple[str, str, int, int]:
     """
     meta JSON 구조는 utils.meta.build_meta() 결과를 따른다고 가정.
     최소한 stage/run_id/df_shape(혹은 n_rows/n_cols)를 안전하게 읽는다.
@@ -3414,7 +3844,7 @@ def snapshot(
     interim: Path,
     out_dir: Path,
     include_discovered: bool,
-) -> List[ArtifactRecord]:
+) -> list[ArtifactRecord]:
     _safe_mkdir(out_dir)
 
     # export 대상 artifact 목록 확정
@@ -3423,7 +3853,7 @@ def snapshot(
         names += _discover_artifacts_from_meta(interim)
     names = sorted(set(names))
 
-    records: List[ArtifactRecord] = []
+    records: list[ArtifactRecord] = []
 
     for name in names:
         src_base = interim / name
@@ -3473,38 +3903,42 @@ def snapshot(
     return records
 
 
-def write_manifest(out_dir: Path, records: List[ArtifactRecord]) -> None:
+def write_manifest(out_dir: Path, records: list[ArtifactRecord]) -> None:
     # CSV
     manifest_csv = out_dir / "manifest.csv"
     with manifest_csv.open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
-        w.writerow([
-            "name",
-            "has_parquet",
-            "has_csv",
-            "has_meta",
-            "parquet_bytes",
-            "csv_bytes",
-            "meta_bytes",
-            "meta_stage",
-            "meta_run_id",
-            "meta_n_rows",
-            "meta_n_cols",
-        ])
+        w.writerow(
+            [
+                "name",
+                "has_parquet",
+                "has_csv",
+                "has_meta",
+                "parquet_bytes",
+                "csv_bytes",
+                "meta_bytes",
+                "meta_stage",
+                "meta_run_id",
+                "meta_n_rows",
+                "meta_n_cols",
+            ]
+        )
         for r in records:
-            w.writerow([
-                r.name,
-                int(r.has_parquet),
-                int(r.has_csv),
-                int(r.has_meta),
-                r.parquet_bytes,
-                r.csv_bytes,
-                r.meta_bytes,
-                r.meta_stage,
-                r.meta_run_id,
-                r.meta_n_rows,
-                r.meta_n_cols,
-            ])
+            w.writerow(
+                [
+                    r.name,
+                    int(r.has_parquet),
+                    int(r.has_csv),
+                    int(r.has_meta),
+                    r.parquet_bytes,
+                    r.csv_bytes,
+                    r.meta_bytes,
+                    r.meta_stage,
+                    r.meta_run_id,
+                    r.meta_n_rows,
+                    r.meta_n_cols,
+                ]
+            )
 
     # JSON
     manifest_json = out_dir / "manifest.json"
@@ -3604,8 +4038,8 @@ import pandas as pd
 # Path bootstrap (Spyder/Windows 안정화)
 # ----------------------------
 THIS = Path(__file__).resolve()
-ROOT = THIS.parents[2]          # .../03_code
-SRC = THIS.parents[1]           # .../03_code/src
+ROOT = THIS.parents[2]  # .../03_code
+SRC = THIS.parents[1]  # .../03_code/src
 CFG_PATH = ROOT / "configs" / "config.yaml"
 
 if str(SRC) not in sys.path:
@@ -3620,7 +4054,9 @@ from src.utils.io import artifact_exists, load_artifact
 # ----------------------------
 def _must_exist(base: Path, name: str) -> None:
     if not artifact_exists(base):
-        raise FileNotFoundError(f"[FAIL] artifact missing: {name} -> {base}(.parquet/.csv)")
+        raise FileNotFoundError(
+            f"[FAIL] artifact missing: {name} -> {base}(.parquet/.csv)"
+        )
 
 
 def _load_df(interim: Path, name: str) -> pd.DataFrame:
@@ -3680,7 +4116,13 @@ def _pick_pred_col(df: pd.DataFrame) -> str:
 def _metrics(y: np.ndarray, p: np.ndarray) -> dict:
     mask = np.isfinite(y) & np.isfinite(p)
     if mask.sum() == 0:
-        return {"n": 0, "rmse": np.nan, "mae": np.nan, "corr": np.nan, "hit_ratio": np.nan}
+        return {
+            "n": 0,
+            "rmse": np.nan,
+            "mae": np.nan,
+            "corr": np.nan,
+            "hit_ratio": np.nan,
+        }
 
     yy = y[mask]
     pp = p[mask]
@@ -3688,10 +4130,18 @@ def _metrics(y: np.ndarray, p: np.ndarray) -> dict:
     mae = float(np.mean(np.abs(pp - yy)))
     corr = float(np.corrcoef(pp, yy)[0, 1]) if len(yy) > 1 else np.nan
     hit = float(np.mean((pp > 0) == (yy > 0)))
-    return {"n": int(mask.sum()), "rmse": rmse, "mae": mae, "corr": corr, "hit_ratio": hit}
+    return {
+        "n": int(mask.sum()),
+        "rmse": rmse,
+        "mae": mae,
+        "corr": corr,
+        "hit_ratio": hit,
+    }
 
 
-def _merged_intervals(intervals: list[tuple[pd.Timestamp, pd.Timestamp]]) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
+def _merged_intervals(
+    intervals: list[tuple[pd.Timestamp, pd.Timestamp]],
+) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
     intervals = sorted(intervals, key=lambda x: x[0])
     out: list[tuple[pd.Timestamp, pd.Timestamp]] = []
     for s, e in intervals:
@@ -3706,7 +4156,9 @@ def _merged_intervals(intervals: list[tuple[pd.Timestamp, pd.Timestamp]]) -> lis
     return out
 
 
-def _mask_by_intervals(dates: pd.Series, merged: list[tuple[pd.Timestamp, pd.Timestamp]]) -> pd.Series:
+def _mask_by_intervals(
+    dates: pd.Series, merged: list[tuple[pd.Timestamp, pd.Timestamp]]
+) -> pd.Series:
     m = pd.Series(False, index=dates.index)
     for s, e in merged:
         m |= (dates >= s) & (dates <= e)
@@ -3714,11 +4166,7 @@ def _mask_by_intervals(dates: pd.Series, merged: list[tuple[pd.Timestamp, pd.Tim
 
 
 def _attach_target_from_dataset(
-    pred: pd.DataFrame,
-    dataset: pd.DataFrame,
-    target_col: str,
-    *,
-    name: str
+    pred: pd.DataFrame, dataset: pd.DataFrame, target_col: str, *, name: str
 ) -> pd.DataFrame:
     """
     pred에 target_col이 없으면 dataset_daily에서 (date,ticker)로 조인해 붙인다.
@@ -3736,10 +4184,14 @@ def _attach_target_from_dataset(
     _ensure_ticker_str(dkey)
     dup = int(dkey.duplicated(subset=["date", "ticker"]).sum())
     if dup != 0:
-        raise ValueError(f"[FAIL] dataset_daily has duplicate (date,ticker) keys: {dup} (cannot attach targets safely)")
+        raise ValueError(
+            f"[FAIL] dataset_daily has duplicate (date,ticker) keys: {dup} (cannot attach targets safely)"
+        )
 
     merged = pred.merge(dkey, on=["date", "ticker"], how="left", validate="one_to_one")
-    print(f"[INFO] {name}: target '{target_col}' attached from dataset_daily (missing before attach = {merged[target_col].isna().mean()*100:.4f}%)")
+    print(
+        f"[INFO] {name}: target '{target_col}' attached from dataset_daily (missing before attach = {merged[target_col].isna().mean()*100:.4f}%)"
+    )
     return merged
 
 
@@ -3765,7 +4217,9 @@ def _coverage_against_folds(
     intervals = [(s, e) for s, e in zip(starts.tolist(), ends.tolist())]
     merged_intv = _merged_intervals(intervals)
 
-    eligible_mask = _mask_by_intervals(dataset["date"], merged_intv) & dataset[target_col].notna()
+    eligible_mask = (
+        _mask_by_intervals(dataset["date"], merged_intv) & dataset[target_col].notna()
+    )
     eligible = dataset.loc[eligible_mask, ["date", "ticker"]].drop_duplicates()
 
     pred_keys = pred.loc[pred[target_col].notna(), ["date", "ticker"]].drop_duplicates()
@@ -3773,7 +4227,9 @@ def _coverage_against_folds(
     pred_outside = ~_mask_by_intervals(pred["date"], merged_intv)
     outside_cnt = int(pred_outside.sum())
     if outside_cnt != 0:
-        raise ValueError(f"[FAIL] pred_oos contains {outside_cnt} rows outside test windows (leakage or bad slicing).")
+        raise ValueError(
+            f"[FAIL] pred_oos contains {outside_cnt} rows outside test windows (leakage or bad slicing)."
+        )
 
     cov = (len(pred_keys) / len(eligible)) * 100.0 if len(eligible) > 0 else np.nan
     return {
@@ -3786,7 +4242,9 @@ def _coverage_against_folds(
     }
 
 
-def _fold_level_report(pred: pd.DataFrame, pred_col: str, true_col: str) -> pd.DataFrame:
+def _fold_level_report(
+    pred: pd.DataFrame, pred_col: str, true_col: str
+) -> pd.DataFrame:
     if "fold_id" not in pred.columns:
         y = pd.to_numeric(pred[true_col], errors="coerce").to_numpy()
         p = pd.to_numeric(pred[pred_col], errors="coerce").to_numpy()
@@ -3880,8 +4338,12 @@ def main():
     q_mm = meta_mm.get("quality", {})
 
     print("\n=== [PASS] L5 artifacts loaded and basic checks ok ===")
-    print(f"- pred_short_oos rows={len(ps):,} cols={ps.shape[1]} pred_col={pred_col_s} target={t_s}")
-    print(f"- pred_long_oos  rows={len(pl):,} cols={pl.shape[1]} pred_col={pred_col_l} target={t_l}")
+    print(
+        f"- pred_short_oos rows={len(ps):,} cols={ps.shape[1]} pred_col={pred_col_s} target={t_s}"
+    )
+    print(
+        f"- pred_long_oos  rows={len(pl):,} cols={pl.shape[1]} pred_col={pred_col_l} target={t_l}"
+    )
     print(f"- model_metrics  rows={len(mm):,} cols={mm.shape[1]}")
 
     print("\n=== Missingness (row has any NA in [target,pred]) ===")
@@ -3889,14 +4351,22 @@ def main():
     print(f"- long : {miss_l}%")
 
     print("\n=== Overall OOS Metrics ===")
-    print(f"- short: n={ms['n']:,} rmse={ms['rmse']:.6f} mae={ms['mae']:.6f} corr={ms['corr']:.6f} hit={ms['hit_ratio']:.6f}")
-    print(f"- long : n={ml['n']:,} rmse={ml['rmse']:.6f} mae={ml['mae']:.6f} corr={ml['corr']:.6f} hit={ml['hit_ratio']:.6f}")
+    print(
+        f"- short: n={ms['n']:,} rmse={ms['rmse']:.6f} mae={ms['mae']:.6f} corr={ms['corr']:.6f} hit={ms['hit_ratio']:.6f}"
+    )
+    print(
+        f"- long : n={ml['n']:,} rmse={ml['rmse']:.6f} mae={ml['mae']:.6f} corr={ml['corr']:.6f} hit={ml['hit_ratio']:.6f}"
+    )
 
     print("\n=== Coverage vs Eligible rows (test windows ∩ target notna) ===")
-    print(f"- short: coverage={cov_s['coverage_pct']}% pred={cov_s['pred_rows']:,} eligible={cov_s['eligible_rows']:,} folds={cov_s['folds']} "
-          f"test_range=[{cov_s['test_date_min']} ~ {cov_s['test_date_max']}]")
-    print(f"- long : coverage={cov_l['coverage_pct']}% pred={cov_l['pred_rows']:,} eligible={cov_l['eligible_rows']:,} folds={cov_l['folds']} "
-          f"test_range=[{cov_l['test_date_min']} ~ {cov_l['test_date_max']}]")
+    print(
+        f"- short: coverage={cov_s['coverage_pct']}% pred={cov_s['pred_rows']:,} eligible={cov_s['eligible_rows']:,} folds={cov_s['folds']} "
+        f"test_range=[{cov_s['test_date_min']} ~ {cov_s['test_date_max']}]"
+    )
+    print(
+        f"- long : coverage={cov_l['coverage_pct']}% pred={cov_l['pred_rows']:,} eligible={cov_l['eligible_rows']:,} folds={cov_l['folds']} "
+        f"test_range=[{cov_l['test_date_min']} ~ {cov_l['test_date_max']}]"
+    )
 
     print("\n=== Fold-level sample (first 5 rows) ===")
     print("[short]\n", rep_s.to_string(index=False))
@@ -3927,7 +4397,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -3950,7 +4420,7 @@ def _ensure_datetime(s: pd.Series, name: str) -> pd.Series:
     return s
 
 
-def _read_meta(interim: Path, artifact_name: str) -> Dict[str, Any]:
+def _read_meta(interim: Path, artifact_name: str) -> dict[str, Any]:
     meta_path = interim / f"{artifact_name}__meta.json"
     if not meta_path.exists():
         _fail(f"[FAIL] meta file not found: {meta_path}")
@@ -3958,7 +4428,7 @@ def _read_meta(interim: Path, artifact_name: str) -> Dict[str, Any]:
         return json.load(f)
 
 
-def _get_l6_weights(cfg: dict) -> Tuple[float, float]:
+def _get_l6_weights(cfg: dict) -> tuple[float, float]:
     p = cfg.get("params", {}) or {}
     l6 = p.get("l6", {})
     if not isinstance(l6, dict):
@@ -3971,7 +4441,7 @@ def _get_l6_weights(cfg: dict) -> Tuple[float, float]:
     return (w_s / s, w_l / s)
 
 
-def _detect_col(df: pd.DataFrame, candidates: List[str]) -> str | None:
+def _detect_col(df: pd.DataFrame, candidates: list[str]) -> str | None:
     for c in candidates:
         if c in df.columns:
             return c
@@ -3981,7 +4451,7 @@ def _detect_col(df: pd.DataFrame, candidates: List[str]) -> str | None:
 @dataclass(frozen=True)
 class L6CheckResult:
     ok: bool
-    messages: List[str]
+    messages: list[str]
 
 
 def _validate_fold_windows_nonoverlap(cv: pd.DataFrame, *, name: str) -> None:
@@ -4036,26 +4506,37 @@ def _fold_membership_check(
 
     if m["test_start"].isna().any():
         bad = m.loc[m["test_start"].isna(), ["date", "phase", fold_col]].head(20)
-        _fail(f"[FAIL] {name}: fold_id not found in cv_folds for given phase(segment). sample:\n{bad}")
+        _fail(
+            f"[FAIL] {name}: fold_id not found in cv_folds for given phase(segment). sample:\n{bad}"
+        )
 
     in_window = (m["date"] >= m["test_start"]) & (m["date"] <= m["test_end"])
     bad_cnt = int((~in_window).sum())
     if bad_cnt > 0:
-        bad = m.loc[~in_window, ["date", "phase", fold_col, "test_start", "test_end"]].head(20)
-        _fail(f"[FAIL] {name}: date not in the test window of its fold_id. sample:\n{bad}")
+        bad = m.loc[
+            ~in_window, ["date", "phase", fold_col, "test_start", "test_end"]
+        ].head(20)
+        _fail(
+            f"[FAIL] {name}: date not in the test window of its fold_id. sample:\n{bad}"
+        )
 
 
 def validate_l6_outputs(cfg_path: Path) -> L6CheckResult:
     cfg = load_config(str(cfg_path))
     interim = get_path(cfg, "data_interim")
 
-    msgs: List[str] = []
+    msgs: list[str] = []
     msgs.append("=== L6 Validation Runner ===")
     msgs.append(f"ROOT  : {_root_dir()}")
     msgs.append(f"CFG   : {cfg_path}")
     msgs.append(f"INTERIM: {interim}")
 
-    required = ["rebalance_scores", "rebalance_scores_summary", "cv_folds_short", "cv_folds_long"]
+    required = [
+        "rebalance_scores",
+        "rebalance_scores_summary",
+        "cv_folds_short",
+        "cv_folds_long",
+    ]
     for n in required:
         if not artifact_exists(interim / n):
             _fail(f"[FAIL] missing artifact: {n} at {interim / n}")
@@ -4070,9 +4551,13 @@ def validate_l6_outputs(cfg_path: Path) -> L6CheckResult:
 
     msgs.append("\n=== Meta check ===")
     msgs.append(f"- rebalance_scores meta.stage: {meta_scores.get('stage')}")
-    msgs.append(f"- rebalance_scores meta.quality keys: {list((meta_scores.get('quality') or {}).keys())}")
+    msgs.append(
+        f"- rebalance_scores meta.quality keys: {list((meta_scores.get('quality') or {}).keys())}"
+    )
     msgs.append(f"- rebalance_scores_summary meta.stage: {meta_summary.get('stage')}")
-    msgs.append(f"- rebalance_scores_summary meta.quality keys: {list((meta_summary.get('quality') or {}).keys())}")
+    msgs.append(
+        f"- rebalance_scores_summary meta.quality keys: {list((meta_summary.get('quality') or {}).keys())}"
+    )
 
     if "scoring" not in (meta_scores.get("quality") or {}):
         _fail("[FAIL] rebalance_scores meta.quality missing key 'scoring'")
@@ -4114,16 +4599,22 @@ def validate_l6_outputs(cfg_path: Path) -> L6CheckResult:
     if score_long_col is None:
         _fail("[FAIL] rebalance_scores missing 'score_long'")
     if score_ens_col is None:
-        _fail("[FAIL] rebalance_scores missing ensemble score col (score_ens/score_ensemble/score)")
+        _fail(
+            "[FAIL] rebalance_scores missing ensemble score col (score_ens/score_ensemble/score)"
+        )
 
     # fold cols (merge suffix 대응)
     fold_short = _detect_col(scores, ["fold_id_short", "fold_id_x", "fold_id"])
     fold_long = _detect_col(scores, ["fold_id_long", "fold_id_y"])
     if fold_short is None:
-        _fail("[FAIL] rebalance_scores missing short fold id col (fold_id_short/fold_id_x/fold_id)")
+        _fail(
+            "[FAIL] rebalance_scores missing short fold id col (fold_id_short/fold_id_x/fold_id)"
+        )
     # long은 없는 기간이 있으므로 컬럼 자체는 있어야 한다
     if fold_long is None:
-        _fail("[FAIL] rebalance_scores missing long fold id col (fold_id_long/fold_id_y)")
+        _fail(
+            "[FAIL] rebalance_scores missing long fold id col (fold_id_long/fold_id_y)"
+        )
 
     s_short = pd.to_numeric(scores[score_short_col], errors="coerce")
     s_long = pd.to_numeric(scores[score_long_col], errors="coerce")
@@ -4136,7 +4627,9 @@ def validate_l6_outputs(cfg_path: Path) -> L6CheckResult:
     fl = scores[fold_long].astype("string")
     bad = long_missing & fl.notna()
     if int(bad.sum()) > 0:
-        sample = scores.loc[bad, ["date", "ticker", "phase", fold_long, score_long_col]].head(20)
+        sample = scores.loc[
+            bad, ["date", "ticker", "phase", fold_long, score_long_col]
+        ].head(20)
         _fail(f"[FAIL] long missing rows have non-null fold_id_long. sample:\n{sample}")
 
     msgs.append("\n=== CV windows sanity ===")
@@ -4172,7 +4665,7 @@ def validate_l6_outputs(cfg_path: Path) -> L6CheckResult:
     msgs.append(f"- weights: short={w_s:.6f}, long={w_l:.6f}")
 
     wsum = (~s_short.isna()).astype(float) * w_s + (~s_long.isna()).astype(float) * w_l
-    exp = (s_short.fillna(0) * w_s + s_long.fillna(0) * w_l)
+    exp = s_short.fillna(0) * w_s + s_long.fillna(0) * w_l
     exp = exp.where(wsum > 0, np.nan) / wsum.where(wsum > 0, np.nan)
 
     diff = (s_ens - exp).abs()
@@ -4180,16 +4673,18 @@ def validate_l6_outputs(cfg_path: Path) -> L6CheckResult:
     p99 = float(diff.quantile(0.99))
     msgs.append(f"- |ens - expected| median={med:.10f}, p99={p99:.10f}")
     if not np.isfinite(med) or p99 > 1e-6:
-        _fail("[FAIL] ensemble score does not match expected weighted merge (check build_rebalance_scores)")
+        _fail(
+            "[FAIL] ensemble score does not match expected weighted merge (check build_rebalance_scores)"
+        )
 
     # Summary 정합성
     msgs.append("\n=== Coverage vs summary ===")
-    calc = (
-        scores.groupby(["date", "phase"], as_index=False)
-        .agg(
-            n_tickers_calc=("ticker", "nunique"),
-            ens_missing=(score_ens_col, lambda x: float(pd.to_numeric(x, errors="coerce").isna().mean())),
-        )
+    calc = scores.groupby(["date", "phase"], as_index=False).agg(
+        n_tickers_calc=("ticker", "nunique"),
+        ens_missing=(
+            score_ens_col,
+            lambda x: float(pd.to_numeric(x, errors="coerce").isna().mean()),
+        ),
     )
     merged = summary.merge(calc, on=["date", "phase"], how="left")
     if merged["n_tickers_calc"].isna().any():
@@ -4198,11 +4693,18 @@ def validate_l6_outputs(cfg_path: Path) -> L6CheckResult:
 
     diff_nt = (merged["n_tickers"] - merged["n_tickers_calc"]).abs()
     if int(diff_nt.max()) != 0:
-        bad = merged.loc[diff_nt != 0, ["date", "phase", "n_tickers", "n_tickers_calc"]].head(20)
+        bad = merged.loc[
+            diff_nt != 0, ["date", "phase", "n_tickers", "n_tickers_calc"]
+        ].head(20)
         _fail(f"[FAIL] n_tickers mismatch between summary and scores. sample:\n{bad}")
 
-    if (summary["coverage_ticker_pct"] < 0).any() or (summary["coverage_ticker_pct"] > 100).any():
-        bad = summary.loc[(summary["coverage_ticker_pct"] < 0) | (summary["coverage_ticker_pct"] > 100)].head(20)
+    if (summary["coverage_ticker_pct"] < 0).any() or (
+        summary["coverage_ticker_pct"] > 100
+    ).any():
+        bad = summary.loc[
+            (summary["coverage_ticker_pct"] < 0)
+            | (summary["coverage_ticker_pct"] > 100)
+        ].head(20)
         _fail(f"[FAIL] coverage_ticker_pct out of range [0,100]. sample:\n{bad}")
 
     msgs.append("\n✅ L6 VALIDATION COMPLETE: All critical checks passed.")
@@ -4252,7 +4754,9 @@ def _load_meta(interim: Path, name: str) -> dict:
 def _require_cols(df: pd.DataFrame, cols: list[str], name: str) -> None:
     missing = [c for c in cols if c not in df.columns]
     if missing:
-        raise SystemExit(f"[FAIL] {name} missing columns: {missing}. got={list(df.columns)}")
+        raise SystemExit(
+            f"[FAIL] {name} missing columns: {missing}. got={list(df.columns)}"
+        )
 
 
 def main():
@@ -4291,10 +4795,41 @@ def main():
 
     # schema
     print("\n=== Schema check ===")
-    _require_cols(pos, ["date", "phase", "ticker", "weight", "score_used"], "bt_positions")
-    _require_cols(ret, ["date", "phase", "port_ret_gross", "port_ret_net", "turnover_oneway", "cost", "n_tickers"], "bt_returns")
-    _require_cols(eq, ["date", "phase", "equity_gross", "equity_net", "dd_gross", "dd_net"], "bt_equity_curve")
-    _require_cols(met, ["phase", "top_k", "holding_days", "cost_bps", "gross_sharpe", "net_sharpe", "gross_mdd", "net_mdd"], "bt_metrics")
+    _require_cols(
+        pos, ["date", "phase", "ticker", "weight", "score_used"], "bt_positions"
+    )
+    _require_cols(
+        ret,
+        [
+            "date",
+            "phase",
+            "port_ret_gross",
+            "port_ret_net",
+            "turnover_oneway",
+            "cost",
+            "n_tickers",
+        ],
+        "bt_returns",
+    )
+    _require_cols(
+        eq,
+        ["date", "phase", "equity_gross", "equity_net", "dd_gross", "dd_net"],
+        "bt_equity_curve",
+    )
+    _require_cols(
+        met,
+        [
+            "phase",
+            "top_k",
+            "holding_days",
+            "cost_bps",
+            "gross_sharpe",
+            "net_sharpe",
+            "gross_mdd",
+            "net_mdd",
+        ],
+        "bt_metrics",
+    )
 
     # duplicates
     print("\n=== Duplicate checks ===")
@@ -4328,10 +4863,14 @@ def main():
         last_n = float(e["equity_net"].iloc[-1])
 
         if abs(eq_g - last_g) > 1e-9 or abs(eq_n - last_n) > 1e-9:
-            raise SystemExit(f"[FAIL] equity mismatch for phase={phase}: recomputed({eq_g},{eq_n}) vs saved({last_g},{last_n})")
+            raise SystemExit(
+                f"[FAIL] equity mismatch for phase={phase}: recomputed({eq_g},{eq_n}) vs saved({last_g},{last_n})"
+            )
 
     print("\n✅ L7 VALIDATION COMPLETE: All critical checks passed.")
-    print("➡️ Next: reporting / plots / final summary tables (and optional L7 meta-quality extension).")
+    print(
+        "➡️ Next: reporting / plots / final summary tables (and optional L7 meta-quality extension)."
+    )
 
 
 if __name__ == "__main__":
@@ -4448,7 +4987,11 @@ def main():
     for mp in meta_files:
         m = _load_meta(mp)
         stage = str(m.get("stage", ""))
-        if stage.startswith("L7B:") or stage.startswith("L7C:") or stage.startswith("L7D:"):
+        if (
+            stage.startswith("L7B:")
+            or stage.startswith("L7C:")
+            or stage.startswith("L7D:")
+        ):
             out_name = mp.name.replace("__meta.json", "")
             discovered.append((out_name, stage, mp))
 
@@ -4462,9 +5005,17 @@ def main():
     # L7D yearly metrics는 스키마를 엄격히 고정
     strict_required = {
         "bt_yearly_metrics": [
-            "phase", "year", "n_rebalances",
-            "net_total_return", "net_vol_ann", "net_sharpe", "net_mdd", "net_hit_ratio",
-            "date_start", "date_end", "net_return_col_used",
+            "phase",
+            "year",
+            "n_rebalances",
+            "net_total_return",
+            "net_vol_ann",
+            "net_sharpe",
+            "net_mdd",
+            "net_hit_ratio",
+            "date_start",
+            "date_end",
+            "net_return_col_used",
         ]
     }
 
@@ -4495,7 +5046,9 @@ def main():
             if dc in df.columns:
                 d = pd.to_datetime(df[dc], errors="coerce")
                 if d.isna().any():
-                    _fail(f"[FAIL] {stage}:{out_name} has invalid '{dc}' values (NaT present)")
+                    _fail(
+                        f"[FAIL] {stage}:{out_name} has invalid '{dc}' values (NaT present)"
+                    )
 
         # duplicate checks (output별로 키를 다르게 적용)
         if out_name == "bt_rolling_sharpe":
@@ -4529,7 +5082,9 @@ def main():
         print("phases:", sorted(pd.Series(y["phase"]).astype(str).unique().tolist()))
 
     print("\n✅ L7B/L7C/L7D VALIDATION COMPLETE: All critical checks passed.")
-    print("➡️ Next: run full audit (L0~L7 + extensions) and then final reporting tables.")
+    print(
+        "➡️ Next: run full audit (L0~L7 + extensions) and then final reporting tables."
+    )
 
 
 if __name__ == "__main__":
@@ -4562,7 +5117,7 @@ try:
 
     # 3. 포함된 아티팩트(산출물) 목록 확인
     # '__artifact' 컬럼이 각 행이 어떤 데이터인지 알려주는 '이름표' 역할을 합니다.
-    artifacts = df['__artifact'].unique()
+    artifacts = df["__artifact"].unique()
     print(f"📋 포함된 산출물 목록: {artifacts}")
     print("-" * 60)
 
@@ -4571,21 +5126,30 @@ try:
     # -----------------------------------------------------------------------------
     def analyze_artifact(target_name, description):
         # 해당 아티팩트만 필터링
-        subset = df[df['__artifact'] == target_name].copy()
+        subset = df[df["__artifact"] == target_name].copy()
 
         if subset.empty:
-            return # 해당 아티팩트가 없으면 패스
+            return  # 해당 아티팩트가 없으면 패스
 
         # 해당 데이터에서 '모두 비어있는(NaN)' 컬럼은 제거 (보기 좋게)
-        subset = subset.dropna(axis=1, how='all')
+        subset = subset.dropna(axis=1, how="all")
 
         print(f"\n🔎 [{target_name}] - {description}")
 
         # (A) 성과 지표 (metrics)인 경우: 전체 통계 출력
-        if 'metrics' in target_name:
+        if "metrics" in target_name:
             # 주요 지표 컬럼만 골라서 보여주기 (너무 많으므로)
-            key_metrics = ['net_sharpe', 'net_cagr', 'net_mdd', 'avg_turnover_oneway',
-                           'rmse', 'mae', 'hit_ratio', 'ic_rank', 'corr_vs_benchmark']
+            key_metrics = [
+                "net_sharpe",
+                "net_cagr",
+                "net_mdd",
+                "avg_turnover_oneway",
+                "rmse",
+                "mae",
+                "hit_ratio",
+                "ic_rank",
+                "corr_vs_benchmark",
+            ]
             # 존재하는 컬럼만 선택
             cols_to_show = [c for c in key_metrics if c in subset.columns]
 
@@ -4597,31 +5161,33 @@ try:
                 print(subset.head())
 
         # (B) 포지션(positions)인 경우: 최근 날짜 보유 종목 샘플
-        elif 'positions' in target_name and 'date' in subset.columns:
-            last_date = subset['date'].max()
-            daily_pos = subset[subset['date'] == last_date]
+        elif "positions" in target_name and "date" in subset.columns:
+            last_date = subset["date"].max()
+            daily_pos = subset[subset["date"] == last_date]
             print(f"   📅 최근 거래일({last_date}) 보유 종목 수: {len(daily_pos)}개")
-            print(f"   [상위 비중 5개 종목]")
-            if 'weight' in daily_pos.columns and 'ticker' in daily_pos.columns:
-                print(daily_pos.sort_values('weight', ascending=False)[['ticker', 'weight']].head(5))
+            print("   [상위 비중 5개 종목]")
+            if "weight" in daily_pos.columns and "ticker" in daily_pos.columns:
+                print(
+                    daily_pos.sort_values("weight", ascending=False)[
+                        ["ticker", "weight"]
+                    ].head(5)
+                )
             else:
                 print(daily_pos.head())
 
         # (C) 스코어(scores)인 경우: 점수 분포 확인
-        elif 'score' in target_name:
+        elif "score" in target_name:
             print(f"   📊 스코어 데이터 ({len(subset)} rows)")
             # 점수 컬럼이 있다면 기초 통계 출력
-            score_cols = [c for c in subset.columns if 'score' in c]
+            score_cols = [c for c in subset.columns if "score" in c]
             if score_cols:
-                print(subset[score_cols].describe().loc[['mean', 'std', 'min', 'max']])
+                print(subset[score_cols].describe().loc[["mean", "std", "min", "max"]])
 
         # (D) 기타: 상위 3줄만 출력
         else:
             print(subset.head(3))
 
         print("-" * 60)
-
-
 
     # -----------------------------------------------------------------------------
     # 5. 순차적 분석 실행 (프로젝트 흐름순)
@@ -4632,28 +5198,27 @@ try:
     # 정확한 이름은 위 artifacts 목록 출력 결과를 보고 매칭해야 하지만,
     # 통상적인 이름인 'model_metrics' 또는 'metrics'를 찾아봅니다.
     for art in artifacts:
-        if 'model' in art and 'metrics' in art:
+        if "model" in art and "metrics" in art:
             analyze_artifact(art, "L5 모델 예측 성능 (RMSE, IC)")
 
     # [L6] 스코어링 상태 확인: 점수가 안정적인가?
     for art in artifacts:
-        if 'score' in art and 'summary' not in art: # raw score
+        if "score" in art and "summary" not in art:  # raw score
             analyze_artifact(art, "L6 리밸런싱 스코어 분포")
 
     # [L7] 백테스트 최종 성과: 돈을 벌었는가?
     # 보통 'bt_metrics' 또는 'bt_metrics_...'
     for art in artifacts:
-        if 'bt' in art and 'metrics' in art:
+        if "bt" in art and "metrics" in art:
             analyze_artifact(art, "L7 백테스트 최종 성과 (Sharpe, Turnover)")
 
     # [L7] 포지션 확인: 무엇을 샀는가?
     for art in artifacts:
-        if 'bt' in art and 'positions' in art:
+        if "bt" in art and "positions" in art:
             analyze_artifact(art, "L7 보유 포지션 내역")
 
 except Exception as e:
     print(f"\n❌ 오류 발생: {e}")
-
 
 
 # END OF FILE: 결과값확인코드.py

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/build_kpi_delta.py
 """
 KPI Delta 보고서 생성 래퍼 스크립트
@@ -33,17 +32,23 @@ def main():
     cmd = [
         sys.executable,
         str(delta_script),
-        "--baseline-tag", args.baseline_tag,
-        "--current-tag", args.tag,
+        "--baseline-tag",
+        args.baseline_tag,
+        "--current-tag",
+        args.tag,
     ]
 
     result = subprocess.run(cmd, cwd=str(root))
 
     if result.returncode != 0:
-        print(f"ERROR: Delta report generation failed with exit code {result.returncode}", file=sys.stderr)
+        print(
+            f"ERROR: Delta report generation failed with exit code {result.returncode}",
+            file=sys.stderr,
+        )
         sys.exit(result.returncode)
 
     print(f"[Build KPI Delta] Completed: {args.baseline_tag} vs {args.tag}")
+
 
 if __name__ == "__main__":
     main()

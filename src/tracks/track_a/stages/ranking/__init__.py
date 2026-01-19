@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/ranking/__init__.py
 from .holdout_day_inspector import (  # [개선안 36번] Holdout 하루 분석
     HoldoutDayInspectResult,

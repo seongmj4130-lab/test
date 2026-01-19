@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/ui/icon_mapper.py
 """
 UI 아이콘 매핑 유틸리티
@@ -8,7 +7,7 @@ UI 아이콘 매핑 유틸리티
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import pandas as pd
 import yaml
@@ -19,32 +18,32 @@ DEFAULT_GROUP_ICONS = {
         "icon": "💰",
         "label": "재무",
         "description": "재무 지표가 높은 순위에 기여",
-        "color": "#4CAF50"
+        "color": "#4CAF50",
     },
     "price": {
         "icon": "📈",
         "label": "가격",
         "description": "가격/기술 지표가 높은 순위에 기여",
-        "color": "#2196F3"
+        "color": "#2196F3",
     },
     "sector_adj": {
         "icon": "🏢",
         "label": "섹터",
         "description": "섹터 상대 성과가 높은 순위에 기여",
-        "color": "#FF9800"
+        "color": "#FF9800",
     },
     "core": {
         "icon": "⭐",
         "label": "핵심",
         "description": "핵심 지표가 높은 순위에 기여",
-        "color": "#9C27B0"
+        "color": "#9C27B0",
     },
     "other": {
         "icon": "📊",
         "label": "기타",
         "description": "기타 지표가 높은 순위에 기여",
-        "color": "#666666"
-    }
+        "color": "#666666",
+    },
 }
 
 DEFAULT_FEATURE_ICONS = {
@@ -56,14 +55,21 @@ DEFAULT_FEATURE_ICONS = {
     "momentum": {"icon": "📈", "label": "모멘텀", "description": "추세 강도"},
     "volume": {"icon": "📊", "label": "거래량", "description": "유동성"},
     "volatility": {"icon": "📉", "label": "변동성", "description": "가격 변동성"},
-    "sector_relative": {"icon": "🏢", "label": "섹터 상대", "description": "업종 대비 성과"},
+    "sector_relative": {
+        "icon": "🏢",
+        "label": "섹터 상대",
+        "description": "업종 대비 성과",
+    },
 }
 
-def load_icon_config(config_path: Optional[Path] = None) -> Dict[str, Any]:
+
+def load_icon_config(config_path: Optional[Path] = None) -> dict[str, Any]:
     """아이콘 설정 파일 로드"""
     if config_path is None:
         # 기본 경로: configs/ui_icons.yaml
-        config_path = Path(__file__).parent.parent.parent.parent / "configs" / "ui_icons.yaml"
+        config_path = (
+            Path(__file__).parent.parent.parent.parent / "configs" / "ui_icons.yaml"
+        )
 
     if config_path.exists():
         with config_path.open("r", encoding="utf-8") as f:
@@ -71,17 +77,15 @@ def load_icon_config(config_path: Optional[Path] = None) -> Dict[str, Any]:
         return config
 
     # 기본값 반환
-    return {
-        "groups": DEFAULT_GROUP_ICONS,
-        "features": DEFAULT_FEATURE_ICONS
-    }
+    return {"groups": DEFAULT_GROUP_ICONS, "features": DEFAULT_FEATURE_ICONS}
+
 
 def map_contributions_to_icons(
-    contrib_dict: Dict[str, float],
-    config: Optional[Dict[str, Any]] = None,
+    contrib_dict: dict[str, float],
+    config: Optional[dict[str, Any]] = None,
     top_k: int = 3,
     threshold: float = 0.05,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     contrib_* 딕셔너리를 아이콘 리스트로 변환
 
@@ -110,9 +114,7 @@ def map_contributions_to_icons(
 
     # 기여도 절댓값 기준 정렬
     sorted_contribs = sorted(
-        normalized_dict.items(),
-        key=lambda x: abs(x[1]),
-        reverse=True
+        normalized_dict.items(), key=lambda x: abs(x[1]), reverse=True
     )
 
     icons = []
@@ -120,23 +122,28 @@ def map_contributions_to_icons(
         if abs(contrib_value) < threshold:
             continue
 
-        icon_info = group_icons_config.get(group_name, DEFAULT_GROUP_ICONS.get("other", {}))
+        icon_info = group_icons_config.get(
+            group_name, DEFAULT_GROUP_ICONS.get("other", {})
+        )
 
-        icons.append({
-            "icon": icon_info.get("icon", "📊"),
-            "label": icon_info.get("label", group_name),
-            "value": contrib_value,
-            "description": icon_info.get("description", ""),
-            "color": icon_info.get("color", "#666666")
-        })
+        icons.append(
+            {
+                "icon": icon_info.get("icon", "📊"),
+                "label": icon_info.get("label", group_name),
+                "value": contrib_value,
+                "description": icon_info.get("description", ""),
+                "color": icon_info.get("color", "#666666"),
+            }
+        )
 
     return icons
 
+
 def parse_top_features(
     top_features_str: str,
-    config: Optional[Dict[str, Any]] = None,
+    config: Optional[dict[str, Any]] = None,
     top_k: int = 3,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     top_features 문자열 파싱
 
@@ -170,15 +177,19 @@ def parse_top_features(
 
         try:
             val = float(val_str.strip())
-            feat_info = feature_icons_config.get(feat, {"icon": "📊", "label": feat, "description": ""})
+            feat_info = feature_icons_config.get(
+                feat, {"icon": "📊", "label": feat, "description": ""}
+            )
 
-            features.append({
-                "feature": feat,
-                "value": val,
-                "icon": feat_info.get("icon", "📊"),
-                "label": feat_info.get("label", feat),
-                "description": feat_info.get("description", "")
-            })
+            features.append(
+                {
+                    "feature": feat,
+                    "value": val,
+                    "icon": feat_info.get("icon", "📊"),
+                    "label": feat_info.get("label", feat),
+                    "description": feat_info.get("description", ""),
+                }
+            )
         except (ValueError, AttributeError):
             continue
 
@@ -186,12 +197,13 @@ def parse_top_features(
     features.sort(key=lambda x: abs(x["value"]), reverse=True)
     return features[:top_k]
 
+
 def enrich_ranking_with_icons(
     ranking_row: pd.Series,
-    config: Optional[Dict[str, Any]] = None,
+    config: Optional[dict[str, Any]] = None,
     group_top_k: int = 3,
     feature_top_k: int = 3,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     ranking_daily의 한 행을 UI 친화적인 형식으로 변환
 
@@ -220,17 +232,13 @@ def enrich_ranking_with_icons(
             contrib_dict[col] = ranking_row[col]
 
     group_icons = map_contributions_to_icons(
-        contrib_dict,
-        config=config,
-        top_k=group_top_k
+        contrib_dict, config=config, top_k=group_top_k
     )
 
     # Top features 파싱
     top_features_str = ranking_row.get("top_features", "")
     feature_icons = parse_top_features(
-        top_features_str,
-        config=config,
-        top_k=feature_top_k
+        top_features_str, config=config, top_k=feature_top_k
     )
 
     return {
@@ -241,9 +249,9 @@ def enrich_ranking_with_icons(
         "feature_icons": feature_icons,
     }
 
+
 if __name__ == "__main__":
     # 테스트
-    import sys
     from pathlib import Path
 
     # 예시 데이터

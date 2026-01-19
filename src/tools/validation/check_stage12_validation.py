@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/validation/check_stage12_validation.py
 """
 Stage12 체크리스트 검증 스크립트
@@ -10,13 +9,21 @@ import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
+
 def check_timeline_ppt(run_tag: str):
     """timeline_ppt.csv 검증"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("1. timeline_ppt.csv 검증")
-    print("="*60)
+    print("=" * 60)
 
-    path = PROJECT_ROOT / "artifacts" / "reports" / "final_export" / run_tag / "timeline_ppt.csv"
+    path = (
+        PROJECT_ROOT
+        / "artifacts"
+        / "reports"
+        / "final_export"
+        / run_tag
+        / "timeline_ppt.csv"
+    )
     if not path.exists():
         print(f"[FAIL] 파일 없음: {path}")
         return False
@@ -43,13 +50,21 @@ def check_timeline_ppt(run_tag: str):
     print("\n[PASS] timeline_ppt.csv 검증 통과")
     return True
 
+
 def check_kpi_onepager(run_tag: str):
     """kpi_onepager.csv 검증 (핵심 KPI만)"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("2. kpi_onepager.csv 검증")
-    print("="*60)
+    print("=" * 60)
 
-    path = PROJECT_ROOT / "artifacts" / "reports" / "final_export" / run_tag / "kpi_onepager.csv"
+    path = (
+        PROJECT_ROOT
+        / "artifacts"
+        / "reports"
+        / "final_export"
+        / run_tag
+        / "kpi_onepager.csv"
+    )
     if not path.exists():
         print(f"[FAIL] 파일 없음: {path}")
         return False
@@ -61,9 +76,16 @@ def check_kpi_onepager(run_tag: str):
 
     # 핵심 KPI 컬럼 확인 (예상 컬럼)
     expected_key_cols = [
-        "holdout_sharpe", "holdout_mdd", "holdout_cagr", "holdout_total_return",
-        "net_sharpe", "net_mdd", "net_total_return",
-        "information_ratio", "tracking_error_ann", "avg_turnover_oneway"
+        "holdout_sharpe",
+        "holdout_mdd",
+        "holdout_cagr",
+        "holdout_total_return",
+        "net_sharpe",
+        "net_mdd",
+        "net_total_return",
+        "information_ratio",
+        "tracking_error_ann",
+        "avg_turnover_oneway",
     ]
 
     found_key_cols = [c for c in expected_key_cols if c in df.columns]
@@ -77,13 +99,21 @@ def check_kpi_onepager(run_tag: str):
     print("\n[PASS] kpi_onepager.csv 검증 통과")
     return True
 
+
 def check_latest_snapshot(run_tag: str):
     """latest_snapshot.csv 검증 (Top/Bottom + top_features + regime)"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("3. latest_snapshot.csv 검증")
-    print("="*60)
+    print("=" * 60)
 
-    path = PROJECT_ROOT / "artifacts" / "reports" / "final_export" / run_tag / "latest_snapshot.csv"
+    path = (
+        PROJECT_ROOT
+        / "artifacts"
+        / "reports"
+        / "final_export"
+        / run_tag
+        / "latest_snapshot.csv"
+    )
     if not path.exists():
         print(f"[FAIL] 파일 없음: {path}")
         return False
@@ -94,11 +124,13 @@ def check_latest_snapshot(run_tag: str):
     print(f"컬럼: {list(df.columns)}")
 
     # 필수 컬럼 확인
-    has_top_bottom = "snapshot_type" in df.columns or ("top" in str(df.columns).lower() and "bottom" in str(df.columns).lower())
+    has_top_bottom = "snapshot_type" in df.columns or (
+        "top" in str(df.columns).lower() and "bottom" in str(df.columns).lower()
+    )
     has_top_features = "top_features" in df.columns
     has_regime = "regime_label" in df.columns or "regime_score" in df.columns
 
-    print(f"\n필수 컬럼 확인:")
+    print("\n필수 컬럼 확인:")
     print(f"  - Top/Bottom 구분: {has_top_bottom}")
     print(f"  - top_features: {has_top_features}")
     print(f"  - regime: {has_regime}")
@@ -115,7 +147,7 @@ def check_latest_snapshot(run_tag: str):
 
     # 샘플 출력
     if "snapshot_type" in df.columns:
-        print(f"\nTop/Bottom 분포:")
+        print("\nTop/Bottom 분포:")
         print(df["snapshot_type"].value_counts())
 
     print("\n처음 5행:")
@@ -124,13 +156,21 @@ def check_latest_snapshot(run_tag: str):
     print("\n[PASS] latest_snapshot.csv 검증 통과")
     return True
 
+
 def check_equity_curves(run_tag: str):
     """equity_curves.csv 검증 (그래프 렌더 가능)"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("4. equity_curves.csv 검증")
-    print("="*60)
+    print("=" * 60)
 
-    path = PROJECT_ROOT / "artifacts" / "reports" / "final_export" / run_tag / "equity_curves.csv"
+    path = (
+        PROJECT_ROOT
+        / "artifacts"
+        / "reports"
+        / "final_export"
+        / run_tag
+        / "equity_curves.csv"
+    )
     if not path.exists():
         print(f"[FAIL] 파일 없음: {path}")
         return False
@@ -166,7 +206,9 @@ def check_equity_curves(run_tag: str):
         if min_strategy <= 0:
             print(f"[FAIL] strategy_equity가 0 이하: {min_strategy}")
             return False
-        print(f"strategy_equity 범위: {min_strategy:.2f} ~ {df['strategy_equity'].max():.2f}")
+        print(
+            f"strategy_equity 범위: {min_strategy:.2f} ~ {df['strategy_equity'].max():.2f}"
+        )
 
     if "bench_equity" in df.columns:
         min_bench = df["bench_equity"].min()
@@ -183,18 +225,26 @@ def check_equity_curves(run_tag: str):
     print("\n[PASS] equity_curves.csv 검증 통과")
     return True
 
+
 def check_appendix_sources(run_tag: str):
     """appendix_sources.md 검증 (경로/해시)"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("5. appendix_sources.md 검증")
-    print("="*60)
+    print("=" * 60)
 
-    path = PROJECT_ROOT / "artifacts" / "reports" / "final_export" / run_tag / "appendix_sources.md"
+    path = (
+        PROJECT_ROOT
+        / "artifacts"
+        / "reports"
+        / "final_export"
+        / run_tag
+        / "appendix_sources.md"
+    )
     if not path.exists():
         print(f"[FAIL] 파일 없음: {path}")
         return False
 
-    content = path.read_text(encoding='utf-8')
+    content = path.read_text(encoding="utf-8")
 
     print(f"파일 크기: {len(content):,} bytes")
 
@@ -202,7 +252,7 @@ def check_appendix_sources(run_tag: str):
     has_paths = "경로" in content or "path" in content.lower() or "| 경로 |" in content
     has_hash = "해시" in content or "hash" in content.lower() or "SHA256" in content
 
-    print(f"\n필수 내용 확인:")
+    print("\n필수 내용 확인:")
     print(f"  - 경로 정보: {has_paths}")
     print(f"  - 해시 정보: {has_hash}")
 
@@ -215,25 +265,26 @@ def check_appendix_sources(run_tag: str):
 
     # 샘플 출력
     lines = content.split("\n")
-    print(f"\n파일 첫 20줄:")
+    print("\n파일 첫 20줄:")
     for i, line in enumerate(lines[:20], 1):
         print(f"{i:2d}: {line}")
 
     print("\n[PASS] appendix_sources.md 검증 통과")
     return True
 
+
 def check_history_manifest(run_tag: str):
     """history_manifest에 stage12 기록 확인"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("6. history_manifest에 stage12 기록 확인")
-    print("="*60)
+    print("=" * 60)
 
     manifest_path = PROJECT_ROOT / "reports" / "history" / "history_manifest.parquet"
     if not manifest_path.exists():
         manifest_path = PROJECT_ROOT / "reports" / "history" / "history_manifest.csv"
 
     if not manifest_path.exists():
-        print(f"[FAIL] history_manifest 파일 없음")
+        print("[FAIL] history_manifest 파일 없음")
         return False
 
     if manifest_path.suffix == ".parquet":
@@ -257,16 +308,21 @@ def check_history_manifest(run_tag: str):
         return False
 
     print(f"[PASS] stage12 기록 확인됨: {len(matching_rows)}개")
-    print(f"\nstage12 기록:")
-    print(matching_rows[["stage_no", "track", "run_tag", "change_title", "created_at"]].to_string())
+    print("\nstage12 기록:")
+    print(
+        matching_rows[
+            ["stage_no", "track", "run_tag", "change_title", "created_at"]
+        ].to_string()
+    )
 
     return True
 
+
 def check_paths_not_desktop(run_tag: str):
     """저장 경로가 Desktop base_dir 하위인지 확인 (바탕 화면 경로면 FAIL)"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("7. 저장 경로 확인 (Desktop base_dir 하위)")
-    print("="*60)
+    print("=" * 60)
 
     export_dir = PROJECT_ROOT / "artifacts" / "reports" / "final_export" / run_tag
 
@@ -298,13 +354,13 @@ def check_paths_not_desktop(run_tag: str):
         # 프로젝트 루트가 올바른 base_dir인지 확인 (config.yaml의 base_dir와 일치)
         expected_base_dir = "C:/Users/seong/OneDrive/Desktop/bootcamp/03_code"
         if project_root_str.replace("\\", "/") != expected_base_dir:
-            print(f"[WARNING] 프로젝트 루트가 예상과 다름:")
+            print("[WARNING] 프로젝트 루트가 예상과 다름:")
             print(f"  예상: {expected_base_dir}")
             print(f"  실제: {project_root_str}")
             # 경고만 하고 계속 진행
 
     except ValueError:
-        print(f"[FAIL] 저장 경로가 프로젝트 루트 하위가 아님")
+        print("[FAIL] 저장 경로가 프로젝트 루트 하위가 아님")
         return False
 
     # 실제 파일들 확인
@@ -316,19 +372,22 @@ def check_paths_not_desktop(run_tag: str):
     print("\n[PASS] 저장 경로 검증 통과")
     return True
 
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: python check_stage12_validation.py <run_tag>")
-        print("Example: python check_stage12_validation.py stage12_final_export_20251221_013411")
+        print(
+            "Example: python check_stage12_validation.py stage12_final_export_20251221_013411"
+        )
         sys.exit(1)
 
     run_tag = sys.argv[1]
 
-    print("="*60)
-    print(f"Stage12 체크리스트 검증")
-    print("="*60)
+    print("=" * 60)
+    print("Stage12 체크리스트 검증")
+    print("=" * 60)
     print(f"Run Tag: {run_tag}")
-    print("="*60)
+    print("=" * 60)
 
     results = []
 
@@ -354,9 +413,9 @@ def main():
     results.append(("paths_not_desktop", check_paths_not_desktop(run_tag)))
 
     # 최종 요약
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("최종 검증 결과")
-    print("="*60)
+    print("=" * 60)
 
     all_pass = True
     for name, passed in results:
@@ -365,13 +424,14 @@ def main():
         if not passed:
             all_pass = False
 
-    print("="*60)
+    print("=" * 60)
     if all_pass:
         print("[PASS] 모든 검증 통과")
         sys.exit(0)
     else:
         print("[FAIL] 일부 검증 실패")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/modeling/l6_scoring.py
 from __future__ import annotations
 
@@ -12,15 +11,18 @@ def _ensure_datetime(df: pd.DataFrame, col: str) -> None:
     if not np.issubdtype(df[col].dtype, np.datetime64):
         df[col] = pd.to_datetime(df[col], errors="raise")
 
+
 def _ensure_ticker(df: pd.DataFrame) -> None:
     if "ticker" not in df.columns:
         raise KeyError("missing column: ticker")
     df["ticker"] = df["ticker"].astype(str).str.zfill(6)
 
+
 def _require_cols(df: pd.DataFrame, cols: list[str], name: str) -> None:
     miss = [c for c in cols if c not in df.columns]
     if miss:
         raise KeyError(f"{name} missing columns: {miss}. got={list(df.columns)}")
+
 
 def _add_ym(df: pd.DataFrame, date_col: str = "date") -> pd.DataFrame:
     """date -> ym('YYYY-MM')"""
@@ -28,6 +30,7 @@ def _add_ym(df: pd.DataFrame, date_col: str = "date") -> pd.DataFrame:
     _ensure_datetime(out, date_col)
     out["ym"] = out[date_col].dt.to_period("M").astype(str)
     return out
+
 
 def _attach_in_universe_monthly(
     *,
@@ -77,6 +80,7 @@ def _attach_in_universe_monthly(
     )
     return merged, univ_counts
 
+
 def _agg_across_models(df: pd.DataFrame, score_col: str = "y_pred") -> pd.DataFrame:
     """
     (date,ticker,fold_id,phase,horizon) 단위로 모델별 예측을 평균내서 단일 score로 만든다.
@@ -98,6 +102,7 @@ def _agg_across_models(df: pd.DataFrame, score_col: str = "y_pred") -> pd.DataFr
     )
     return out
 
+
 def _pick_rebalance_rows_by_fold_end(df: pd.DataFrame) -> pd.DataFrame:
     """
     fold별 test window 마지막 날짜(=fold 내 max(date))만 남긴다.
@@ -109,11 +114,14 @@ def _pick_rebalance_rows_by_fold_end(df: pd.DataFrame) -> pd.DataFrame:
         .rename("rebalance_date")
         .reset_index()
     )
-    out = df.merge(end, on=["fold_id", "phase", "horizon"], how="inner", validate="many_to_one")
+    out = df.merge(
+        end, on=["fold_id", "phase", "horizon"], how="inner", validate="many_to_one"
+    )
     out = out.loc[out["date"] == out["rebalance_date"]].copy()
     out.drop(columns=["date"], inplace=True)
     out.rename(columns={"rebalance_date": "date"}, inplace=True)
     return out
+
 
 def _rank_within_date(df: pd.DataFrame, col: str, suffix: str) -> pd.DataFrame:
     df[f"rank_{suffix}"] = df.groupby(["date", "phase"], sort=False)[col].rank(
@@ -123,6 +131,7 @@ def _rank_within_date(df: pd.DataFrame, col: str, suffix: str) -> pd.DataFrame:
         pct=True, ascending=False, method="first"
     )
     return df
+
 
 def build_rebalance_scores(
     *,
@@ -172,11 +181,17 @@ def build_rebalance_scores(
     # [Stage 4] sector_name carry (dataset_daily에서 가져오기)
     if dataset_daily is not None and "sector_name" in dataset_daily.columns:
         # dataset_daily에서 (date, ticker) 기준으로 sector_name 가져오기
-        sector_info = dataset_daily[["date", "ticker", "sector_name"]].drop_duplicates(["date", "ticker"])
-        out = out.merge(sector_info, on=["date", "ticker"], how="left", validate="many_to_one")
+        sector_info = dataset_daily[["date", "ticker", "sector_name"]].drop_duplicates(
+            ["date", "ticker"]
+        )
+        out = out.merge(
+            sector_info, on=["date", "ticker"], how="left", validate="many_to_one"
+        )
         warns.append("[L6 Stage4] sector_name carried from dataset_daily")
     else:
-        warns.append("[L6 Stage4] sector_name not found in dataset_daily -> not carried")
+        warns.append(
+            "[L6 Stage4] sector_name not found in dataset_daily -> not carried"
+        )
 
     w_s = float(weight_short)
     w_l = float(weight_long)
@@ -199,7 +214,10 @@ def build_rebalance_scores(
     dropped_rows = 0
     univ_counts = None
 
-    if universe_k200_membership_monthly is not None and len(universe_k200_membership_monthly) > 0:
+    if (
+        universe_k200_membership_monthly is not None
+        and len(universe_k200_membership_monthly) > 0
+    ):
         universe_mode = "monthly_table"
         out2, univ_counts = _attach_in_universe_monthly(
             df=out,
@@ -207,7 +225,9 @@ def build_rebalance_scores(
             date_col="date",
             ticker_col="ticker",
         )
-        universe_ratio_before = float(out2["in_universe"].mean()) if len(out2) else np.nan
+        universe_ratio_before = (
+            float(out2["in_universe"].mean()) if len(out2) else np.nan
+        )
         dropped_rows = int((~out2["in_universe"]).sum())
         out = out2.loc[out2["in_universe"]].copy()
     else:
@@ -222,7 +242,10 @@ def build_rebalance_scores(
         dropped_rows = int((~out["in_universe"]).sum())
         out = out.loc[out["in_universe"]].copy()
 
-    if np.isfinite(universe_ratio_before) and universe_ratio_before < universe_gate_warn_below:
+    if (
+        np.isfinite(universe_ratio_before)
+        and universe_ratio_before < universe_gate_warn_below
+    ):
         warns.append(
             f"[L6] Universe coverage is low BEFORE filtering: {universe_ratio_before:.1%}. "
             f"(dropped_rows={dropped_rows}) Check universe_k200_membership_monthly completeness/mapping."
@@ -269,7 +292,9 @@ def build_rebalance_scores(
     if univ_counts is not None and len(univ_counts) > 0:
         summary2 = _add_ym(summary, "date")
         summary2 = summary2.merge(univ_counts, on="ym", how="left")
-        summary2["coverage_vs_universe_pct"] = summary2["n_tickers"] / summary2["universe_n_tickers"] * 100.0
+        summary2["coverage_vs_universe_pct"] = (
+            summary2["n_tickers"] / summary2["universe_n_tickers"] * 100.0
+        )
         summary = summary2
 
     quality = {
@@ -278,15 +303,27 @@ def build_rebalance_scores(
             "unique_tickers": int(uni_tickers),
             "unique_dates": int(out["date"].nunique()),
             "phases": sorted(out["phase"].dropna().unique().tolist()),
-            "avg_coverage_ticker_pct": float(round(summary["coverage_ticker_pct"].mean(), 4)),
-            "avg_score_short_missing_pct": float(round(summary["score_short_missing"].mean() * 100.0, 6)),
-            "avg_score_long_missing_pct": float(round(summary["score_long_missing"].mean() * 100.0, 6)),
-            "avg_score_ens_missing_pct": float(round(summary["score_ens_missing"].mean() * 100.0, 6)),
+            "avg_coverage_ticker_pct": float(
+                round(summary["coverage_ticker_pct"].mean(), 4)
+            ),
+            "avg_score_short_missing_pct": float(
+                round(summary["score_short_missing"].mean() * 100.0, 6)
+            ),
+            "avg_score_long_missing_pct": float(
+                round(summary["score_long_missing"].mean() * 100.0, 6)
+            ),
+            "avg_score_ens_missing_pct": float(
+                round(summary["score_ens_missing"].mean() * 100.0, 6)
+            ),
             "weights": {"short": float(weight_short), "long": float(weight_long)},
         },
         "universe": {
             "mode": universe_mode,
-            "coverage_before_filter": None if not np.isfinite(universe_ratio_before) else float(universe_ratio_before),
+            "coverage_before_filter": (
+                None
+                if not np.isfinite(universe_ratio_before)
+                else float(universe_ratio_before)
+            ),
             "dropped_rows": int(dropped_rows),
         },
     }

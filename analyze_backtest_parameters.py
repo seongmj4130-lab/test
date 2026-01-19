@@ -15,51 +15,51 @@ def analyze_backtest_parameters():
     print("=" * 80)
 
     # 1. 기본 config.yaml 로드
-    config_path = Path('configs/config.yaml')
-    with open(config_path, 'r', encoding='utf-8') as f:
+    config_path = Path("configs/config.yaml")
+    with open(config_path, encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
     # 2. 재설계된 파라미터 로드
-    redesigned_path = Path('configs/redesigned_backtest_params.yaml')
+    redesigned_path = Path("configs/redesigned_backtest_params.yaml")
     if redesigned_path.exists():
-        with open(redesigned_path, 'r', encoding='utf-8') as f:
+        with open(redesigned_path, encoding="utf-8") as f:
             redesigned = yaml.safe_load(f)
     else:
         redesigned = {}
 
     print("📊 1. 기본 설정 파라미터 (params 섹션)")
     print("-" * 50)
-    params = config.get('params', {})
+    params = config.get("params", {})
     for key, value in params.items():
         print(f"   {key}: {value}")
 
     print("\n📊 2. L4 CV 파라미터")
     print("-" * 50)
-    l4 = config.get('l4', {})
+    l4 = config.get("l4", {})
     for key, value in l4.items():
         print(f"   {key}: {value}")
 
     print("\n📊 3. L5 모델 파라미터")
     print("-" * 50)
-    l5 = config.get('l5', {})
+    l5 = config.get("l5", {})
     for key, value in l5.items():
         print(f"   {key}: {value}")
 
     print("\n📊 4. L6 스코어링 파라미터")
     print("-" * 50)
-    l6 = config.get('l6', {})
+    l6 = config.get("l6", {})
     for key, value in l6.items():
         print(f"   {key}: {value}")
 
     print("\n📊 5. L7 기본 백테스트 파라미터")
     print("-" * 50)
-    l7 = config.get('l7', {})
+    l7 = config.get("l7", {})
     for key, value in l7.items():
         print(f"   {key}: {value}")
 
     print("\n📊 6. 전략별 L7 파라미터")
     print("-" * 50)
-    strategies = ['l7_bt20_short', 'l7_bt120_long', 'l7_bt20_ens', 'l7_bt120_ens']
+    strategies = ["l7_bt20_short", "l7_bt120_long", "l7_bt20_ens", "l7_bt120_ens"]
     for strategy in strategies:
         if strategy in config:
             print(f"\n   🔹 {strategy}:")
@@ -69,7 +69,7 @@ def analyze_backtest_parameters():
 
     print("\n📊 7. 동적 기간 파라미터 (holding_days별)")
     print("-" * 50)
-    dynamic_params = config.get('holding_days_dynamic_params', {})
+    dynamic_params = config.get("holding_days_dynamic_params", {})
     for holding_days, params in dynamic_params.items():
         print(f"\n   🔹 {holding_days}일:")
         for key, value in params.items():
@@ -77,11 +77,11 @@ def analyze_backtest_parameters():
 
     print("\n📊 8. 재설계된 파라미터 (업계표준 적용)")
     print("-" * 50)
-    redesigned_params = redesigned.get('params', {})
+    redesigned_params = redesigned.get("params", {})
     for key, value in redesigned_params.items():
         print(f"   {key}: {value}")
 
-    strategies_redesigned = ['bt20_short', 'bt120_long', 'bt20_ens']
+    strategies_redesigned = ["bt20_short", "bt120_long", "bt20_ens"]
     for strategy in strategies_redesigned:
         if strategy in redesigned:
             print(f"\n   🔹 {strategy}:")
@@ -142,6 +142,7 @@ def analyze_backtest_parameters():
     print("   • 통합 전략 (bt20_ens): 업계평균 목표, top_k=10, 비용=0.12%")
     print("   • 동적 적용: holding_days별 파라미터 자동 조정")
     print("   • 평가 구간: HOLDOUT (시장 현실성 확보)")
+
 
 if __name__ == "__main__":
     analyze_backtest_parameters()

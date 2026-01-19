@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 
 
@@ -10,7 +9,9 @@ def analyze_ranking_difference():
 
     # 최근 백테스트 결과 로드
     try:
-        results = pd.read_csv('C:\\Users\\seong\\OneDrive\\Desktop\\bootcamp\\03_code\\artifacts\\reports\\backtest_4models_comparison.csv')
+        results = pd.read_csv(
+            "C:\\Users\\seong\\OneDrive\\Desktop\\bootcamp\\03_code\\artifacts\\reports\\backtest_4models_comparison.csv"
+        )
         print("✅ 백테스트 결과 로드됨")
     except:
         print("❌ 백테스트 결과 없음")
@@ -18,46 +19,51 @@ def analyze_ranking_difference():
 
     print("\n📊 현재 백테스트 결과:")
     for _, row in results.iterrows():
-        strategy = row['strategy']
-        cagr = row['net_cagr'] * 100
-        mdd = row['net_mdd'] * 100
-        sharpe = row['net_sharpe']
+        strategy = row["strategy"]
+        cagr = row["net_cagr"] * 100
+        mdd = row["net_mdd"] * 100
+        sharpe = row["net_sharpe"]
 
-        strategy_name = strategy.replace('bt20_ens', 'BT20 앙상블').replace('bt20_short', 'BT20 단기').replace('bt120_ens', 'BT120 앙상블').replace('bt120_long', 'BT120 장기')
+        strategy_name = (
+            strategy.replace("bt20_ens", "BT20 앙상블")
+            .replace("bt20_short", "BT20 단기")
+            .replace("bt120_ens", "BT120 앙상블")
+            .replace("bt120_long", "BT120 장기")
+        )
         print("<15")
 
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("🎯 왜 BT20와 BT120 성과가 같을까?")
-    print("="*50)
+    print("=" * 50)
 
     print("\n1️⃣ 설정 차이 분석")
     print("-" * 20)
 
     config_differences = {
-        'BT20 단기': {
-            'score_col': 'score_total_short',
-            'holding_days': 20,
-            'top_k': 15,
-            '랭킹': '단기 랭킹만'
+        "BT20 단기": {
+            "score_col": "score_total_short",
+            "holding_days": 20,
+            "top_k": 15,
+            "랭킹": "단기 랭킹만",
         },
-        'BT20 앙상블': {
-            'score_col': 'score_ens',
-            'holding_days': 20,
-            'top_k': 15,
-            '랭킹': '단기+장기 5:5 결합'
+        "BT20 앙상블": {
+            "score_col": "score_ens",
+            "holding_days": 20,
+            "top_k": 15,
+            "랭킹": "단기+장기 5:5 결합",
         },
-        'BT120 장기': {
-            'score_col': 'score_total_long',
-            'holding_days': 20,
-            'top_k': 15,
-            '랭킹': '장기 랭킹만'
+        "BT120 장기": {
+            "score_col": "score_total_long",
+            "holding_days": 20,
+            "top_k": 15,
+            "랭킹": "장기 랭킹만",
         },
-        'BT120 앙상블': {
-            'score_col': 'score_ens',
-            'holding_days': 20,
-            'top_k': 15,
-            '랭킹': '단기+장기 5:5 결합'
-        }
+        "BT120 앙상블": {
+            "score_col": "score_ens",
+            "holding_days": 20,
+            "top_k": 15,
+            "랭킹": "단기+장기 5:5 결합",
+        },
     }
 
     for strategy, config in config_differences.items():
@@ -94,10 +100,16 @@ def analyze_ranking_difference():
     print("-" * 20)
 
     # 성과 차이 계산
-    bt20_short_cagr = results[results['strategy'] == 'bt20_short']['net_cagr'].iloc[0] * 100
-    bt20_ens_cagr = results[results['strategy'] == 'bt20_ens']['net_cagr'].iloc[0] * 100
-    bt120_long_cagr = results[results['strategy'] == 'bt120_long']['net_cagr'].iloc[0] * 100
-    bt120_ens_cagr = results[results['strategy'] == 'bt120_ens']['net_cagr'].iloc[0] * 100
+    bt20_short_cagr = (
+        results[results["strategy"] == "bt20_short"]["net_cagr"].iloc[0] * 100
+    )
+    bt20_ens_cagr = results[results["strategy"] == "bt20_ens"]["net_cagr"].iloc[0] * 100
+    bt120_long_cagr = (
+        results[results["strategy"] == "bt120_long"]["net_cagr"].iloc[0] * 100
+    )
+    bt120_ens_cagr = (
+        results[results["strategy"] == "bt120_ens"]["net_cagr"].iloc[0] * 100
+    )
 
     print(".1f")
     print(".1f")
@@ -133,6 +145,7 @@ def analyze_ranking_difference():
     print("✅ 해결 방향: 파라미터 다양화 + 랭킹 가중치 차별화")
     print()
     print("💡 전략별 차별화를 위해 파라미터를 다양하게 설정하는 것을 추천!")
+
 
 if __name__ == "__main__":
     analyze_ranking_difference()

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # src/stages/ranking/ranking_explainability.py
 # [개선안 16번] 트랙(A/B/공통) 폴더 재정리: 기존 import 경로 호환 래퍼
 
@@ -17,5 +16,3 @@ __all__ = [
     "build_ranking_with_explainability",
     "make_snapshot_with_explainability",
 ]
-
-

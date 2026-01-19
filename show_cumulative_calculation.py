@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 누적 수익률 계산 방법 상세 설명
 """
@@ -14,19 +13,19 @@ def demonstrate_cumulative_calculation():
     print("=== 누적 수익률 계산 방법 상세 설명 ===\n")
 
     # 실제 데이터 로드
-    df = pd.read_csv('data/ui_strategies_cumulative_comparison_updated.csv')
+    df = pd.read_csv("data/ui_strategies_cumulative_comparison_updated.csv")
     print("1. 원본 데이터 (이미 누적 수익률 형태):")
-    sample_data = df.head(5)[['month', 'bt20_short_20', 'bt120_long_120', 'kospi200']]
+    sample_data = df.head(5)[["month", "bt20_short_20", "bt120_long_120", "kospi200"]]
     print(sample_data.to_string())
     print()
 
     # 백분율을 소수점으로 변환
-    numeric_cols = ['bt20_short_20', 'bt120_long_120', 'kospi200']
+    numeric_cols = ["bt20_short_20", "bt120_long_120", "kospi200"]
     df_calc = df.copy()
     df_calc[numeric_cols] = df_calc[numeric_cols] / 100.0
 
     print("2. 백분율 → 소수점 변환:")
-    print(df_calc.head(3)[['month'] + numeric_cols].to_string())
+    print(df_calc.head(3)[["month"] + numeric_cols].to_string())
     print()
 
     # 월별 수익률 계산
@@ -38,22 +37,24 @@ def demonstrate_cumulative_calculation():
     print()
 
     for i in range(1, len(df_calc)):
-        current_month = df_calc.iloc[i]['month']
-        prev_month = df_calc.iloc[i-1]['month']
+        current_month = df_calc.iloc[i]["month"]
+        prev_month = df_calc.iloc[i - 1]["month"]
 
         print(f"   {current_month} 월별 수익률 계산:")
         for col in numeric_cols:
             current_cum = df_calc.iloc[i][col]
-            prev_cum = df_calc.iloc[i-1][col]
+            prev_cum = df_calc.iloc[i - 1][col]
             monthly_return = current_cum - prev_cum
 
             df_monthly.iloc[i, df_monthly.columns.get_loc(col)] = monthly_return
 
-            print(f"     {col}: {current_cum:.6f} - {prev_cum:.6f} = {monthly_return:.6f}")
+            print(
+                f"     {col}: {current_cum:.6f} - {prev_cum:.6f} = {monthly_return:.6f}"
+            )
         print()
 
     print("4. 월별 수익률 결과:")
-    print(df_monthly.head(5)[['month'] + numeric_cols].to_string())
+    print(df_monthly.head(5)[["month"] + numeric_cols].to_string())
     print()
 
     # 누적 수익률 재계산
@@ -73,7 +74,7 @@ def demonstrate_cumulative_calculation():
             if i == 0:
                 cum_prod = 1 + monthly_returns[i]
             else:
-                cum_prod *= (1 + monthly_returns[i])
+                cum_prod *= 1 + monthly_returns[i]
 
             cum_return = cum_prod - 1
             print(f"     기간{i+1}: Π(1+r)={cum_prod:.6f}, 누적수익률={cum_return:.6f}")
@@ -83,7 +84,7 @@ def demonstrate_cumulative_calculation():
     df_corrected[numeric_cols] = df_corrected[numeric_cols] * 100.0
 
     print("6. 최종 정정된 누적 수익률 (백분율):")
-    print(df_corrected.head(5)[['month'] + numeric_cols].to_string())
+    print(df_corrected.head(5)[["month"] + numeric_cols].to_string())
     print()
 
     # 수학적 정확성 검증
@@ -97,11 +98,12 @@ def demonstrate_cumulative_calculation():
     print()
 
     # 저장
-    output_file = 'data/ui_strategies_cumulative_comparison_corrected.csv'
+    output_file = "data/ui_strategies_cumulative_comparison_corrected.csv"
     df_corrected.to_csv(output_file, index=False)
     print(f"✅ 정정된 누적 수익률 데이터가 '{output_file}'로 저장되었습니다.")
 
     return df_corrected
+
 
 def show_mathematical_basis():
     """수학적 근거 설명"""
@@ -121,6 +123,7 @@ def show_mathematical_basis():
     print("• 관측된_누적_t = Σ(월별수익률_1 to t)")
     print("• 실제 월별수익률_t = 관측된_누적_t - 관측된_누적_(t-1)")
     print("• 정정된_누적_t = Π(1 + 실제월별수익률_1 to t) - 1")
+
 
 if __name__ == "__main__":
     demonstrate_cumulative_calculation()

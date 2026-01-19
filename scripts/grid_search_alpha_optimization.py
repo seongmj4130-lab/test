@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Alpha 최적화 스크립트 (Grid Search)
 
@@ -17,17 +16,17 @@ import logging
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from copy import deepcopy
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
-import numpy as np
 import pandas as pd
 import yaml
 
 from src.pipeline.track_b_pipeline import run_track_b_pipeline
 from src.utils.config import get_path, load_config
-from src.utils.io import artifact_exists, load_artifact, save_artifact
 
-logging.basicConfig(level=logging.INFO, format='[%(asctime)s] [%(levelname)s] %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="[%(asctime)s] [%(levelname)s] %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -35,7 +34,14 @@ def run_backtest_with_alpha(
     strategy: str,
     alpha_short: float,
     config_path: str = "configs/config.yaml",
-) -> Tuple[Optional[float], Optional[float], Optional[float], Optional[float], Optional[float], Optional[float]]:
+) -> tuple[
+    Optional[float],
+    Optional[float],
+    Optional[float],
+    Optional[float],
+    Optional[float],
+    Optional[float],
+]:
     """
     특정 alpha 값으로 백테스트를 실행하고 성과 지표를 반환
 
@@ -47,8 +53,6 @@ def run_backtest_with_alpha(
     Returns:
         (total_return_dev, total_return_holdout, cagr_dev, cagr_holdout, sharpe_dev, sharpe_holdout)
     """
-    import os
-    import tempfile
 
     try:
         # 설정 로드 및 alpha 수정
@@ -59,7 +63,11 @@ def run_backtest_with_alpha(
         if isinstance(original_base_dir, str):
             base_dir_abs = Path(original_base_dir).resolve()
         else:
-            base_dir_abs = original_base_dir.resolve() if hasattr(original_base_dir, 'resolve') else Path(original_base_dir)
+            base_dir_abs = (
+                original_base_dir.resolve()
+                if hasattr(original_base_dir, "resolve")
+                else Path(original_base_dir)
+            )
 
         # l6r 설정에 alpha_short 추가
         if "l6r" not in cfg:
@@ -87,11 +95,19 @@ def run_backtest_with_alpha(
         cfg_serializable = convert_paths(deepcopy(cfg))
 
         # 임시 config 파일을 프로젝트 디렉토리에 생성 (경로 문제 방지)
-        temp_config_path = base_dir_abs / f"configs/config_temp_alpha_{alpha_short:.3f}.yaml"
+        temp_config_path = (
+            base_dir_abs / f"configs/config_temp_alpha_{alpha_short:.3f}.yaml"
+        )
         temp_config_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(temp_config_path, 'w', encoding='utf-8') as f:
-            yaml.dump(cfg_serializable, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+        with open(temp_config_path, "w", encoding="utf-8") as f:
+            yaml.dump(
+                cfg_serializable,
+                f,
+                default_flow_style=False,
+                allow_unicode=True,
+                sort_keys=False,
+            )
 
         try:
             # 백테스트 실행
@@ -102,8 +118,11 @@ def run_backtest_with_alpha(
                     force_rebuild=False,  # alpha 변경은 L6R에서만 재계산되므로 False
                 )
             except Exception as e:
-                logger.error(f"[{strategy}] alpha={alpha_short:.3f} 백테스트 실행 중 오류: {type(e).__name__}: {e}")
+                logger.error(
+                    f"[{strategy}] alpha={alpha_short:.3f} 백테스트 실행 중 오류: {type(e).__name__}: {e}"
+                )
                 import traceback
+
                 logger.debug(traceback.format_exc())
                 return (None, None, None, None, None, None)
 
@@ -114,7 +133,9 @@ def run_backtest_with_alpha(
             # 성과 지표 추출
             bt_metrics = result.get("bt_metrics")
             if bt_metrics is None or bt_metrics.empty:
-                logger.warning(f"[{strategy}] alpha={alpha_short:.3f}: 메트릭 없음 (bt_metrics: {bt_metrics})")
+                logger.warning(
+                    f"[{strategy}] alpha={alpha_short:.3f}: 메트릭 없음 (bt_metrics: {bt_metrics})"
+                )
                 return (None, None, None, None, None, None)
 
             # Dev/Holdout 구분
@@ -122,22 +143,55 @@ def run_backtest_with_alpha(
             holdout_metrics = bt_metrics[bt_metrics["phase"] == "holdout"]
 
             if dev_metrics.empty or holdout_metrics.empty:
-                logger.warning(f"[{strategy}] alpha={alpha_short:.3f}: Dev/Holdout 구분 실패")
+                logger.warning(
+                    f"[{strategy}] alpha={alpha_short:.3f}: Dev/Holdout 구분 실패"
+                )
                 return (None, None, None, None, None, None)
 
             # Total Return 추출
-            total_return_dev = float(dev_metrics.iloc[0]["net_total_return"]) if "net_total_return" in dev_metrics.columns else None
-            total_return_holdout = float(holdout_metrics.iloc[0]["net_total_return"]) if "net_total_return" in holdout_metrics.columns else None
+            total_return_dev = (
+                float(dev_metrics.iloc[0]["net_total_return"])
+                if "net_total_return" in dev_metrics.columns
+                else None
+            )
+            total_return_holdout = (
+                float(holdout_metrics.iloc[0]["net_total_return"])
+                if "net_total_return" in holdout_metrics.columns
+                else None
+            )
 
             # CAGR 추출
-            cagr_dev = float(dev_metrics.iloc[0]["net_cagr"]) if "net_cagr" in dev_metrics.columns else None
-            cagr_holdout = float(holdout_metrics.iloc[0]["net_cagr"]) if "net_cagr" in holdout_metrics.columns else None
+            cagr_dev = (
+                float(dev_metrics.iloc[0]["net_cagr"])
+                if "net_cagr" in dev_metrics.columns
+                else None
+            )
+            cagr_holdout = (
+                float(holdout_metrics.iloc[0]["net_cagr"])
+                if "net_cagr" in holdout_metrics.columns
+                else None
+            )
 
             # Sharpe 추출
-            sharpe_dev = float(dev_metrics.iloc[0]["net_sharpe"]) if "net_sharpe" in dev_metrics.columns else None
-            sharpe_holdout = float(holdout_metrics.iloc[0]["net_sharpe"]) if "net_sharpe" in holdout_metrics.columns else None
+            sharpe_dev = (
+                float(dev_metrics.iloc[0]["net_sharpe"])
+                if "net_sharpe" in dev_metrics.columns
+                else None
+            )
+            sharpe_holdout = (
+                float(holdout_metrics.iloc[0]["net_sharpe"])
+                if "net_sharpe" in holdout_metrics.columns
+                else None
+            )
 
-            return (total_return_dev, total_return_holdout, cagr_dev, cagr_holdout, sharpe_dev, sharpe_holdout)
+            return (
+                total_return_dev,
+                total_return_holdout,
+                cagr_dev,
+                cagr_holdout,
+                sharpe_dev,
+                sharpe_holdout,
+            )
 
         finally:
             # 임시 파일 삭제
@@ -155,10 +209,10 @@ def run_backtest_with_alpha(
 def optimize_alpha_grid_search(
     strategy: str,
     optimization_target: str,  # "total_return", "cagr", or "sharpe"
-    alpha_grid: List[float],
+    alpha_grid: list[float],
     config_path: str = "configs/config.yaml",
     n_jobs: int = -1,
-) -> Dict:
+) -> dict:
     """
     Grid Search로 alpha 최적화
 
@@ -186,23 +240,35 @@ def optimize_alpha_grid_search(
 
     with ProcessPoolExecutor(max_workers=n_jobs) as executor:
         futures = {
-            executor.submit(run_backtest_with_alpha, strategy, alpha, config_path): alpha
+            executor.submit(
+                run_backtest_with_alpha, strategy, alpha, config_path
+            ): alpha
             for alpha in alpha_grid
         }
 
         for future in as_completed(futures):
             alpha = futures[future]
             try:
-                total_return_dev, total_return_holdout, cagr_dev, cagr_holdout, sharpe_dev, sharpe_holdout = future.result()
-                results.append({
-                    "alpha": alpha,
-                    "total_return_dev": total_return_dev,
-                    "total_return_holdout": total_return_holdout,
-                    "cagr_dev": cagr_dev,
-                    "cagr_holdout": cagr_holdout,
-                    "sharpe_dev": sharpe_dev,
-                    "sharpe_holdout": sharpe_holdout,
-                })
+                (
+                    total_return_dev,
+                    total_return_holdout,
+                    cagr_dev,
+                    cagr_holdout,
+                    sharpe_dev,
+                    sharpe_holdout,
+                ) = future.result()
+                results.append(
+                    {
+                        "alpha": alpha,
+                        "total_return_dev": total_return_dev,
+                        "total_return_holdout": total_return_holdout,
+                        "cagr_dev": cagr_dev,
+                        "cagr_holdout": cagr_holdout,
+                        "sharpe_dev": sharpe_dev,
+                        "sharpe_holdout": sharpe_holdout,
+                    }
+                )
+
                 # None 값 포맷팅 방지
                 def safe_format(val, fmt=".4f"):
                     if val is None:
@@ -212,12 +278,14 @@ def optimize_alpha_grid_search(
                     except:
                         return "N/A"
 
-                logger.info(f"  alpha={alpha:.3f}: Dev Total Return={safe_format(total_return_dev)}, "
-                          f"Holdout Total Return={safe_format(total_return_holdout)}, "
-                          f"Dev CAGR={safe_format(cagr_dev)}, "
-                          f"Holdout CAGR={safe_format(cagr_holdout)}, "
-                          f"Dev Sharpe={safe_format(sharpe_dev)}, "
-                          f"Holdout Sharpe={safe_format(sharpe_holdout)}")
+                logger.info(
+                    f"  alpha={alpha:.3f}: Dev Total Return={safe_format(total_return_dev)}, "
+                    f"Holdout Total Return={safe_format(total_return_holdout)}, "
+                    f"Dev CAGR={safe_format(cagr_dev)}, "
+                    f"Holdout CAGR={safe_format(cagr_holdout)}, "
+                    f"Dev Sharpe={safe_format(sharpe_dev)}, "
+                    f"Holdout Sharpe={safe_format(sharpe_holdout)}"
+                )
             except Exception as e:
                 logger.error(f"  alpha={alpha:.3f} 실행 중 오류: {e}")
 
@@ -232,7 +300,9 @@ def optimize_alpha_grid_search(
     elif optimization_target == "sharpe":
         target_col = "sharpe_holdout"
     else:
-        raise ValueError(f"Unknown optimization_target: {optimization_target}. Must be 'total_return', 'cagr', or 'sharpe'")
+        raise ValueError(
+            f"Unknown optimization_target: {optimization_target}. Must be 'total_return', 'cagr', or 'sharpe'"
+        )
 
     # 유효한 결과만 필터링
     df_valid = df_results[df_results[target_col].notna()].copy()
@@ -249,7 +319,9 @@ def optimize_alpha_grid_search(
     best_alpha = float(df_valid.loc[best_idx, "alpha"])
     best_score = float(df_valid.loc[best_idx, target_col])
 
-    logger.info(f"[{strategy}] 최적 alpha: {best_alpha:.3f} (Holdout {optimization_target.upper()}: {best_score:.4f})")
+    logger.info(
+        f"[{strategy}] 최적 alpha: {best_alpha:.3f} (Holdout {optimization_target.upper()}: {best_score:.4f})"
+    )
 
     return {
         "best_alpha": best_alpha,
@@ -272,7 +344,7 @@ def check_prerequisites(config_path: str = "configs/config.yaml") -> bool:
     required_artifacts = [
         "universe_k200_membership_monthly.parquet",
         "ranking_short_daily.parquet",  # Track A 산출물
-        "ranking_long_daily.parquet",   # Track A 산출물
+        "ranking_long_daily.parquet",  # Track A 산출물
     ]
 
     missing = []
@@ -360,12 +432,14 @@ def main():
 
         all_results[strategy] = result
 
-        summary.append({
-            "strategy": strategy,
-            "optimization_target": target,
-            "best_alpha": result["best_alpha"],
-            "best_score": result["best_score"],
-        })
+        summary.append(
+            {
+                "strategy": strategy,
+                "optimization_target": target,
+                "best_alpha": result["best_alpha"],
+                "best_score": result["best_score"],
+            }
+        )
 
         # 결과 저장
         cfg = load_config(config_path)
@@ -379,7 +453,10 @@ def main():
 
     # 요약 저장
     df_summary = pd.DataFrame(summary)
-    summary_path = Path(get_path(load_config(config_path), "artifacts_reports")) / "alpha_optimization_summary.csv"
+    summary_path = (
+        Path(get_path(load_config(config_path), "artifacts_reports"))
+        / "alpha_optimization_summary.csv"
+    )
     df_summary.to_csv(summary_path, index=False, encoding="utf-8-sig")
     logger.info(f"\n요약 저장: {summary_path}")
 
@@ -400,7 +477,7 @@ def main():
 
 
 def generate_optimization_report(
-    all_results: Dict,
+    all_results: dict,
     df_summary: pd.DataFrame,
     config_path: str = "configs/config.yaml",
 ):
@@ -458,15 +535,25 @@ def generate_optimization_report(
             if best_row is not None:
                 # 추가 메트릭 표시
                 if "net_sharpe" in best_row and pd.notna(best_row["net_sharpe"]):
-                    report_lines.append(f"- **Net Sharpe**: {best_row['net_sharpe']:.4f}")
+                    report_lines.append(
+                        f"- **Net Sharpe**: {best_row['net_sharpe']:.4f}"
+                    )
                 if "net_cagr" in best_row and pd.notna(best_row["net_cagr"]):
                     report_lines.append(f"- **Net CAGR**: {best_row['net_cagr']:.4f}%")
-                if "net_total_return" in best_row and pd.notna(best_row["net_total_return"]):
-                    report_lines.append(f"- **Net Total Return**: {best_row['net_total_return']:.4f}")
+                if "net_total_return" in best_row and pd.notna(
+                    best_row["net_total_return"]
+                ):
+                    report_lines.append(
+                        f"- **Net Total Return**: {best_row['net_total_return']:.4f}"
+                    )
                 if "net_mdd" in best_row and pd.notna(best_row["net_mdd"]):
                     report_lines.append(f"- **Net MDD**: {best_row['net_mdd']:.4f}%")
-                if "net_calmar_ratio" in best_row and pd.notna(best_row["net_calmar_ratio"]):
-                    report_lines.append(f"- **Net Calmar Ratio**: {best_row['net_calmar_ratio']:.4f}")
+                if "net_calmar_ratio" in best_row and pd.notna(
+                    best_row["net_calmar_ratio"]
+                ):
+                    report_lines.append(
+                        f"- **Net Calmar Ratio**: {best_row['net_calmar_ratio']:.4f}"
+                    )
         else:
             report_lines.append("- 최적 alpha를 찾을 수 없습니다.")
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/backtest/l1d_market_regime.py
 """
 [Stage5] 시장 국면(regime) 계산 모듈
@@ -9,12 +8,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
+
 
 def build_market_regime(
     *,
@@ -85,7 +84,9 @@ def build_market_regime(
     ohlcv["date"] = pd.to_datetime(ohlcv["date"])
     ohlcv = ohlcv.sort_values(["date", "ticker"]).reset_index(drop=True)
 
-    logger.info(f"[L1D] 시장 국면 계산 시작: {len(dates)}개 rebalance 날짜, {len(ohlcv)}개 OHLCV 레코드")
+    logger.info(
+        f"[L1D] 시장 국면 계산 시작: {len(dates)}개 rebalance 날짜, {len(ohlcv)}개 OHLCV 레코드"
+    )
 
     # 각 rebalance 날짜에 대해 국면 계산
     regime_rows = []
@@ -102,20 +103,28 @@ def build_market_regime(
         ].copy()
 
         if len(period_data) == 0:
-            logger.warning(f"[L1D] {rebal_date.strftime('%Y-%m-%d')}: 데이터 부족, neutral로 분류")
-            regime_rows.append({
-                "date": rebal_date,
-                "regime": "neutral",
-                "lookback_return_pct": np.nan,
-                "lookback_volatility_pct": np.nan,
-                "lookback_volume_change_pct": np.nan,
-            })
+            logger.warning(
+                f"[L1D] {rebal_date.strftime('%Y-%m-%d')}: 데이터 부족, neutral로 분류"
+            )
+            regime_rows.append(
+                {
+                    "date": rebal_date,
+                    "regime": "neutral",
+                    "lookback_return_pct": np.nan,
+                    "lookback_volatility_pct": np.nan,
+                    "lookback_volume_change_pct": np.nan,
+                }
+            )
             continue
 
         # [수정] 전체 period_data에서 종목별로 날짜 순서대로 정렬 후 전일 종가 계산
         period_data_sorted = period_data.sort_values(["ticker", "date"]).copy()
-        period_data_sorted["prev_close"] = period_data_sorted.groupby("ticker")["close"].shift(1)
-        period_data_sorted["daily_return"] = (period_data_sorted["close"] - period_data_sorted["prev_close"]) / period_data_sorted["prev_close"]
+        period_data_sorted["prev_close"] = period_data_sorted.groupby("ticker")[
+            "close"
+        ].shift(1)
+        period_data_sorted["daily_return"] = (
+            period_data_sorted["close"] - period_data_sorted["prev_close"]
+        ) / period_data_sorted["prev_close"]
 
         # 일별 시장 가중 평균 수익률 계산 (시가총액 가중 또는 동일 가중)
         daily_returns = []
@@ -137,14 +146,18 @@ def build_market_regime(
                     daily_volumes.append(valid_volumes.sum())
 
         if len(daily_returns) < 2:
-            logger.warning(f"[L1D] {rebal_date.strftime('%Y-%m-%d')}: 수익률 데이터 부족, neutral로 분류")
-            regime_rows.append({
-                "date": rebal_date,
-                "regime": "neutral",
-                "lookback_return_pct": np.nan,
-                "lookback_volatility_pct": np.nan,
-                "lookback_volume_change_pct": np.nan,
-            })
+            logger.warning(
+                f"[L1D] {rebal_date.strftime('%Y-%m-%d')}: 수익률 데이터 부족, neutral로 분류"
+            )
+            regime_rows.append(
+                {
+                    "date": rebal_date,
+                    "regime": "neutral",
+                    "lookback_return_pct": np.nan,
+                    "lookback_volatility_pct": np.nan,
+                    "lookback_volume_change_pct": np.nan,
+                }
+            )
             continue
 
         # 1. 가격 수익률: 전체 기간 누적 수익률
@@ -152,7 +165,9 @@ def build_market_regime(
         total_return_pct = ((1 + returns_series).prod() - 1) * 100.0
 
         # 2. 변동성: 일일 수익률 표준편차 (연환산)
-        volatility_pct = returns_series.std() * np.sqrt(252) * 100.0 if use_volatility else np.nan
+        volatility_pct = (
+            returns_series.std() * np.sqrt(252) * 100.0 if use_volatility else np.nan
+        )
 
         # 3. 거래량 변화율: 초기 vs 최종 거래량
         volume_change_pct = np.nan
@@ -201,15 +216,19 @@ def build_market_regime(
             else:
                 regime = "bear"
 
-        regime_rows.append({
-            "date": rebal_date,
-            "regime": regime,
-            "lookback_return_pct": total_return_pct,
-            "lookback_volatility_pct": volatility_pct,
-            "lookback_volume_change_pct": volume_change_pct,
-        })
+        regime_rows.append(
+            {
+                "date": rebal_date,
+                "regime": regime,
+                "lookback_return_pct": total_return_pct,
+                "lookback_volatility_pct": volatility_pct,
+                "lookback_volume_change_pct": volume_change_pct,
+            }
+        )
 
-        logger.debug(f"[L1D] {rebal_date.strftime('%Y-%m-%d')}: {regime} (수익률={total_return_pct:.2f}%, 변동성={volatility_pct:.2f}%, 거래량변화={volume_change_pct:.2f}%)")
+        logger.debug(
+            f"[L1D] {rebal_date.strftime('%Y-%m-%d')}: {regime} (수익률={total_return_pct:.2f}%, 변동성={volatility_pct:.2f}%, 거래량변화={volume_change_pct:.2f}%)"
+        )
 
     df = pd.DataFrame(regime_rows)
     df = df.sort_values("date").reset_index(drop=True)
@@ -218,7 +237,7 @@ def build_market_regime(
     regime_counts = df["regime"].value_counts()
 
     logger.info(f"[L1D] 국면 계산 완료: 총 {len(df)}개 rebalance 날짜")
-    logger.info(f"[L1D] 국면 분포 (3단계):")
+    logger.info("[L1D] 국면 분포 (3단계):")
     for regime in ["bull", "neutral", "bear"]:
         count = regime_counts.get(regime, 0)
         logger.info(f"[L1D]   {regime}: {count}개 ({count/len(df)*100:.1f}%)")

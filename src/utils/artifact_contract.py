@@ -1,14 +1,12 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/utils/artifact_contract.py
 """
 아티팩트 계약 정의 (Artifact Contract)
 
 각 Stage의 입력/출력 아티팩트에 대한 계약을 딕셔너리/상수로 정의합니다.
 """
-from typing import Dict, List, Optional
 
 # Stage별 필수 입력
-REQUIRED_INPUTS: Dict[str, List[str]] = {
+REQUIRED_INPUTS: dict[str, list[str]] = {
     "L0": [],
     "L1": ["universe_k200_membership_monthly"],
     "L1B": ["universe_k200_membership_monthly"],
@@ -22,18 +20,22 @@ REQUIRED_INPUTS: Dict[str, List[str]] = {
     "L7B": ["rebalance_scores"],
     "L7C": ["bt_returns", "rebalance_scores"],
     "L7D": ["bt_returns", "bt_equity_curve"],
-    "L8": ["dataset_daily"],  # dataset_daily 또는 panel_merged_daily 둘 중 하나만 있으면 됨
+    "L8": [
+        "dataset_daily"
+    ],  # dataset_daily 또는 panel_merged_daily 둘 중 하나만 있으면 됨
     "L11": ["ranking_daily", "ohlcv_daily"],
 }
 
 # Stage별 옵션 입력
-OPTIONAL_INPUTS: Dict[str, List[str]] = {
+OPTIONAL_INPUTS: dict[str, list[str]] = {
     "L7": ["market_regime"],  # L1D에서 생성, L5 이후 실행
-    "L8": ["panel_merged_daily"],  # dataset_daily 또는 panel_merged_daily 둘 중 하나만 있으면 됨
+    "L8": [
+        "panel_merged_daily"
+    ],  # dataset_daily 또는 panel_merged_daily 둘 중 하나만 있으면 됨
 }
 
 # Stage별 필수 출력
-REQUIRED_OUTPUTS: Dict[str, List[str]] = {
+REQUIRED_OUTPUTS: dict[str, list[str]] = {
     "L0": ["universe_k200_membership_monthly"],
     "L1": ["ohlcv_daily"],
     "L1B": ["sector_map"],
@@ -53,18 +55,23 @@ REQUIRED_OUTPUTS: Dict[str, List[str]] = {
     ],
     "L7B": ["bt_sensitivity"],
     "L7C": ["bt_vs_benchmark", "bt_benchmark_compare", "bt_benchmark_returns"],
-    "L7D": ["l7d_stability", "bt_yearly_metrics", "bt_rolling_sharpe", "bt_drawdown_events"],
+    "L7D": [
+        "l7d_stability",
+        "bt_yearly_metrics",
+        "bt_rolling_sharpe",
+        "bt_drawdown_events",
+    ],
     "L8": ["ranking_daily", "ranking_snapshot"],
     "L11": ["ui_top_bottom_daily", "ui_equity_curves", "ui_snapshot", "ui_metrics"],
 }
 
 # Stage별 옵션 출력
-OPTIONAL_OUTPUTS: Dict[str, List[str]] = {
+OPTIONAL_OUTPUTS: dict[str, list[str]] = {
     # 현재 옵션 출력 없음
 }
 
 # 아티팩트별 필수 컬럼
-REQUIRED_COLS_BY_OUTPUT: Dict[str, List[str]] = {
+REQUIRED_COLS_BY_OUTPUT: dict[str, list[str]] = {
     "universe_k200_membership_monthly": ["date", "ticker"],
     "ohlcv_daily": ["date", "ticker"],
     "sector_map": ["date", "ticker", "sector_name"],
@@ -72,10 +79,40 @@ REQUIRED_COLS_BY_OUTPUT: Dict[str, List[str]] = {
     "fundamentals_annual": ["date", "ticker"],
     "panel_merged_daily": ["date", "ticker"],
     "dataset_daily": ["date", "ticker"],
-    "cv_folds_short": ["fold_id", "segment", "train_start", "train_end", "test_start", "test_end"],
-    "cv_folds_long": ["fold_id", "segment", "train_start", "train_end", "test_start", "test_end"],
-    "pred_short_oos": ["date", "ticker", "y_true", "y_pred", "fold_id", "phase", "horizon"],
-    "pred_long_oos": ["date", "ticker", "y_true", "y_pred", "fold_id", "phase", "horizon"],
+    "cv_folds_short": [
+        "fold_id",
+        "segment",
+        "train_start",
+        "train_end",
+        "test_start",
+        "test_end",
+    ],
+    "cv_folds_long": [
+        "fold_id",
+        "segment",
+        "train_start",
+        "train_end",
+        "test_start",
+        "test_end",
+    ],
+    "pred_short_oos": [
+        "date",
+        "ticker",
+        "y_true",
+        "y_pred",
+        "fold_id",
+        "phase",
+        "horizon",
+    ],
+    "pred_long_oos": [
+        "date",
+        "ticker",
+        "y_true",
+        "y_pred",
+        "fold_id",
+        "phase",
+        "horizon",
+    ],
     "model_metrics": ["horizon", "phase", "rmse"],
     "rebalance_scores": ["date", "ticker", "phase"],
     "rebalance_scores_summary": [
@@ -105,7 +142,13 @@ REQUIRED_COLS_BY_OUTPUT: Dict[str, List[str]] = {
         "bench_equity",
         "excess_equity",
     ],
-    "ui_snapshot": ["snapshot_date", "snapshot_type", "snapshot_rank", "ticker", "rank_total"],
+    "ui_snapshot": [
+        "snapshot_date",
+        "snapshot_type",
+        "snapshot_rank",
+        "ticker",
+        "rank_total",
+    ],
     "ui_metrics": ["total_return", "cagr", "vol", "sharpe", "mdd"],
     "l7d_stability": [
         "phase",
@@ -134,13 +177,25 @@ REQUIRED_COLS_BY_OUTPUT: Dict[str, List[str]] = {
         "net_return_col_used",
     ],
     "bt_rolling_sharpe": ["date", "phase", "net_rolling_sharpe"],
-    "bt_drawdown_events": ["phase", "peak_date", "trough_date", "drawdown", "length_days"],
-    "selection_diagnostics": ["date", "phase", "top_k", "eligible_count", "selected_count"],
+    "bt_drawdown_events": [
+        "phase",
+        "peak_date",
+        "trough_date",
+        "drawdown",
+        "length_days",
+    ],
+    "selection_diagnostics": [
+        "date",
+        "phase",
+        "top_k",
+        "eligible_count",
+        "selected_count",
+    ],
     "bt_returns_diagnostics": ["date", "phase"],
 }
 
 # 아티팩트별 옵션 컬럼
-OPTIONAL_COLS_BY_OUTPUT: Dict[str, List[str]] = {
+OPTIONAL_COLS_BY_OUTPUT: dict[str, list[str]] = {
     "rebalance_scores": ["score_short", "score_long", "score_ens"],
     "bt_positions": ["sector_name"],  # diversify.enabled일 때만
     "bt_returns": ["net_return", "gross_return"],
@@ -149,7 +204,7 @@ OPTIONAL_COLS_BY_OUTPUT: Dict[str, List[str]] = {
 }
 
 # Track 구분
-TRACK_BY_STAGE: Dict[str, str] = {
+TRACK_BY_STAGE: dict[str, str] = {
     "L0": "pipeline",
     "L1": "pipeline",
     "L1B": "pipeline",
@@ -195,37 +250,46 @@ L11_INPUT_RULE = {
     },
 }
 
+
 def get_stage_track(stage_name: str) -> str:
     """Stage의 Track 반환"""
     return TRACK_BY_STAGE.get(stage_name, "unknown")
 
-def get_required_inputs(stage_name: str) -> List[str]:
+
+def get_required_inputs(stage_name: str) -> list[str]:
     """Stage의 필수 입력 반환"""
     return REQUIRED_INPUTS.get(stage_name, [])
 
-def get_optional_inputs(stage_name: str) -> List[str]:
+
+def get_optional_inputs(stage_name: str) -> list[str]:
     """Stage의 옵션 입력 반환"""
     return OPTIONAL_INPUTS.get(stage_name, [])
 
-def get_required_outputs(stage_name: str) -> List[str]:
+
+def get_required_outputs(stage_name: str) -> list[str]:
     """Stage의 필수 출력 반환"""
     return REQUIRED_OUTPUTS.get(stage_name, [])
 
-def get_optional_outputs(stage_name: str) -> List[str]:
+
+def get_optional_outputs(stage_name: str) -> list[str]:
     """Stage의 옵션 출력 반환"""
     return OPTIONAL_OUTPUTS.get(stage_name, [])
 
-def get_required_columns(artifact_name: str) -> List[str]:
+
+def get_required_columns(artifact_name: str) -> list[str]:
     """아티팩트의 필수 컬럼 반환"""
     return REQUIRED_COLS_BY_OUTPUT.get(artifact_name, [])
 
-def get_optional_columns(artifact_name: str) -> List[str]:
+
+def get_optional_columns(artifact_name: str) -> list[str]:
     """아티팩트의 옵션 컬럼 반환"""
     return OPTIONAL_COLS_BY_OUTPUT.get(artifact_name, [])
+
 
 def is_pipeline_track(stage_name: str) -> bool:
     """Pipeline Track 여부 확인"""
     return get_stage_track(stage_name) == "pipeline"
+
 
 def is_ranking_track(stage_name: str) -> bool:
     """Ranking Track 여부 확인"""

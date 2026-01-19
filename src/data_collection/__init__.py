@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 데이터 수집 모듈 (Data Collection Module)
 

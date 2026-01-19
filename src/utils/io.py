@@ -1,20 +1,20 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/utils/io.py
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 import pandas as pd
 
 
-def artifact_exists(out_base: Path, formats: Optional[List[str]] = None) -> bool:
+def artifact_exists(out_base: Path, formats: Optional[list[str]] = None) -> bool:
     formats = formats or ["parquet", "csv"]
     for fmt in formats:
         p = out_base.with_suffix(f".{fmt}")
         if p.exists():
             return True
     return False
+
 
 def load_artifact(out_base: Path) -> pd.DataFrame:
     """
@@ -34,11 +34,12 @@ def load_artifact(out_base: Path) -> pd.DataFrame:
 
     raise FileNotFoundError(f"Artifact not found: {p_parq} or {p_csv}")
 
+
 def save_artifact(
     df: pd.DataFrame,
     out_base: Path,
     *,
-    formats: Optional[List[str]] = None,
+    formats: Optional[list[str]] = None,
     force: bool = False,
 ) -> None:
     """
@@ -57,6 +58,7 @@ def save_artifact(
 
     # [Stage0] 디버그: 실제 저장 경로 확인
     import logging
+
     logger = logging.getLogger(__name__)
     logger.debug(f"[save_artifact] Saving to: {out_base}")
 

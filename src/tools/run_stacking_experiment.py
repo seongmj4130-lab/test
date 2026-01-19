@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 [개선안 24번] 스태킹 실험 러너
 
@@ -19,7 +18,6 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import Dict, List
 
 import pandas as pd
 
@@ -58,6 +56,7 @@ def _load_interim_artifact(interim: Path, name: str) -> pd.DataFrame:
 
 def _clone_cfg(cfg: dict) -> dict:
     import copy
+
     return copy.deepcopy(cfg)
 
 
@@ -65,10 +64,15 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="configs/config.yaml")
     ap.add_argument("--interim", default="data/interim")
-    ap.add_argument("--model-rebalance", default="data/interim/option_a_only_20d/rebalance_scores.parquet")
+    ap.add_argument(
+        "--model-rebalance",
+        default="data/interim/option_a_only_20d/rebalance_scores.parquet",
+    )
     ap.add_argument("--out", default="finalterm/35_stacking_results.md")
     ap.add_argument("--meta-alpha", type=float, default=1.0)
-    ap.add_argument("--enable-xgb", action="store_true", help="xgboost 설치된 환경에서만 켜세요")
+    ap.add_argument(
+        "--enable-xgb", action="store_true", help="xgboost 설치된 환경에서만 켜세요"
+    )
     args = ap.parse_args()
 
     cfg = load_config(args.config)
@@ -84,11 +88,17 @@ def main():
         "dataset_daily": dataset_daily,
         "cv_folds_short": cv_s,
         "universe_k200_membership_monthly": univ,
-        "ranking_short_daily": _safe_read_parquet(interim / "ranking_short_daily.parquet"),
-        "ranking_long_daily": _safe_read_parquet(interim / "ranking_long_daily.parquet"),
+        "ranking_short_daily": _safe_read_parquet(
+            interim / "ranking_short_daily.parquet"
+        ),
+        "ranking_long_daily": _safe_read_parquet(
+            interim / "ranking_long_daily.parquet"
+        ),
     }
     dual_out, dual_warns = run_L6R_ranking_scoring(cfg, artifacts, force=True)
-    rs_dual = dual_out["rebalance_scores"][["date", "ticker", "phase", "score_ens", "true_short"]].copy()
+    rs_dual = dual_out["rebalance_scores"][
+        ["date", "ticker", "phase", "score_ens", "true_short"]
+    ].copy()
 
     # 2) ridge base: model rebalance_scores (default = option_a_only_20d)
     rs_ridge = _safe_read_parquet((ROOT / args.model_rebalance).resolve())
@@ -130,27 +140,39 @@ def main():
             dataset_daily=dataset_daily,
             invert_score_sign=bool(l6.get("invert_score_sign", False)),
         )
-        return out[["date", "ticker", "phase", "score_ens", "true_short"]].copy(), (warns_s + warns_l + warns6)
+        return out[["date", "ticker", "phase", "score_ens", "true_short"]].copy(), (
+            warns_s + warns_l + warns6
+        )
 
     rs_rf, rf_warns = build_model_rebalance_scores("random_forest")
 
     rs_xgb = None
-    xgb_warns: List[str] = []
+    xgb_warns: list[str] = []
     if args.enable_xgb:
         rs_xgb, xgb_warns = build_model_rebalance_scores("xgboost")
 
     # 4) build stacked scores (dev only train)
-    base_frames: Dict[str, pd.DataFrame] = {
-        "ranking_dual": rs_dual.rename(columns={"score_ens": "score_ens"})[["date", "ticker", "phase", "score_ens"]],
-        "ridge": rs_ridge.rename(columns={"score_ens": "score_ens"})[["date", "ticker", "phase", "score_ens"]],
-        "rf": rs_rf.rename(columns={"score_ens": "score_ens"})[["date", "ticker", "phase", "score_ens"]],
+    base_frames: dict[str, pd.DataFrame] = {
+        "ranking_dual": rs_dual.rename(columns={"score_ens": "score_ens"})[
+            ["date", "ticker", "phase", "score_ens"]
+        ],
+        "ridge": rs_ridge.rename(columns={"score_ens": "score_ens"})[
+            ["date", "ticker", "phase", "score_ens"]
+        ],
+        "rf": rs_rf.rename(columns={"score_ens": "score_ens"})[
+            ["date", "ticker", "phase", "score_ens"]
+        ],
     }
     feat_cols = ["ridge", "rf", "ranking_dual"]
     if rs_xgb is not None:
-        base_frames["xgb"] = rs_xgb.rename(columns={"score_ens": "score_ens"})[["date", "ticker", "phase", "score_ens"]]
+        base_frames["xgb"] = rs_xgb.rename(columns={"score_ens": "score_ens"})[
+            ["date", "ticker", "phase", "score_ens"]
+        ]
         feat_cols = ["ridge", "rf", "xgb", "ranking_dual"]
 
-    stacked_cfg = StackingConfig(ridge_alpha=float(args.meta_alpha), feature_cols=tuple(feat_cols))
+    stacked_cfg = StackingConfig(
+        ridge_alpha=float(args.meta_alpha), feature_cols=tuple(feat_cols)
+    )
     rs_stacked, report, warns_stack = build_stacked_rebalance_scores(
         base_frames=base_frames,
         target_frame=rs_ridge[["date", "ticker", "phase", "true_short"]],
@@ -159,7 +181,9 @@ def main():
 
     # 5) L7 backtest for stacked
     l7 = cfg.get("l7", {}) or {}
-    bt_cfg = __import__("src.stages.backtest.l7_backtest", fromlist=["BacktestConfig"]).BacktestConfig(
+    bt_cfg = __import__(
+        "src.stages.backtest.l7_backtest", fromlist=["BacktestConfig"]
+    ).BacktestConfig(
         holding_days=int(l7.get("holding_days", 20)),
         top_k=int(l7.get("top_k", 20)),
         cost_bps=float(l7.get("cost_bps", 10.0)),
@@ -169,7 +193,9 @@ def main():
         buffer_k=int(l7.get("buffer_k", 0)),
         diversify_enabled=bool((l7.get("diversify") or {}).get("enabled", False)),
         group_col=str((l7.get("diversify") or {}).get("group_col", "sector_name")),
-        max_names_per_group=int((l7.get("diversify") or {}).get("max_names_per_group", 4)),
+        max_names_per_group=int(
+            (l7.get("diversify") or {}).get("max_names_per_group", 4)
+        ),
         regime_enabled=bool((l7.get("regime") or {}).get("enabled", False)),
     )
 

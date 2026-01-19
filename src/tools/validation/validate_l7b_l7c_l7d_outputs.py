@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/validation/validate_l7b_l7c_l7d_outputs.py
 import json
 from pathlib import Path
@@ -13,24 +12,30 @@ from src.utils.io import artifact_exists, load_artifact
 def _root() -> Path:
     return Path(__file__).resolve().parents[2]
 
+
 def _cfg_path(root: Path) -> Path:
     return root / "configs" / "config.yaml"
+
 
 def _load_meta(meta_path: Path) -> dict:
     with meta_path.open("r", encoding="utf-8") as f:
         return json.load(f)
 
+
 def _artifact_base(interim: Path, name: str) -> Path:
     return interim / name
 
+
 def _fail(msg: str) -> None:
     raise SystemExit(msg)
+
 
 def _check_numeric_finite(df: pd.DataFrame, cols: list[str], label: str) -> None:
     for c in cols:
         s = pd.to_numeric(df[c], errors="coerce")
         if (~np.isfinite(s.to_numpy())).any():
             _fail(f"[FAIL] {label}: non-finite values found in numeric col '{c}'")
+
 
 def _check_dupes(df: pd.DataFrame, keys: list[str], label: str) -> None:
     if not all(k in df.columns for k in keys):
@@ -39,6 +44,7 @@ def _check_dupes(df: pd.DataFrame, keys: list[str], label: str) -> None:
     if dup.any():
         sample = df.loc[dup, keys].head(10)
         _fail(f"[FAIL] {label}: duplicates on keys={keys}. sample:\n{sample}")
+
 
 def _infer_rolling_keys(df: pd.DataFrame) -> list[str]:
     """
@@ -71,6 +77,7 @@ def _infer_rolling_keys(df: pd.DataFrame) -> list[str]:
     # extras 전부 포함(보수적으로 유니크 보장)
     return base + extras
 
+
 def main():
     print("=== L7B/L7C/L7D Validation Runner ===")
     root = _root()
@@ -94,7 +101,11 @@ def main():
     for mp in meta_files:
         m = _load_meta(mp)
         stage = str(m.get("stage", ""))
-        if stage.startswith("L7B:") or stage.startswith("L7C:") or stage.startswith("L7D:"):
+        if (
+            stage.startswith("L7B:")
+            or stage.startswith("L7C:")
+            or stage.startswith("L7D:")
+        ):
             out_name = mp.name.replace("__meta.json", "")
             discovered.append((out_name, stage, mp))
 
@@ -108,9 +119,17 @@ def main():
     # L7D yearly metrics는 스키마를 엄격히 고정
     strict_required = {
         "bt_yearly_metrics": [
-            "phase", "year", "n_rebalances",
-            "net_total_return", "net_vol_ann", "net_sharpe", "net_mdd", "net_hit_ratio",
-            "date_start", "date_end", "net_return_col_used",
+            "phase",
+            "year",
+            "n_rebalances",
+            "net_total_return",
+            "net_vol_ann",
+            "net_sharpe",
+            "net_mdd",
+            "net_hit_ratio",
+            "date_start",
+            "date_end",
+            "net_return_col_used",
         ]
     }
 
@@ -141,7 +160,9 @@ def main():
             if dc in df.columns:
                 d = pd.to_datetime(df[dc], errors="coerce")
                 if d.isna().any():
-                    _fail(f"[FAIL] {stage}:{out_name} has invalid '{dc}' values (NaT present)")
+                    _fail(
+                        f"[FAIL] {stage}:{out_name} has invalid '{dc}' values (NaT present)"
+                    )
 
         # duplicate checks (output별로 키를 다르게 적용)
         if out_name == "bt_rolling_sharpe":
@@ -175,7 +196,10 @@ def main():
         print("phases:", sorted(pd.Series(y["phase"]).astype(str).unique().tolist()))
 
     print("\n✅ L7B/L7C/L7D VALIDATION COMPLETE: All critical checks passed.")
-    print("➡️ Next: run full audit (L0~L7 + extensions) and then final reporting tables.")
+    print(
+        "➡️ Next: run full audit (L0~L7 + extensions) and then final reporting tables."
+    )
+
 
 if __name__ == "__main__":
     main()

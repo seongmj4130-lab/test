@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 BT20 전체 파이프라인 실행 모듈
 
@@ -11,9 +10,6 @@ BT20(20일 보유 기간) 전략의 전체 파이프라인을 실행합니다.
 """
 import logging
 from pathlib import Path
-from typing import Dict, Optional
-
-import pandas as pd
 
 from src.utils.config import get_path, load_config
 from src.utils.io import artifact_exists, load_artifact, save_artifact
@@ -25,7 +21,7 @@ def run_bt20_pipeline(
     config_path: str = "configs/config.yaml",
     strategy: str = "short",  # "short" (분리) or "ens" (통합)
     force_rebuild: bool = False,
-) -> Dict:
+) -> dict:
     """
     BT20 전체 파이프라인을 실행합니다.
 
@@ -78,7 +74,9 @@ def run_bt20_pipeline(
     if artifact_exists(uni_path) and not force_rebuild:
         artifacts["universe_k200_membership_monthly"] = load_artifact(uni_path)
         artifacts_path["universe"] = str(uni_path)
-        logger.info(f"  ✓ 캐시에서 로드: {len(artifacts['universe_k200_membership_monthly']):,}행")
+        logger.info(
+            f"  ✓ 캐시에서 로드: {len(artifacts['universe_k200_membership_monthly']):,}행"
+        )
     else:
         logger.warning("  ✗ 유니버스 데이터가 없습니다. L0부터 실행이 필요합니다.")
         logger.warning("  python scripts/run_pipeline_l0_l7.py 를 먼저 실행하세요.")
@@ -101,10 +99,12 @@ def run_bt20_pipeline(
     cv_short_path = interim_dir / "cv_folds_short"
     cv_long_path = interim_dir / "cv_folds_long"
 
-    if (artifact_exists(dataset_path) and
-        artifact_exists(cv_short_path) and
-        artifact_exists(cv_long_path) and
-        not force_rebuild):
+    if (
+        artifact_exists(dataset_path)
+        and artifact_exists(cv_short_path)
+        and artifact_exists(cv_long_path)
+        and not force_rebuild
+    ):
         artifacts["dataset_daily"] = load_artifact(dataset_path)
         artifacts["cv_folds_short"] = load_artifact(cv_short_path)
         artifacts["cv_folds_long"] = load_artifact(cv_long_path)
@@ -121,14 +121,18 @@ def run_bt20_pipeline(
     pred_short_path = interim_dir / "pred_short_oos"
     pred_long_path = interim_dir / "pred_long_oos"
 
-    if (artifact_exists(pred_short_path) and
-        artifact_exists(pred_long_path) and
-        not force_rebuild):
+    if (
+        artifact_exists(pred_short_path)
+        and artifact_exists(pred_long_path)
+        and not force_rebuild
+    ):
         artifacts["pred_short_oos"] = load_artifact(pred_short_path)
         artifacts["pred_long_oos"] = load_artifact(pred_long_path)
         artifacts_path["pred_short"] = str(pred_short_path)
         artifacts_path["pred_long"] = str(pred_long_path)
-        logger.info(f"  ✓ 캐시에서 로드: pred_short {len(artifacts['pred_short_oos']):,}행")
+        logger.info(
+            f"  ✓ 캐시에서 로드: pred_short {len(artifacts['pred_short_oos']):,}행"
+        )
     else:
         logger.warning("  ✗ 모델 예측이 없습니다. L5까지 실행이 필요합니다.")
         raise FileNotFoundError("pred_short_oos or pred_long_oos not found")
@@ -153,7 +157,9 @@ def run_bt20_pipeline(
         scores, summary, quality, warns = build_rebalance_scores(
             pred_short_oos=artifacts["pred_short_oos"],
             pred_long_oos=artifacts["pred_long_oos"],
-            universe_k200_membership_monthly=artifacts["universe_k200_membership_monthly"],
+            universe_k200_membership_monthly=artifacts[
+                "universe_k200_membership_monthly"
+            ],
             weight_short=w_s,
             weight_long=w_l,
         )
@@ -171,52 +177,126 @@ def run_bt20_pipeline(
 
     # BacktestConfig 생성
     # [개선안 37번] l7_bt20_* 설정 전달 누락(regime/overlapping/slippage/diversify) 보완
-    l7_regime = (l7_cfg.get("regime", {}) or {}) if isinstance(l7_cfg.get("regime", {}), dict) else {}
-    l7_div = (l7_cfg.get("diversify", {}) or {}) if isinstance(l7_cfg.get("diversify", {}), dict) else {}
+    l7_regime = (
+        (l7_cfg.get("regime", {}) or {})
+        if isinstance(l7_cfg.get("regime", {}), dict)
+        else {}
+    )
+    l7_div = (
+        (l7_cfg.get("diversify", {}) or {})
+        if isinstance(l7_cfg.get("diversify", {}), dict)
+        else {}
+    )
     bt_cfg = BacktestConfig(
         holding_days=int(l7_cfg.get("holding_days", 20)),
         top_k=int(l7_cfg.get("top_k", 12)),
         cost_bps=float(l7_cfg.get("cost_bps", 10.0)),
         slippage_bps=float(l7_cfg.get("slippage_bps", 0.0)),
-        score_col=str(l7_cfg.get("score_col", "score_total_short" if strategy == "short" else "score_ens")),
+        score_col=str(
+            l7_cfg.get(
+                "score_col", "score_total_short" if strategy == "short" else "score_ens"
+            )
+        ),
         ret_col=str(l7_cfg.get("return_col", "true_short")),
         weighting=str(l7_cfg.get("weighting", "equal")),
-        softmax_temp=float(l7_cfg.get("softmax_temperature", l7_cfg.get("softmax_temp", 1.0))),
+        softmax_temp=float(
+            l7_cfg.get("softmax_temperature", l7_cfg.get("softmax_temp", 1.0))
+        ),
         buffer_k=int(l7_cfg.get("buffer_k", 15)),
         rebalance_interval=int(l7_cfg.get("rebalance_interval", 1)),
         smart_buffer_enabled=bool(l7_cfg.get("smart_buffer_enabled", True)),
-        smart_buffer_stability_threshold=float(l7_cfg.get("smart_buffer_stability_threshold", 0.7)),
-        volatility_adjustment_enabled=bool(l7_cfg.get("volatility_adjustment_enabled", True)),
+        smart_buffer_stability_threshold=float(
+            l7_cfg.get("smart_buffer_stability_threshold", 0.7)
+        ),
+        volatility_adjustment_enabled=bool(
+            l7_cfg.get("volatility_adjustment_enabled", True)
+        ),
         volatility_lookback_days=int(l7_cfg.get("volatility_lookback_days", 60)),
         target_volatility=float(l7_cfg.get("target_volatility", 0.15)),
         volatility_adjustment_max=float(l7_cfg.get("volatility_adjustment_max", 1.2)),
         volatility_adjustment_min=float(l7_cfg.get("volatility_adjustment_min", 0.7)),
         risk_scaling_enabled=bool(l7_cfg.get("risk_scaling_enabled", True)),
-        risk_scaling_bear_multiplier=float(l7_cfg.get("risk_scaling_bear_multiplier", 0.8)),
-        risk_scaling_neutral_multiplier=float(l7_cfg.get("risk_scaling_neutral_multiplier", 1.0)),
-        risk_scaling_bull_multiplier=float(l7_cfg.get("risk_scaling_bull_multiplier", 1.0)),
-        overlapping_tranches_enabled=bool(l7_cfg.get("overlapping_tranches_enabled", False)),
+        risk_scaling_bear_multiplier=float(
+            l7_cfg.get("risk_scaling_bear_multiplier", 0.8)
+        ),
+        risk_scaling_neutral_multiplier=float(
+            l7_cfg.get("risk_scaling_neutral_multiplier", 1.0)
+        ),
+        risk_scaling_bull_multiplier=float(
+            l7_cfg.get("risk_scaling_bull_multiplier", 1.0)
+        ),
+        overlapping_tranches_enabled=bool(
+            l7_cfg.get("overlapping_tranches_enabled", False)
+        ),
         tranche_holding_days=int(l7_cfg.get("tranche_holding_days", 120)),
         tranche_max_active=int(l7_cfg.get("tranche_max_active", 4)),
-        tranche_allocation_mode=str(l7_cfg.get("tranche_allocation_mode", "fixed_equal")),
+        tranche_allocation_mode=str(
+            l7_cfg.get("tranche_allocation_mode", "fixed_equal")
+        ),
         diversify_enabled=bool(l7_div.get("enabled", False)),
         group_col=str(l7_div.get("group_col", "sector_name")),
         max_names_per_group=int(l7_div.get("max_names_per_group", 4)),
         regime_enabled=bool(l7_regime.get("enabled", False)),
-        regime_top_k_bull_strong=(int(l7_regime["top_k_bull_strong"]) if "top_k_bull_strong" in l7_regime else None),
-        regime_top_k_bull_weak=(int(l7_regime["top_k_bull_weak"]) if "top_k_bull_weak" in l7_regime else None),
-        regime_top_k_bear_strong=(int(l7_regime["top_k_bear_strong"]) if "top_k_bear_strong" in l7_regime else None),
-        regime_top_k_bear_weak=(int(l7_regime["top_k_bear_weak"]) if "top_k_bear_weak" in l7_regime else None),
-        regime_top_k_neutral=(int(l7_regime["top_k_neutral"]) if "top_k_neutral" in l7_regime else None),
-        regime_exposure_bull_strong=(float(l7_regime["exposure_bull_strong"]) if "exposure_bull_strong" in l7_regime else None),
-        regime_exposure_bull_weak=(float(l7_regime["exposure_bull_weak"]) if "exposure_bull_weak" in l7_regime else None),
-        regime_exposure_bear_strong=(float(l7_regime["exposure_bear_strong"]) if "exposure_bear_strong" in l7_regime else None),
-        regime_exposure_bear_weak=(float(l7_regime["exposure_bear_weak"]) if "exposure_bear_weak" in l7_regime else None),
-        regime_exposure_neutral=(float(l7_regime["exposure_neutral"]) if "exposure_neutral" in l7_regime else None),
-        regime_top_k_bull=(int(l7_regime["top_k_bull"]) if "top_k_bull" in l7_regime else None),
-        regime_top_k_bear=(int(l7_regime["top_k_bear"]) if "top_k_bear" in l7_regime else None),
-        regime_exposure_bull=(float(l7_regime["exposure_bull"]) if "exposure_bull" in l7_regime else None),
-        regime_exposure_bear=(float(l7_regime["exposure_bear"]) if "exposure_bear" in l7_regime else None),
+        regime_top_k_bull_strong=(
+            int(l7_regime["top_k_bull_strong"])
+            if "top_k_bull_strong" in l7_regime
+            else None
+        ),
+        regime_top_k_bull_weak=(
+            int(l7_regime["top_k_bull_weak"])
+            if "top_k_bull_weak" in l7_regime
+            else None
+        ),
+        regime_top_k_bear_strong=(
+            int(l7_regime["top_k_bear_strong"])
+            if "top_k_bear_strong" in l7_regime
+            else None
+        ),
+        regime_top_k_bear_weak=(
+            int(l7_regime["top_k_bear_weak"])
+            if "top_k_bear_weak" in l7_regime
+            else None
+        ),
+        regime_top_k_neutral=(
+            int(l7_regime["top_k_neutral"]) if "top_k_neutral" in l7_regime else None
+        ),
+        regime_exposure_bull_strong=(
+            float(l7_regime["exposure_bull_strong"])
+            if "exposure_bull_strong" in l7_regime
+            else None
+        ),
+        regime_exposure_bull_weak=(
+            float(l7_regime["exposure_bull_weak"])
+            if "exposure_bull_weak" in l7_regime
+            else None
+        ),
+        regime_exposure_bear_strong=(
+            float(l7_regime["exposure_bear_strong"])
+            if "exposure_bear_strong" in l7_regime
+            else None
+        ),
+        regime_exposure_bear_weak=(
+            float(l7_regime["exposure_bear_weak"])
+            if "exposure_bear_weak" in l7_regime
+            else None
+        ),
+        regime_exposure_neutral=(
+            float(l7_regime["exposure_neutral"])
+            if "exposure_neutral" in l7_regime
+            else None
+        ),
+        regime_top_k_bull=(
+            int(l7_regime["top_k_bull"]) if "top_k_bull" in l7_regime else None
+        ),
+        regime_top_k_bear=(
+            int(l7_regime["top_k_bear"]) if "top_k_bear" in l7_regime else None
+        ),
+        regime_exposure_bull=(
+            float(l7_regime["exposure_bull"]) if "exposure_bull" in l7_regime else None
+        ),
+        regime_exposure_bear=(
+            float(l7_regime["exposure_bear"]) if "exposure_bear" in l7_regime else None
+        ),
     )
 
     # 시장 국면 데이터 (regime_enabled일 때)
@@ -251,9 +331,30 @@ def run_bt20_pipeline(
 
     # 결과 처리
     if len(result) == 10:
-        bt_pos, bt_ret, bt_eq, bt_met, quality, warns, selection_diagnostics, bt_returns_diagnostics, runtime_profile, bt_regime_metrics = result
+        (
+            bt_pos,
+            bt_ret,
+            bt_eq,
+            bt_met,
+            quality,
+            warns,
+            selection_diagnostics,
+            bt_returns_diagnostics,
+            runtime_profile,
+            bt_regime_metrics,
+        ) = result
     elif len(result) == 9:
-        bt_pos, bt_ret, bt_eq, bt_met, quality, warns, selection_diagnostics, bt_returns_diagnostics, runtime_profile = result
+        (
+            bt_pos,
+            bt_ret,
+            bt_eq,
+            bt_met,
+            quality,
+            warns,
+            selection_diagnostics,
+            bt_returns_diagnostics,
+            runtime_profile,
+        ) = result
         bt_regime_metrics = None
     elif len(result) == 6:
         bt_pos, bt_ret, bt_eq, bt_met, quality, warns = result
@@ -293,10 +394,11 @@ def run_bt20_pipeline(
 
 if __name__ == "__main__":
     import sys
+
     logging.basicConfig(
         level=logging.INFO,
         format="[%(asctime)s] [%(levelname)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     strategy = sys.argv[1] if len(sys.argv) > 1 else "short"

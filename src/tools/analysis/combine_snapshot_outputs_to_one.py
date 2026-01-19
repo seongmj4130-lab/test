@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/analysis/combine_snapshot_outputs_to_one.py
 from __future__ import annotations
 
 import argparse
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pandas as pd
 
@@ -17,9 +16,11 @@ def _project_root() -> Path:
     # .../03_code/src/stages/xxx.py -> parents[2] == 03_code
     return Path(__file__).resolve().parents[2]
 
-def _load_meta(meta_path: Path) -> Dict[str, Any]:
+
+def _load_meta(meta_path: Path) -> dict[str, Any]:
     with meta_path.open("r", encoding="utf-8") as f:
         return json.load(f)
+
 
 def _read_artifact(snapshot_dir: Path, name: str) -> pd.DataFrame:
     p_parq = snapshot_dir / f"{name}.parquet"
@@ -29,7 +30,10 @@ def _read_artifact(snapshot_dir: Path, name: str) -> pd.DataFrame:
         return pd.read_parquet(p_parq)
     if p_csv.exists():
         return pd.read_csv(p_csv, low_memory=False)
-    raise FileNotFoundError(f"Missing data for artifact='{name}' in snapshot_dir={snapshot_dir}")
+    raise FileNotFoundError(
+        f"Missing data for artifact='{name}' in snapshot_dir={snapshot_dir}"
+    )
+
 
 def _normalize_df(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
@@ -41,6 +45,7 @@ def _normalize_df(df: pd.DataFrame) -> pd.DataFrame:
         out["date"] = pd.to_datetime(out["date"], errors="coerce")
 
     return out
+
 
 def _get_snapshots_dir(cfg: dict, root: Path, snapshots_dir_arg: str = "") -> Path:
     """
@@ -68,14 +73,38 @@ def _get_snapshots_dir(cfg: dict, root: Path, snapshots_dir_arg: str = "") -> Pa
     cand = base_dir / "data" / "snapshots"
     return cand
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Combine snapshot outputs into ONE table (parquet + csv).")
+    parser = argparse.ArgumentParser(
+        description="Combine snapshot outputs into ONE table (parquet + csv)."
+    )
     parser.add_argument("--config", type=str, default="configs/config.yaml")
-    parser.add_argument("--tag", type=str, required=True, help="snapshot tag folder name (e.g., baseline_after_L7BCD)")
-    parser.add_argument("--out-name", type=str, default="", help="base output name (no extension). default=combined__<tag>")
-    parser.add_argument("--out-dir", type=str, default="", help="optional override output directory")
-    parser.add_argument("--snapshots-dir", type=str, default="", help="optional override snapshots base dir")
-    parser.add_argument("--include-meta-cols", action="store_true", help="attach meta.stage/meta.run_id as columns")
+    parser.add_argument(
+        "--tag",
+        type=str,
+        required=True,
+        help="snapshot tag folder name (e.g., baseline_after_L7BCD)",
+    )
+    parser.add_argument(
+        "--out-name",
+        type=str,
+        default="",
+        help="base output name (no extension). default=combined__<tag>",
+    )
+    parser.add_argument(
+        "--out-dir", type=str, default="", help="optional override output directory"
+    )
+    parser.add_argument(
+        "--snapshots-dir",
+        type=str,
+        default="",
+        help="optional override snapshots base dir",
+    )
+    parser.add_argument(
+        "--include-meta-cols",
+        action="store_true",
+        help="attach meta.stage/meta.run_id as columns",
+    )
     args = parser.parse_args()
 
     root = _project_root()
@@ -90,7 +119,9 @@ def main():
         if alt.exists():
             snapshot_dir = alt
         else:
-            raise FileNotFoundError(f"Snapshot folder not found: {snapshot_dir} (also tried: {alt})")
+            raise FileNotFoundError(
+                f"Snapshot folder not found: {snapshot_dir} (also tried: {alt})"
+            )
 
     out_name = args.out_name.strip() or f"combined__{args.tag}"
     if args.out_dir.strip():
@@ -111,8 +142,8 @@ def main():
     if not meta_files:
         raise FileNotFoundError(f"No meta files found in snapshot: {snapshot_dir}")
 
-    dfs: List[pd.DataFrame] = []
-    manifest_rows: List[dict] = []
+    dfs: list[pd.DataFrame] = []
+    manifest_rows: list[dict] = []
 
     for mp in meta_files:
         name = mp.name.replace("__meta.json", "")
@@ -130,19 +161,23 @@ def main():
 
         dfs.append(df)
 
-        manifest_rows.append({
-            "artifact": name,
-            "rows": int(df.shape[0]),
-            "cols": int(df.shape[1]),
-            "has_date": bool("date" in df.columns),
-            "meta_stage": meta.get("stage", None),
-            "meta_run_id": meta.get("run_id", None),
-        })
+        manifest_rows.append(
+            {
+                "artifact": name,
+                "rows": int(df.shape[0]),
+                "cols": int(df.shape[1]),
+                "has_date": bool("date" in df.columns),
+                "meta_stage": meta.get("stage", None),
+                "meta_run_id": meta.get("run_id", None),
+            }
+        )
 
         print(f"- loaded: {name:30s} shape={df.shape}")
 
     combined = pd.concat(dfs, ignore_index=True, sort=False)
-    manifest = pd.DataFrame(manifest_rows).sort_values(["artifact"]).reset_index(drop=True)
+    manifest = (
+        pd.DataFrame(manifest_rows).sort_values(["artifact"]).reset_index(drop=True)
+    )
 
     out_base = out_dir / out_name
     save_artifact(combined, out_base, force=True, formats=["parquet", "csv"])
@@ -155,6 +190,7 @@ def main():
     print(f"- manifest saved: {man_base}.parquet / {man_base}.csv")
     print(f"- combined shape: {combined.shape}")
     print(f"- manifest shape: {manifest.shape}")
+
 
 if __name__ == "__main__":
     main()

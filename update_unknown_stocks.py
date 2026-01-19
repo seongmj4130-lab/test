@@ -3,9 +3,7 @@
 Unknown 종목명을 수동으로 추가하여 100% 매칭 확인
 """
 
-import sys
 from pathlib import Path
-from typing import Dict, List
 
 import pandas as pd
 
@@ -217,20 +215,22 @@ S-Oil(010950),SHORT
 """
 
 
-def parse_mappings_to_dict() -> Dict[str, str]:
+def parse_mappings_to_dict() -> dict[str, str]:
     """제공된 매핑 데이터를 딕셔너리로 파싱"""
     mappings = {}
-    lines = [line.strip() for line in provided_mappings.strip().split('\n') if line.strip()]
+    lines = [
+        line.strip() for line in provided_mappings.strip().split("\n") if line.strip()
+    ]
 
     for line in lines:
-        if line and ',' in line:
-            company_ticker, strategy = line.split(',', 1)
+        if line and "," in line:
+            company_ticker, strategy = line.split(",", 1)
             company_ticker = company_ticker.strip()
 
             # 회사명과 티커 분리
-            if '(' in company_ticker and ')' in company_ticker:
-                company_name = company_ticker.split('(')[0].strip()
-                ticker = company_ticker.split('(')[1].split(')')[0].strip()
+            if "(" in company_ticker and ")" in company_ticker:
+                company_name = company_ticker.split("(")[0].strip()
+                ticker = company_ticker.split("(")[1].split(")")[0].strip()
 
                 # 티커를 6자리로 포맷팅
                 ticker_formatted = f"{int(ticker):06d}"
@@ -256,7 +256,7 @@ def update_unknown_stocks():
     print(f"기존 Unknown 종목 수: {len(unknown_df)}")
 
     # 중복 제거된 Unknown 목록 생성
-    unique_unknown = unknown_df[['종목명(ticker)']].drop_duplicates()
+    unique_unknown = unknown_df[["종목명(ticker)"]].drop_duplicates()
     print(f"고유 Unknown 종목 수: {len(unique_unknown)}")
 
     # 매칭 확인
@@ -265,27 +265,29 @@ def update_unknown_stocks():
     mapping_results = []
 
     for _, row in unique_unknown.iterrows():
-        unknown_key = row['종목명(ticker)']
+        unknown_key = row["종목명(ticker)"]
 
         if unknown_key in provided_mappings:
             company_name = provided_mappings[unknown_key]
             matched += 1
-            mapping_results.append({
-                '원본': unknown_key,
-                '매핑결과': f"{company_name}({unknown_key.split('(')[1].split(')')[0]})",
-                '상태': '✅ 매칭됨'
-            })
+            mapping_results.append(
+                {
+                    "원본": unknown_key,
+                    "매핑결과": f"{company_name}({unknown_key.split('(')[1].split(')')[0]})",
+                    "상태": "✅ 매칭됨",
+                }
+            )
         else:
             unmatched.append(unknown_key)
-            mapping_results.append({
-                '원본': unknown_key,
-                '매핑결과': '매핑되지 않음',
-                '상태': '❌ 미매칭'
-            })
+            mapping_results.append(
+                {"원본": unknown_key, "매핑결과": "매핑되지 않음", "상태": "❌ 미매칭"}
+            )
 
     # 결과 출력
-    print(f"\n=== 매칭 결과 ===")
-    print(f"매칭된 종목: {matched}/{len(unique_unknown)} ({matched/len(unique_unknown)*100:.1f}%)")
+    print("\n=== 매칭 결과 ===")
+    print(
+        f"매칭된 종목: {matched}/{len(unique_unknown)} ({matched/len(unique_unknown)*100:.1f}%)"
+    )
 
     if unmatched:
         print(f"미매칭 종목: {len(unmatched)}개")
@@ -300,7 +302,7 @@ def update_unknown_stocks():
     # 상세 결과 저장
     results_df = pd.DataFrame(mapping_results)
     results_file = project_root / "data" / "unknown_stocks_mapping_results.csv"
-    results_df.to_csv(results_file, index=False, encoding='utf-8-sig')
+    results_df.to_csv(results_file, index=False, encoding="utf-8-sig")
     print(f"\n상세 결과 파일: {results_file}")
 
     # 100% 매칭 시 최종 업데이트된 종목명 딕셔너리 생성
@@ -309,23 +311,43 @@ def update_unknown_stocks():
 
         # 기존 티커 매핑에 Unknown 매핑 추가
         final_ticker_mapping = {
-            '005930': '삼성전자', '000660': 'SK하이닉스', '035420': 'NAVER', '034730': 'SK텔레콤',
-            '005380': '현대차', '000270': '기아', '035720': '카카오', '005490': 'POSCO홀딩스',
-            '051910': 'LG화학', '012330': '현대모비스', '055550': '신한지주', '032830': '삼성생명',
-            '003550': 'LG', '006400': '삼성SDI', '086790': '하나금융지주', '138040': '메리츠금융지주',
-            '036570': '엔씨소프트', '000810': '삼성화재', '009150': '삼성전기', '034730': 'SK',
-            '352820': '하이브', '011200': 'HMM', '010130': '고려아연', '009830': '한화솔루션',
-            '241560': '두산밥캣', '137310': '에스디바이오센서', '003240': '태광산업'
+            "005930": "삼성전자",
+            "000660": "SK하이닉스",
+            "035420": "NAVER",
+            "034730": "SK텔레콤",
+            "005380": "현대차",
+            "000270": "기아",
+            "035720": "카카오",
+            "005490": "POSCO홀딩스",
+            "051910": "LG화학",
+            "012330": "현대모비스",
+            "055550": "신한지주",
+            "032830": "삼성생명",
+            "003550": "LG",
+            "006400": "삼성SDI",
+            "086790": "하나금융지주",
+            "138040": "메리츠금융지주",
+            "036570": "엔씨소프트",
+            "000810": "삼성화재",
+            "009150": "삼성전기",
+            "034730": "SK",
+            "352820": "하이브",
+            "011200": "HMM",
+            "010130": "고려아연",
+            "009830": "한화솔루션",
+            "241560": "두산밥캣",
+            "137310": "에스디바이오센서",
+            "003240": "태광산업",
         }
 
         # Unknown 매핑 추가
         for unknown_key, company_name in provided_mappings.items():
-            ticker = unknown_key.split('(')[1].split(')')[0]
+            ticker = unknown_key.split("(")[1].split(")")[0]
             final_ticker_mapping[ticker] = company_name
 
         # 딕셔너리 파일로 저장
         dict_file = project_root / "data" / "final_ticker_mapping.py"
-        with open(dict_file, 'w', encoding='utf-8') as f:
+        with open(dict_file, "w", encoding="utf-8") as f:
             f.write("# 최종 티커-종목명 매핑 딕셔너리 (100% 완성)\n")
             f.write("ticker_to_name = {\n")
             for ticker, name in sorted(final_ticker_mapping.items()):
@@ -339,14 +361,14 @@ def update_unknown_stocks():
         update_holdout_files(final_ticker_mapping)
 
 
-def update_holdout_files(ticker_mapping: Dict[str, str]):
+def update_holdout_files(ticker_mapping: dict[str, str]):
     """Holdout 랭킹 파일들을 업데이트된 종목명으로 교체"""
 
     print("\n=== Holdout 파일 업데이트 시작 ===")
 
     holdout_files = [
-        'holdout_daily_ranking_long_top20.csv',
-        'holdout_daily_ranking_short_top20.csv'
+        "holdout_daily_ranking_long_top20.csv",
+        "holdout_daily_ranking_short_top20.csv",
     ]
 
     for filename in holdout_files:
@@ -361,16 +383,16 @@ def update_holdout_files(ticker_mapping: Dict[str, str]):
             # 종목명 업데이트
             updated_count = 0
             for idx, row in df.iterrows():
-                company_ticker = row['종목명(ticker)']
-                if 'Unknown(' in company_ticker:
-                    ticker = company_ticker.split('(')[1].split(')')[0]
+                company_ticker = row["종목명(ticker)"]
+                if "Unknown(" in company_ticker:
+                    ticker = company_ticker.split("(")[1].split(")")[0]
                     if ticker in ticker_mapping:
                         company_name = ticker_mapping[ticker]
-                        df.at[idx, '종목명(ticker)'] = f"{company_name}({ticker})"
+                        df.at[idx, "종목명(ticker)"] = f"{company_name}({ticker})"
                         updated_count += 1
 
             # 파일 저장
-            df.to_csv(file_path, index=False, encoding='utf-8-sig')
+            df.to_csv(file_path, index=False, encoding="utf-8-sig")
             print(f"  {updated_count}개 종목명 업데이트됨")
 
     print("Holdout 파일 업데이트 완료!")

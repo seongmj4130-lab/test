@@ -5,7 +5,6 @@
 
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import yaml
 
@@ -19,9 +18,9 @@ class AbsoluteReturnEvaluator:
     def _load_benchmark_data(self):
         """벤치마크 데이터 로드"""
         try:
-            with open('configs/config.yaml', 'r', encoding='utf-8') as f:
+            with open("configs/config.yaml", encoding="utf-8") as f:
                 config = yaml.safe_load(f)
-                return config.get('benchmark_data', {})
+                return config.get("benchmark_data", {})
         except Exception as e:
             print(f"벤치마크 데이터 로드 실패: {e}")
             return {}
@@ -30,15 +29,15 @@ class AbsoluteReturnEvaluator:
         """절대 수익률 중심 전략 평가"""
 
         print("🎯 절대 수익률 중심 평가 시스템")
-        print("="*60)
+        print("=" * 60)
 
         # 평가 가중치 설정 (수익률 중심)
         weights = {
-            'cagr': 0.40,        # 절대 수익률 (가장 중요)
-            'total_return': 0.25, # 총 수익률
-            'sharpe': 0.15,      # 리스크 조정 수익률 (감소)
-            'mdd': 0.10,         # 안정성 (감소)
-            'calmar': 0.10       # Calmar 비율 (유지)
+            "cagr": 0.40,  # 절대 수익률 (가장 중요)
+            "total_return": 0.25,  # 총 수익률
+            "sharpe": 0.15,  # 리스크 조정 수익률 (감소)
+            "mdd": 0.10,  # 안정성 (감소)
+            "calmar": 0.10,  # Calmar 비율 (유지)
         }
 
         print("📊 평가 가중치 (수익률 중심):")
@@ -49,29 +48,34 @@ class AbsoluteReturnEvaluator:
 
         evaluations = {}
 
-        for strategy in ['bt20_short', 'bt20_ens', 'bt120_long']:
-            strategy_data = results_df[results_df['strategy'] == strategy]
+        for strategy in ["bt20_short", "bt20_ens", "bt120_long"]:
+            strategy_data = results_df[results_df["strategy"] == strategy]
 
             if strategy_data.empty:
                 continue
 
             # 최고 성과 케이스 선택 (수익률 기준)
-            best_by_cagr = strategy_data.loc[strategy_data['cagr'].idxmax()]
-            best_by_total_return = strategy_data.loc[strategy_data['total_return'].idxmax()]
+            best_by_cagr = strategy_data.loc[strategy_data["cagr"].idxmax()]
+            best_by_total_return = strategy_data.loc[
+                strategy_data["total_return"].idxmax()
+            ]
 
             # 최종 평가 케이스 선택 (CAGR 우선)
             best_case = best_by_cagr
 
             # 벤치마크 대비 평가
-            kospi_return = self.benchmark_data.get('kospi200', {}).get('annual_return_pct', 4.5)
-            quant_avg_return = self.benchmark_data.get('quant_funds', {}).get('avg_annual_return', 6.5)
+            kospi_return = self.benchmark_data.get("kospi200", {}).get(
+                "annual_return_pct", 4.5
+            )
+            quant_avg_return = self.benchmark_data.get("quant_funds", {}).get(
+                "avg_annual_return", 6.5
+            )
 
-            evaluation = self._calculate_absolute_score(best_case, weights, kospi_return, quant_avg_return)
+            evaluation = self._calculate_absolute_score(
+                best_case, weights, kospi_return, quant_avg_return
+            )
 
-            evaluations[strategy] = {
-                'best_case': best_case,
-                'evaluation': evaluation
-            }
+            evaluations[strategy] = {"best_case": best_case, "evaluation": evaluation}
 
             print(f"\n{strategy.upper()} (최적: {best_case['holding_days']}일)")
             print(f"  • CAGR: {best_case['cagr']:.2f}% (벤치마크: {kospi_return:.1f}%)")
@@ -86,52 +90,54 @@ class AbsoluteReturnEvaluator:
 
         return evaluations
 
-    def _calculate_absolute_score(self, strategy_data, weights, kospi_return, quant_avg_return):
+    def _calculate_absolute_score(
+        self, strategy_data, weights, kospi_return, quant_avg_return
+    ):
         """절대 수익률 기반 종합 점수 계산"""
 
         # 정규화된 지표 계산 (0-100 점수로 변환)
-        cagr_score = self._normalize_cagr(strategy_data['cagr'])
-        total_return_score = self._normalize_total_return(strategy_data['total_return'])
-        sharpe_score = self._normalize_sharpe(strategy_data['sharpe'])
-        mdd_score = self._normalize_mdd(strategy_data['mdd'])
-        calmar_score = self._normalize_calmar(strategy_data['calmar'])
+        cagr_score = self._normalize_cagr(strategy_data["cagr"])
+        total_return_score = self._normalize_total_return(strategy_data["total_return"])
+        sharpe_score = self._normalize_sharpe(strategy_data["sharpe"])
+        mdd_score = self._normalize_mdd(strategy_data["mdd"])
+        calmar_score = self._normalize_calmar(strategy_data["calmar"])
 
         # 가중 평균 점수
         total_score = (
-            cagr_score * weights['cagr'] +
-            total_return_score * weights['total_return'] +
-            sharpe_score * weights['sharpe'] +
-            mdd_score * weights['mdd'] +
-            calmar_score * weights['calmar']
+            cagr_score * weights["cagr"]
+            + total_return_score * weights["total_return"]
+            + sharpe_score * weights["sharpe"]
+            + mdd_score * weights["mdd"]
+            + calmar_score * weights["calmar"]
         )
 
         # 벤치마크 대비 성과
-        excess_return_vs_kospi = strategy_data['cagr'] - kospi_return
-        excess_return_vs_quant = strategy_data['cagr'] - quant_avg_return
+        excess_return_vs_kospi = strategy_data["cagr"] - kospi_return
+        excess_return_vs_quant = strategy_data["cagr"] - quant_avg_return
 
         # 투자 등급 결정
-        if strategy_data['cagr'] >= quant_avg_return:
+        if strategy_data["cagr"] >= quant_avg_return:
             grade = "A"  # 퀀트 평균 이상
-        elif strategy_data['cagr'] >= kospi_return:
+        elif strategy_data["cagr"] >= kospi_return:
             grade = "B"  # KOSPI 이상
-        elif strategy_data['cagr'] >= kospi_return * 0.5:
+        elif strategy_data["cagr"] >= kospi_return * 0.5:
             grade = "C"  # KOSPI 50% 이상
         else:
             grade = "D"  # 부진
 
         return {
-            'total_score': total_score,
-            'cagr_score': cagr_score,
-            'excess_vs_kospi': excess_return_vs_kospi,
-            'excess_vs_quant': excess_return_vs_quant,
-            'grade': grade,
-            'normalized_scores': {
-                'cagr': cagr_score,
-                'total_return': total_return_score,
-                'sharpe': sharpe_score,
-                'mdd': mdd_score,
-                'calmar': calmar_score
-            }
+            "total_score": total_score,
+            "cagr_score": cagr_score,
+            "excess_vs_kospi": excess_return_vs_kospi,
+            "excess_vs_quant": excess_return_vs_quant,
+            "grade": grade,
+            "normalized_scores": {
+                "cagr": cagr_score,
+                "total_return": total_return_score,
+                "sharpe": sharpe_score,
+                "mdd": mdd_score,
+                "calmar": calmar_score,
+            },
         }
 
     def _normalize_cagr(self, cagr):
@@ -196,19 +202,19 @@ class AbsoluteReturnEvaluator:
         # 점수 기준 정렬
         ranked_strategies = sorted(
             evaluations.items(),
-            key=lambda x: x[1]['evaluation']['total_score'],
-            reverse=True
+            key=lambda x: x[1]["evaluation"]["total_score"],
+            reverse=True,
         )
 
         for rank, (strategy, data) in enumerate(ranked_strategies, 1):
-            eval_data = data['evaluation']
-            grade = eval_data['grade']
+            eval_data = data["evaluation"]
+            grade = eval_data["grade"]
 
             grade_desc = {
-                'A': '탁월 (퀀트 평균 이상)',
-                'B': '우수 (KOSPI 이상)',
-                'C': '보통 (KOSPI 50% 이상)',
-                'D': '부진 (개선 필요)'
+                "A": "탁월 (퀀트 평균 이상)",
+                "B": "우수 (KOSPI 이상)",
+                "C": "보통 (KOSPI 50% 이상)",
+                "D": "부진 (개선 필요)",
             }
 
             print(f"{rank}위: {strategy.upper()}")
@@ -216,16 +222,16 @@ class AbsoluteReturnEvaluator:
             print(f"   등급: {grade} - {grade_desc[grade]}")
             print(f"   KOSPI 초과: {eval_data['excess_vs_kospi']:+.2f}%")
             print(f"   퀀트 초과: {eval_data['excess_vs_quant']:+.2f}%")
+
     def create_absolute_return_report(self, evaluations):
         """절대 수익률 중심 평가 보고서 생성"""
 
         print("\n📋 절대 수익률 중심 평가 보고서")
-        print("="*60)
+        print("=" * 60)
 
         # 최고 전략 선정
         best_strategy = max(
-            evaluations.items(),
-            key=lambda x: x[1]['evaluation']['total_score']
+            evaluations.items(), key=lambda x: x[1]["evaluation"]["total_score"]
         )[0]
 
         print("🎯 평가 결과 요약:")
@@ -241,14 +247,14 @@ class AbsoluteReturnEvaluator:
         # 전략별 상세 권장사항
         print("\n🔧 전략별 권장사항:")
         for strategy, data in evaluations.items():
-            grade = data['evaluation']['grade']
-            cagr = data['best_case']['cagr']
+            grade = data["evaluation"]["grade"]
+            cagr = data["best_case"]["cagr"]
 
-            if grade == 'A':
+            if grade == "A":
                 recommendation = "적극 투자 추천 - 안정적 수익 창출 가능"
-            elif grade == 'B':
+            elif grade == "B":
                 recommendation = "보수적 투자 고려 - KOSPI 초과 가능성"
-            elif grade == 'C':
+            elif grade == "C":
                 recommendation = "모니터링 후 결정 - 개선 여지 확인 필요"
             else:
                 recommendation = "전략 개선 필요 - 현재 수익률 부진"
@@ -256,6 +262,7 @@ class AbsoluteReturnEvaluator:
             print(f"  • {strategy.upper()}: {recommendation}")
 
         return best_strategy
+
 
 def main():
     """메인 실행"""
@@ -273,6 +280,7 @@ def main():
     best_strategy = evaluator.create_absolute_return_report(evaluations)
 
     print(f"\n✅ 절대 수익률 중심 평가 완료! 최고 전략: {best_strategy.upper()}")
+
 
 if __name__ == "__main__":
     main()

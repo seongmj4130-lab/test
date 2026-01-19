@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 """
@@ -19,13 +18,13 @@ import shutil
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import pandas as pd
 
 from src.utils.config import get_path, load_config
 
-FINAL_INTERIM_PREFIXES: Tuple[str, ...] = (
+FINAL_INTERIM_PREFIXES: tuple[str, ...] = (
     # Track A (최종)
     "ranking_short_daily",
     "ranking_long_daily",
@@ -42,7 +41,12 @@ FINAL_INTERIM_PREFIXES: Tuple[str, ...] = (
     "runtime_profile_",
 )
 
-DEFAULT_STRATEGIES: Tuple[str, ...] = ("bt20_short", "bt20_ens", "bt120_long", "bt120_ens")
+DEFAULT_STRATEGIES: tuple[str, ...] = (
+    "bt20_short",
+    "bt20_ens",
+    "bt120_long",
+    "bt120_ens",
+)
 
 
 @dataclass(frozen=True)
@@ -58,7 +62,7 @@ class ExportResult:
     """
 
     out_dir: Path
-    copied_files: List[Path]
+    copied_files: list[Path]
     manifest_path: Path
     summary_path: Path
 
@@ -86,11 +90,11 @@ def _should_export_interim_stem(stem: str) -> bool:
     return any(s.startswith(prefix) for prefix in FINAL_INTERIM_PREFIXES)
 
 
-def _copy_with_suffixes(src_base: Path, dst_dir: Path) -> List[Path]:
+def _copy_with_suffixes(src_base: Path, dst_dir: Path) -> list[Path]:
     """
     out_base(.parquet/.csv) + 선택적으로 __meta.json까지 복사한다.
     """
-    copied: List[Path] = []
+    copied: list[Path] = []
     for ext in (".parquet", ".csv"):
         src = src_base.with_suffix(ext)
         if src.exists():
@@ -117,7 +121,7 @@ def _read_metrics(interim_dir: Path, strategy: str) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-def _pick_phase_row(df: pd.DataFrame, phase: str) -> Dict[str, object]:
+def _pick_phase_row(df: pd.DataFrame, phase: str) -> dict[str, object]:
     if df is None or df.empty or "phase" not in df.columns:
         return {}
     sub = df[df["phase"].astype(str) == phase]
@@ -134,6 +138,7 @@ def _fmt_num(x: object, nd: int = 4) -> str:
         return f"{fx:.{nd}f}"
     except Exception:
         return ""
+
 
 def _jsonable(x: object) -> object:
     """
@@ -167,11 +172,11 @@ def _jsonable(x: object) -> object:
     return str(x)
 
 
-def _jsonify_dict(d: Dict[str, object]) -> Dict[str, object]:
+def _jsonify_dict(d: dict[str, object]) -> dict[str, object]:
     return {str(k): _jsonable(v) for k, v in (d or {}).items()}
 
 
-def _build_summary_md(interim_dir: Path, strategies: Tuple[str, ...]) -> str:
+def _build_summary_md(interim_dir: Path, strategies: tuple[str, ...]) -> str:
     """
     [개선안 40번][최종 수치셋] Export 폴더에 함께 넣을 간단 요약 리포트 생성
 
@@ -198,7 +203,7 @@ def _build_summary_md(interim_dir: Path, strategies: Tuple[str, ...]) -> str:
         ("avg_trade_duration", "Avg Trade Duration"),
     ]
 
-    def _table(rows: List[Dict[str, str]], cols: List[str]) -> str:
+    def _table(rows: list[dict[str, str]], cols: list[str]) -> str:
         if not rows:
             return "_(데이터 없음)_\n"
         out = []
@@ -208,23 +213,29 @@ def _build_summary_md(interim_dir: Path, strategies: Tuple[str, ...]) -> str:
             out.append("| " + " | ".join([str(r.get(c, "")) for c in cols]) + " |")
         return "\n".join(out) + "\n"
 
-    def _section(title: str, cols: List[Tuple[str, str]]) -> str:
-        rows: List[Dict[str, str]] = []
+    def _section(title: str, cols: list[tuple[str, str]]) -> str:
+        rows: list[dict[str, str]] = []
         for s in strategies:
             df = _read_metrics(interim_dir, s)
             dev = _pick_phase_row(df, "dev")
             hold = _pick_phase_row(df, "holdout")
             for ph, row in [("Dev", dev), ("Holdout", hold)]:
-                r: Dict[str, str] = {"전략": s, "구간": ph}
+                r: dict[str, str] = {"전략": s, "구간": ph}
                 for key, label in cols:
                     r[label] = _fmt_num(row.get(key) if row else None, nd=4)
                 rows.append(r)
-        return f"## {title}\n\n" + _table(rows, ["전략", "구간"] + [lab for _, lab in cols]) + "\n"
+        return (
+            f"## {title}\n\n"
+            + _table(rows, ["전략", "구간"] + [lab for _, lab in cols])
+            + "\n"
+        )
 
-    md: List[str] = []
+    md: list[str] = []
     md.append("# Two-Track 최종 산출물 요약 (Export Snapshot)")
     md.append("")
-    md.append("- 근거: `data/interim/bt_metrics_{strategy}.csv`, `data/interim/bt_regime_metrics_{strategy}.*`")
+    md.append(
+        "- 근거: `data/interim/bt_metrics_{strategy}.csv`, `data/interim/bt_regime_metrics_{strategy}.*`"
+    )
     md.append("")
     md.append(_section("1) 핵심 성과 (Headline Metrics)", headline))
     md.append(_section("2) 모델 예측력 (Alpha Quality)", alpha))
@@ -241,7 +252,7 @@ def export_final_outputs(
     clean_latest: bool = True,
     mode: str = "latest",  # latest | runs
     run_tag: Optional[str] = None,
-    strategies: Tuple[str, ...] = DEFAULT_STRATEGIES,
+    strategies: tuple[str, ...] = DEFAULT_STRATEGIES,
 ) -> ExportResult:
     """
     [개선안 40번] 최종 산출물 Export 실행
@@ -279,7 +290,7 @@ def export_final_outputs(
 
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    copied: List[Path] = []
+    copied: list[Path] = []
 
     # 1) config 스냅샷
     cfg_src = base_dir / "configs" / "config.yaml"
@@ -322,7 +333,7 @@ def export_final_outputs(
 
     # 5) manifest.json
     # (전략별 Dev/Holdout 핵심 지표 요약 + 복사 파일 리스트)
-    metrics_summary: Dict[str, Dict[str, Dict[str, object]]] = {}
+    metrics_summary: dict[str, dict[str, dict[str, object]]] = {}
     for s in strategies:
         df = _read_metrics(interim_dir, s)
         metrics_summary[s] = {
@@ -344,14 +355,22 @@ def export_final_outputs(
             {
                 "path": str(p.relative_to(out_dir)) if p.exists() else str(p),
                 "size_bytes": (p.stat().st_size if p.exists() else None),
-                "modified_at": (datetime.fromtimestamp(p.stat().st_mtime).isoformat(timespec="seconds") if p.exists() else None),
+                "modified_at": (
+                    datetime.fromtimestamp(p.stat().st_mtime).isoformat(
+                        timespec="seconds"
+                    )
+                    if p.exists()
+                    else None
+                ),
             }
             for p in copied
         ],
     }
 
     manifest_path = out_dir / "manifest.json"
-    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     copied.append(manifest_path)
 
     return ExportResult(

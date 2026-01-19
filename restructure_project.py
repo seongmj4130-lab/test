@@ -1,4 +1,3 @@
-import os
 import shutil
 from pathlib import Path
 
@@ -14,10 +13,10 @@ def create_new_structure():
 
     # 새로운 폴더 구조 생성
     new_folders = [
-        'scripts',      # 실행 스크립트들
-        'experiments',  # 실험/분석 스크립트들
-        'results',      # 결과 파일들 (PNG, TXT 등)
-        'docs',         # 문서 파일들 (중복 정리)
+        "scripts",  # 실행 스크립트들
+        "experiments",  # 실험/분석 스크립트들
+        "results",  # 결과 파일들 (PNG, TXT 등)
+        "docs",  # 문서 파일들 (중복 정리)
     ]
 
     for folder in new_folders:
@@ -27,39 +26,36 @@ def create_new_structure():
     # 이동할 파일들 정의 (분류별)
     moves = {
         # scripts 폴더로 이동 (프로젝트 실행용)
-        'scripts': [
-            'run_multiple_tests.py',
-            'run_track_a_multiple_tests.py',
+        "scripts": [
+            "run_multiple_tests.py",
+            "run_track_a_multiple_tests.py",
         ],
-
         # experiments 폴더로 이동 (분석/실험용)
-        'experiments': [
-            'analyze_track_a_performance.py',
-            'calculate_combined_performance.py',
-            'calculate_correct_ic_metrics.py',
-            'calculate_track_a_ic_metrics.py',
-            'create_baseline_backup.py',
-            'create_strategy_cumulative_returns.py',
-            'extract_holdout_data.py',
-            'extract_performance_metrics.py',
-            'temp_analysis.py',
-            'test_feature_engineering.py',
-            'enable_all_features.py',
+        "experiments": [
+            "analyze_track_a_performance.py",
+            "calculate_combined_performance.py",
+            "calculate_correct_ic_metrics.py",
+            "calculate_track_a_ic_metrics.py",
+            "create_baseline_backup.py",
+            "create_strategy_cumulative_returns.py",
+            "extract_holdout_data.py",
+            "extract_performance_metrics.py",
+            "temp_analysis.py",
+            "test_feature_engineering.py",
+            "enable_all_features.py",
         ],
-
         # results 폴더로 이동 (결과물)
-        'results': [
-            'backtest_strategy_comparison.png',
-            'grid_output.txt',
-            'test_final.txt',
-            'test_output.txt',
-            'test_result.txt',
+        "results": [
+            "backtest_strategy_comparison.png",
+            "grid_output.txt",
+            "test_final.txt",
+            "test_output.txt",
+            "test_result.txt",
         ],
-
         # docs 폴더로 이동 (문서 정리)
-        'docs': [
-            'ppt_report.md',
-            'CLEANUP_SUMMARY.md',
+        "docs": [
+            "ppt_report.md",
+            "CLEANUP_SUMMARY.md",
         ],
     }
 
@@ -75,10 +71,10 @@ def create_new_structure():
 
     # 중복 파일 정리 (유사한 final_*.md 파일들)
     final_files = [
-        'final_backtest_report.md',
-        'final_easy_report.md',
-        'final_ranking_report.md',
-        'final_report.md'
+        "final_backtest_report.md",
+        "final_easy_report.md",
+        "final_ranking_report.md",
+        "final_report.md",
     ]
 
     print("\n📋 중복 문서 파일 정리:")
@@ -86,18 +82,20 @@ def create_new_structure():
         src_path = base_dir / file
         if src_path.exists():
             # docs 폴더로 이동
-            dst_path = base_dir / 'docs' / file
+            dst_path = base_dir / "docs" / file
             shutil.move(str(src_path), str(dst_path))
             print(f"📄 이동: {file} → docs/")
 
     # backup_final_state.py는 experiments로 이동
-    backup_file = base_dir / 'backup_final_state.py'
+    backup_file = base_dir / "backup_final_state.py"
     if backup_file.exists():
-        shutil.move(str(backup_file), str(base_dir / 'experiments' / 'backup_final_state.py'))
+        shutil.move(
+            str(backup_file), str(base_dir / "experiments" / "backup_final_state.py")
+        )
         print("📄 이동: backup_final_state.py → experiments/")
 
     # 빈 폴더 정리 (logs, reports 폴더가 비어있으면 삭제)
-    empty_folders = ['logs', 'reports']
+    empty_folders = ["logs", "reports"]
     for folder in empty_folders:
         folder_path = base_dir / folder
         if folder_path.exists() and not any(folder_path.iterdir()):
@@ -120,12 +118,13 @@ def create_new_structure():
     # README.md 업데이트
     update_readme(base_dir)
 
+
 def update_readme(base_dir):
     """README.md에 새로운 구조 정보를 추가"""
-    readme_path = base_dir / 'README.md'
+    readme_path = base_dir / "README.md"
 
     if readme_path.exists():
-        with open(readme_path, 'r', encoding='utf-8') as f:
+        with open(readme_path, encoding="utf-8") as f:
             content = f.read()
 
         # 새로운 구조 정보를 추가
@@ -176,12 +175,15 @@ def update_readme(base_dir):
             # 적절한 위치에 삽입 (프로젝트 개요 후)
             insert_pos = content.find("## 프로젝트 개요")
             if insert_pos != -1:
-                content = content[:insert_pos] + structure_info + "\n" + content[insert_pos:]
+                content = (
+                    content[:insert_pos] + structure_info + "\n" + content[insert_pos:]
+                )
 
-                with open(readme_path, 'w', encoding='utf-8') as f:
+                with open(readme_path, "w", encoding="utf-8") as f:
                     f.write(content)
 
                 print("📝 README.md 업데이트 완료")
+
 
 if __name__ == "__main__":
     create_new_structure()

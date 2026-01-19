@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 [개선안 1번][개선안 3번] Track B 백테스트 재실행 + 수정 전/후 성과 비교
 
@@ -15,7 +14,6 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Dict, Tuple
 
 import pandas as pd
 
@@ -83,8 +81,8 @@ def main() -> None:
     report_dir = project_root / "artifacts" / "reports"
     report_dir.mkdir(parents=True, exist_ok=True)
 
-    before: Dict[Tuple[str, str], dict] = {}
-    after: Dict[Tuple[str, str], dict] = {}
+    before: dict[tuple[str, str], dict] = {}
+    after: dict[tuple[str, str], dict] = {}
 
     # 1) 수정 전(현재 파일) 읽기
     for s in STRATEGIES:
@@ -97,7 +95,9 @@ def main() -> None:
 
     # 2) 백테스트 재실행 (L6R 캐시 사용, L7은 항상 재계산/저장)
     for s in STRATEGIES:
-        run_backtest_strategy(strategy=s, config_path="configs/config.yaml", force_rebuild=False)
+        run_backtest_strategy(
+            strategy=s, config_path="configs/config.yaml", force_rebuild=False
+        )
 
     # 3) 수정 후 읽기
     for s in STRATEGIES:
@@ -142,13 +142,17 @@ def main() -> None:
 
     comp = pd.DataFrame(rows)
     # delta 계산(숫자일 때만)
-    comp["delta"] = pd.to_numeric(comp["after"], errors="coerce") - pd.to_numeric(comp["before"], errors="coerce")
+    comp["delta"] = pd.to_numeric(comp["after"], errors="coerce") - pd.to_numeric(
+        comp["before"], errors="coerce"
+    )
 
     # 5) 리포트 저장
     md_lines = []
     md_lines.append("# Track B 백테스트 결과 (거래비용 모델 수정 전/후 비교)")
     md_lines.append("")
-    md_lines.append("**변경 요약**: L7의 거래비용 차감이 `턴오버 기반`으로 적용되도록 수정 (고정 10bp 차감 제거) + slippage_bps 옵션 추가")
+    md_lines.append(
+        "**변경 요약**: L7의 거래비용 차감이 `턴오버 기반`으로 적용되도록 수정 (고정 10bp 차감 제거) + slippage_bps 옵션 추가"
+    )
     md_lines.append("")
     md_lines.append("## 전략별 원본 bt_metrics (수정 후)")
     for s in STRATEGIES:
@@ -161,8 +165,12 @@ def main() -> None:
     md_lines.append(_to_md_table(comp))
     md_lines.append("")
     md_lines.append("## 다음 액션(추천)")
-    md_lines.append("- `slippage_bps`를 0.0→5.0 등으로 올려 현실성 점검(성과 과대추정 여부 확인)")
-    md_lines.append("- bt20의 MDD가 여전히 크면: `regime.exposure_bear_*` 추가 축소 또는 `volatility_adjustment_min/max` 튜닝")
+    md_lines.append(
+        "- `slippage_bps`를 0.0→5.0 등으로 올려 현실성 점검(성과 과대추정 여부 확인)"
+    )
+    md_lines.append(
+        "- bt20의 MDD가 여전히 크면: `regime.exposure_bear_*` 추가 축소 또는 `volatility_adjustment_min/max` 튜닝"
+    )
     md_lines.append("")
 
     out_path = report_dir / "track_b_backtest_results_after_cost_model_fix.md"

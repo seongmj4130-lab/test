@@ -17,13 +17,13 @@ import ast
 import csv
 import datetime as dt
 import json
-import os
 import re
 import subprocess
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Optional
 
 # =========================
 # Constants (User-provided)
@@ -90,7 +90,7 @@ def _write_json(path: Path, obj: Any) -> None:
     path.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def _write_csv(path: Path, rows: List[Dict[str, Any]], fieldnames: List[str]) -> None:
+def _write_csv(path: Path, rows: list[dict[str, Any]], fieldnames: list[str]) -> None:
     _ensure_dir(path.parent)
     with path.open("w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
@@ -127,8 +127,12 @@ def resolve_project_root(cwd: Path) -> ResolvedPaths:
     if cfg_path is None:
         # config가 없으면, reports/extract가 존재하는 상위 폴더를 root로 사용 (근거: 폴더 존재)
         if extract_root is not None:
-            return ResolvedPaths(project_root=extract_root, config_path=None, base_dir_from_config=None)
-        return ResolvedPaths(project_root=cwd, config_path=None, base_dir_from_config=None)
+            return ResolvedPaths(
+                project_root=extract_root, config_path=None, base_dir_from_config=None
+            )
+        return ResolvedPaths(
+            project_root=cwd, config_path=None, base_dir_from_config=None
+        )
 
     base_dir: Optional[Path] = None
     try:
@@ -155,13 +159,13 @@ def resolve_project_root(cwd: Path) -> ResolvedPaths:
 # =========================
 # Task 1: Reproducibility
 # =========================
-def collect_git_repro(project_root: Path) -> Dict[str, Any]:
+def collect_git_repro(project_root: Path) -> dict[str, Any]:
     """
     [개선안 11번] git branch/commit/status(dirty 파일 목록) 수집.
     git이 없거나 저장소가 아니면 해당 항목은 '알 수 없습니다'로 기록.
     """
 
-    def run_git(args: Sequence[str]) -> Tuple[Optional[str], Optional[str]]:
+    def run_git(args: Sequence[str]) -> tuple[Optional[str], Optional[str]]:
         try:
             cp = subprocess.run(
                 ["git", *args],
@@ -185,7 +189,7 @@ def collect_git_repro(project_root: Path) -> Dict[str, Any]:
     commit, commit_err = run_git(["rev-parse", "HEAD"])
     status, status_err = run_git(["status", "--porcelain"])
 
-    dirty_files: List[str] = []
+    dirty_files: list[str] = []
     if status:
         for line in status.splitlines():
             # porcelain: XY <path>
@@ -210,7 +214,7 @@ def collect_git_repro(project_root: Path) -> Dict[str, Any]:
     }
 
 
-def collect_env_repro() -> Dict[str, Any]:
+def collect_env_repro() -> dict[str, Any]:
     """
     [개선안 11번] python 버전 + pip freeze(핵심 패키지만) 수집.
     pip이 없거나 실패하면 '알 수 없습니다'로 기록.
@@ -242,7 +246,7 @@ def collect_env_repro() -> Dict[str, Any]:
     except Exception as e:
         freeze_err = f"{type(e).__name__}: {e}"
 
-    pkgs: Dict[str, str] = {}
+    pkgs: dict[str, str] = {}
     if freeze_raw:
         wanted = {p.lower() for p in CORE_PIP_PACKAGES}
         for line in freeze_raw.splitlines():
@@ -266,7 +270,7 @@ def collect_env_repro() -> Dict[str, Any]:
     }
 
 
-def collect_command_logs(project_root: Path) -> Tuple[str, List[Path]]:
+def collect_command_logs(project_root: Path) -> tuple[str, list[Path]]:
     """
     [개선안 11번] 실행 커맨드 로그 수집.
     - 우선: reports/history, reports/stages/history
@@ -290,8 +294,8 @@ def collect_command_logs(project_root: Path) -> Tuple[str, List[Path]]:
         flags=re.IGNORECASE,
     )
 
-    found_files: List[Path] = []
-    md_lines: List[str] = []
+    found_files: list[Path] = []
+    md_lines: list[str] = []
     md_lines.append("# Repro Commands")
     md_lines.append("")
     md_lines.append(f"- collected_at: `{_now_iso()}`")
@@ -332,7 +336,9 @@ def collect_command_logs(project_root: Path) -> Tuple[str, List[Path]]:
     if not any_hit:
         md_lines.append("## 결과")
         md_lines.append("")
-        md_lines.append("reports/history 또는 reports/stages/history 등에 실행 커맨드 로그가 **발견되지 않았습니다**. (알 수 없습니다)")
+        md_lines.append(
+            "reports/history 또는 reports/stages/history 등에 실행 커맨드 로그가 **발견되지 않았습니다**. (알 수 없습니다)"
+        )
         md_lines.append("")
 
     return "\n".join(md_lines).rstrip() + "\n", found_files
@@ -341,7 +347,7 @@ def collect_command_logs(project_root: Path) -> Tuple[str, List[Path]]:
 # =========================
 # Task 2: CLI / Config evidence
 # =========================
-def parse_run_all_cli_options(run_all_path: Path) -> List[Dict[str, str]]:
+def parse_run_all_cli_options(run_all_path: Path) -> list[dict[str, str]]:
     """
     [개선안 11번] src/run_all.py의 argparse 옵션 파싱(AST 기반; 평가/실행 없음).
     추정 금지: default/help가 코드에 없으면 '알 수 없습니다'로 남김.
@@ -349,17 +355,19 @@ def parse_run_all_cli_options(run_all_path: Path) -> List[Dict[str, str]]:
     src = _read_text(run_all_path)
     tree = ast.parse(src)
 
-    rows: List[Dict[str, str]] = []
+    rows: list[dict[str, str]] = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
         func = node.func
         # parser.add_argument(...)
-        is_add_argument = isinstance(func, ast.Attribute) and func.attr == "add_argument"
+        is_add_argument = (
+            isinstance(func, ast.Attribute) and func.attr == "add_argument"
+        )
         if not is_add_argument:
             continue
 
-        opt_strs: List[str] = []
+        opt_strs: list[str] = []
         for a in node.args:
             if isinstance(a, ast.Constant) and isinstance(a.value, str):
                 opt_strs.append(a.value)
@@ -369,7 +377,7 @@ def parse_run_all_cli_options(run_all_path: Path) -> List[Dict[str, str]]:
                     opt_strs.append(seg)
         opt = ", ".join(opt_strs) if opt_strs else "알 수 없습니다"
 
-        kw: Dict[str, str] = {}
+        kw: dict[str, str] = {}
         for k in node.keywords:
             if not k.arg:
                 continue
@@ -392,7 +400,7 @@ def parse_run_all_cli_options(run_all_path: Path) -> List[Dict[str, str]]:
         )
     # 중복 제거(동일 option 문자열)
     seen = set()
-    uniq: List[Dict[str, str]] = []
+    uniq: list[dict[str, str]] = []
     for r in rows:
         k = r.get("option", "")
         if k in seen:
@@ -402,16 +410,18 @@ def parse_run_all_cli_options(run_all_path: Path) -> List[Dict[str, str]]:
     return uniq
 
 
-def build_cli_md(rows: List[Dict[str, str]], *, title: str) -> str:
+def build_cli_md(rows: list[dict[str, str]], *, title: str) -> str:
     """
     [개선안 11번] CLI 옵션을 Markdown 표로 출력.
     """
-    out: List[str] = []
+    out: list[str] = []
     out.append(f"# {title}")
     out.append("")
     out.append(f"- collected_at: `{_now_iso()}`")
     out.append("")
-    out.append("| option | help | default | action | type | required | choices | dest |")
+    out.append(
+        "| option | help | default | action | type | required | choices | dest |"
+    )
     out.append("|---|---|---|---|---|---|---|---|")
     for r in rows:
         out.append(
@@ -430,7 +440,7 @@ def build_cli_md(rows: List[Dict[str, str]], *, title: str) -> str:
     return "\n".join(out)
 
 
-def extract_config_snapshot(config_path: Path) -> Dict[str, Any]:
+def extract_config_snapshot(config_path: Path) -> dict[str, Any]:
     """
     [개선안 11번] configs/config.yaml에서 l4/l5/l6/l7 관련 키/값 추출.
     전체를 복붙하지 않고, 해당 섹션의 key/value만 출력.
@@ -440,13 +450,21 @@ def extract_config_snapshot(config_path: Path) -> Dict[str, Any]:
 
         cfg = yaml.safe_load(_read_text(config_path))
     except Exception as e:
-        return {"error": f"{type(e).__name__}: {e}", "l4": None, "l5": None, "l6": None, "l7": None}
+        return {
+            "error": f"{type(e).__name__}: {e}",
+            "l4": None,
+            "l5": None,
+            "l6": None,
+            "l7": None,
+        }
 
     def sec(name: str) -> Any:
         if not isinstance(cfg, dict):
             return None
         # run_all.py 규칙(_resolve_section): params 아래 또는 최상위
-        params = cfg.get("params", {}) if isinstance(cfg.get("params", {}), dict) else {}
+        params = (
+            cfg.get("params", {}) if isinstance(cfg.get("params", {}), dict) else {}
+        )
         if isinstance(params, dict) and isinstance(params.get(name), dict):
             return params.get(name)
         if isinstance(cfg.get(name), dict):
@@ -463,11 +481,11 @@ def extract_config_snapshot(config_path: Path) -> Dict[str, Any]:
     }
 
 
-def build_config_snapshot_md(snapshot: Dict[str, Any]) -> str:
+def build_config_snapshot_md(snapshot: dict[str, Any]) -> str:
     """
     [개선안 11번] config snapshot을 Markdown으로 출력.
     """
-    out: List[str] = []
+    out: list[str] = []
     out.append("# Config Snapshot (l4~l7)")
     out.append("")
     out.append(f"- collected_at: `{_safe_text(snapshot.get('collected_at'))}`")
@@ -499,7 +517,9 @@ def build_config_snapshot_md(snapshot: Dict[str, Any]) -> str:
 # =========================
 # Task 3: Features (L5)
 # =========================
-def _find_dataset_daily_for_features(project_root: Path, run_tag: str) -> Tuple[Optional[Path], List[str]]:
+def _find_dataset_daily_for_features(
+    project_root: Path, run_tag: str
+) -> tuple[Optional[Path], list[str]]:
     """
     [개선안 11번] feature 산출용 dataset_daily.parquet 위치 결정(추정 금지).
     검색 우선순위:
@@ -507,7 +527,7 @@ def _find_dataset_daily_for_features(project_root: Path, run_tag: str) -> Tuple[
       2) data/interim/dataset_daily.parquet
     둘 다 없으면 FAIL.
     """
-    notes: List[str] = []
+    notes: list[str] = []
     cand1 = project_root / "data" / "interim" / run_tag / "dataset_daily.parquet"
     if cand1.exists():
         return cand1, [f"selected: {cand1}"]
@@ -521,7 +541,9 @@ def _find_dataset_daily_for_features(project_root: Path, run_tag: str) -> Tuple[
     return None, notes
 
 
-def extract_l5_feature_cols_from_code(dataset_df: Any, *, target_col: str) -> Tuple[Optional[List[str]], str]:
+def extract_l5_feature_cols_from_code(
+    dataset_df: Any, *, target_col: str
+) -> tuple[Optional[list[str]], str]:
     """
     [개선안 11번] L5의 실제 feature selection 로직을 호출해 feature list를 산출.
     - src/stages/l5_train_models.py 의 _pick_feature_cols(df, target_col=...) 사용
@@ -546,9 +568,9 @@ def extract_l5_feature_cols_from_code(dataset_df: Any, *, target_col: str) -> Tu
 def build_features_final_json(
     *,
     project_root: Path,
-    cfg_snapshot: Dict[str, Any],
+    cfg_snapshot: dict[str, Any],
     run_tag: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     [개선안 11번] L5 최종 Ridge 모델 feature column 리스트 산출.
     - dataset_daily.parquet를 읽고
@@ -657,15 +679,17 @@ def build_features_final_json(
 # =========================
 # Task 4: Backtest / Benchmark contract (L7/L7C)
 # =========================
-def _snippet_by_regex(path: Path, pattern: str, *, context: int = 4, max_hits: int = 3) -> List[Dict[str, Any]]:
+def _snippet_by_regex(
+    path: Path, pattern: str, *, context: int = 4, max_hits: int = 3
+) -> list[dict[str, Any]]:
     """
     [개선안 11번] 코드에서 regex 매치 주변을 snippet으로 수집.
     """
     text = _read_text(path)
     lines = text.splitlines()
     rx = re.compile(pattern)
-    hits: List[int] = [i for i, ln in enumerate(lines) if rx.search(ln)]
-    out: List[Dict[str, Any]] = []
+    hits: list[int] = [i for i, ln in enumerate(lines) if rx.search(ln)]
+    out: list[dict[str, Any]] = []
     for i in hits[:max_hits]:
         s = max(0, i - context)
         e = min(len(lines), i + context + 1)
@@ -687,7 +711,7 @@ def build_backtest_contract_md(project_root: Path) -> str:
     """
     l7 = project_root / "src" / "stages" / "l7_backtest.py"
     l7c = project_root / "src" / "stages" / "l7c_benchmark.py"
-    out: List[str] = []
+    out: list[str] = []
     out.append("# Backtest Contract (L7 / L7C)")
     out.append("")
     out.append(f"- collected_at: `{_now_iso()}`")
@@ -706,7 +730,9 @@ def build_backtest_contract_md(project_root: Path) -> str:
         snips = _snippet_by_regex(l7, r"rebalance_dates\s*=", context=6, max_hits=2)
         if snips:
             for s in snips:
-                out.append(f"- code: `{Path(s['path']).relative_to(project_root)}` L{s['start_line']}~L{s['end_line']}")
+                out.append(
+                    f"- code: `{Path(s['path']).relative_to(project_root)}` L{s['start_line']}~L{s['end_line']}"
+                )
                 out.append("```")
                 out.extend(s["lines"])
                 out.append("```")
@@ -719,7 +745,10 @@ def build_backtest_contract_md(project_root: Path) -> str:
         out.append("")
         for pat, label in [
             (r"def _select_with_buffer", "buffer_k 로직"),
-            (r"allow_n\s*=\s*top_k\s*\+\s*buffer_k", "허용범위(allow_n=top_k+buffer_k)"),
+            (
+                r"allow_n\s*=\s*top_k\s*\+\s*buffer_k",
+                "허용범위(allow_n=top_k+buffer_k)",
+            ),
             (r"holding_days", "holding_days 사용 위치"),
             (r"top_k", "top_k 사용 위치"),
         ]:
@@ -729,7 +758,9 @@ def build_backtest_contract_md(project_root: Path) -> str:
             out.append(f"### {label}")
             out.append("")
             for s in sn:
-                out.append(f"- code: `{Path(s['path']).relative_to(project_root)}` L{s['start_line']}~L{s['end_line']}")
+                out.append(
+                    f"- code: `{Path(s['path']).relative_to(project_root)}` L{s['start_line']}~L{s['end_line']}"
+                )
                 out.append("```")
                 out.extend(s["lines"])
                 out.append("```")
@@ -737,10 +768,17 @@ def build_backtest_contract_md(project_root: Path) -> str:
 
         out.append("## L7: cost_bps 적용 방식(수식 포함)")
         out.append("")
-        cost_snips = _snippet_by_regex(l7, r"(daily_trading_cost\s*=|turnover_cost\s*=|net_ret\s*=)", context=6, max_hits=6)
+        cost_snips = _snippet_by_regex(
+            l7,
+            r"(daily_trading_cost\s*=|turnover_cost\s*=|net_ret\s*=)",
+            context=6,
+            max_hits=6,
+        )
         if cost_snips:
             for s in cost_snips:
-                out.append(f"- code: `{Path(s['path']).relative_to(project_root)}` L{s['start_line']}~L{s['end_line']}")
+                out.append(
+                    f"- code: `{Path(s['path']).relative_to(project_root)}` L{s['start_line']}~L{s['end_line']}"
+                )
                 out.append("```")
                 out.extend(s["lines"])
                 out.append("```")
@@ -769,7 +807,9 @@ def build_backtest_contract_md(project_root: Path) -> str:
         ]:
             sn = _snippet_by_regex(l7c, pat, context=6, max_hits=2)
             for s in sn:
-                out.append(f"- code: `{Path(s['path']).relative_to(project_root)}` L{s['start_line']}~L{s['end_line']}")
+                out.append(
+                    f"- code: `{Path(s['path']).relative_to(project_root)}` L{s['start_line']}~L{s['end_line']}"
+                )
                 out.append("```")
                 out.extend(s["lines"])
                 out.append("```")
@@ -781,12 +821,12 @@ def build_backtest_contract_md(project_root: Path) -> str:
 # =========================
 # Task 5: KPI snapshot
 # =========================
-def parse_kpi_md_table(md_text: str) -> Dict[str, Dict[str, str]]:
+def parse_kpi_md_table(md_text: str) -> dict[str, dict[str, str]]:
     """
     [개선안 11번] KPI Table(.md)의 표( | Metric | Dev | Holdout | Unit | )를 파싱.
     반환: metric -> {dev, holdout, unit}
     """
-    rows: Dict[str, Dict[str, str]] = {}
+    rows: dict[str, dict[str, str]] = {}
     for line in md_text.splitlines():
         if not line.strip().startswith("|"):
             continue
@@ -802,11 +842,13 @@ def parse_kpi_md_table(md_text: str) -> Dict[str, Dict[str, str]]:
     return rows
 
 
-def build_kpi_snapshot_rows(project_root: Path, tags: List[str]) -> List[Dict[str, Any]]:
+def build_kpi_snapshot_rows(
+    project_root: Path, tags: list[str]
+) -> list[dict[str, Any]]:
     """
     [개선안 11번] reports/kpi/kpi_table__{tag}.md 에서 핵심 KPI를 뽑아 CSV row 생성.
     """
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for tag in tags:
         p = project_root / "reports" / "kpi" / f"kpi_table__{tag}.md"
         if not p.exists():
@@ -852,7 +894,9 @@ def _find_artifact_file(base_dir: Path, name: str) -> Optional[Path]:
     return None
 
 
-def _find_tag_or_root_artifact(project_root: Path, tag: str, name: str) -> Tuple[Optional[Path], str]:
+def _find_tag_or_root_artifact(
+    project_root: Path, tag: str, name: str
+) -> tuple[Optional[Path], str]:
     """
     [개선안 11번] data/interim/{tag}/ 우선, 없으면 data/interim/ 루트 fallback으로 아티팩트 탐색.
     반환: (path or None, selected='tag'|'root'|'missing')
@@ -884,7 +928,9 @@ def _read_any_df(path: Path) -> Any:
     raise ValueError(f"unsupported extension: {path}")
 
 
-def _export_any_to_csv(src: Path, dst: Path) -> Tuple[Optional[Tuple[int, int]], Optional[str], Optional[str], str]:
+def _export_any_to_csv(
+    src: Path, dst: Path
+) -> tuple[Optional[tuple[int, int]], Optional[str], Optional[str], str]:
     """
     [개선안 11번] (parquet/csv) -> csv 저장 + (rows, cols, date_min, date_max) 추출.
     date range는 'date' 컬럼 또는 datetime index가 있을 때만 계산.
@@ -917,7 +963,9 @@ def _export_any_to_csv(src: Path, dst: Path) -> Tuple[Optional[Tuple[int, int]],
                 date_max = str(dd.max().date())
         else:
             try:
-                if hasattr(df.index, "dtype") and str(df.index.dtype).startswith("datetime64"):
+                if hasattr(df.index, "dtype") and str(df.index.dtype).startswith(
+                    "datetime64"
+                ):
                     di = pd.to_datetime(df.index, errors="coerce")
                     if di.notna().any():
                         date_min = str(di.min().date())
@@ -930,14 +978,16 @@ def _export_any_to_csv(src: Path, dst: Path) -> Tuple[Optional[Tuple[int, int]],
     return (rows, cols), date_min, date_max, "ok"
 
 
-def export_charts_and_manifest(project_root: Path, tags: List[str], out_dir: Path) -> List[Dict[str, Any]]:
+def export_charts_and_manifest(
+    project_root: Path, tags: list[str], out_dir: Path
+) -> list[dict[str, Any]]:
     """
     [개선안 11번] 차트 아티팩트들을 reports/extract/charts/로 CSV export하고 manifest 생성용 row 반환.
     검색 순서(추정 금지: 순서만 고정, 실제 존재하면 그 경로 사용):
       1) data/interim/{tag}/
       2) data/interim/
     """
-    manifest_rows: List[Dict[str, Any]] = []
+    manifest_rows: list[dict[str, Any]] = []
     charts_dir = out_dir / "charts"
     _ensure_dir(charts_dir)
 
@@ -979,7 +1029,7 @@ def export_charts_and_manifest(project_root: Path, tags: List[str], out_dir: Pat
 
             try:
                 shape, dmin, dmax, st = _export_any_to_csv(src, exported)
-                rows, cols = (shape if shape is not None else (None, None))
+                rows, cols = shape if shape is not None else (None, None)
                 manifest_rows.append(
                     {
                         "tag": tag,
@@ -1018,8 +1068,8 @@ def export_charts_and_manifest(project_root: Path, tags: List[str], out_dir: Pat
 # =========================
 def build_integrity_report_md(
     *,
-    cfg_snapshot: Dict[str, Any],
-    kpi_rows: List[Dict[str, Any]],
+    cfg_snapshot: dict[str, Any],
+    kpi_rows: list[dict[str, Any]],
 ) -> str:
     """
     [개선안 11번] 주요 값 불일치 검사 요약.
@@ -1027,7 +1077,7 @@ def build_integrity_report_md(
       - cost_bps_used vs config(l7.cost_bps)
       - top_k_used vs config(l7.top_k)  (KPI 테이블에 없으면 알 수 없습니다)
     """
-    out: List[str] = []
+    out: list[str] = []
     out.append("# Integrity Report")
     out.append("")
     out.append(f"- collected_at: `{_now_iso()}`")
@@ -1042,8 +1092,16 @@ def build_integrity_report_md(
 
     out.append("## Config 기준값")
     out.append("")
-    out.append(f"- l7.cost_bps: `{cfg_cost}`" if cfg_cost is not None else "- l7.cost_bps: `알 수 없습니다`")
-    out.append(f"- l7.top_k: `{cfg_topk}`" if cfg_topk is not None else "- l7.top_k: `알 수 없습니다`")
+    out.append(
+        f"- l7.cost_bps: `{cfg_cost}`"
+        if cfg_cost is not None
+        else "- l7.cost_bps: `알 수 없습니다`"
+    )
+    out.append(
+        f"- l7.top_k: `{cfg_topk}`"
+        if cfg_topk is not None
+        else "- l7.top_k: `알 수 없습니다`"
+    )
     out.append("")
 
     out.append("## KPI 기반 사용값(실측)")
@@ -1056,8 +1114,8 @@ def build_integrity_report_md(
         # KPI 테이블 스펙상 top_k_used는 별도 필드가 없어 '알 수 없습니다'
         used_topk = r.get("top_k_used") if "top_k_used" in r else None
 
-        verdicts: List[str] = []
-        evid: List[str] = []
+        verdicts: list[str] = []
+        evid: list[str] = []
 
         # cost 비교
         if cfg_cost is not None and used_cost is not None and used_cost != "N/A":
@@ -1099,7 +1157,7 @@ def build_integrity_report_md(
     return "\n".join(out).rstrip() + "\n"
 
 
-def collect_to_markdown_hits(project_root: Path, out_path: Path) -> Dict[str, Any]:
+def collect_to_markdown_hits(project_root: Path, out_path: Path) -> dict[str, Any]:
     """
     [개선안 11번] ripgrep로 to_markdown() 호출 검색.
     - rg가 없으면 '알 수 없습니다'로 기록하고, 결과 파일에 원인만 남김.
@@ -1115,12 +1173,20 @@ def collect_to_markdown_hits(project_root: Path, out_path: Path) -> Dict[str, An
         )
         if cp.returncode not in (0, 1):  # 1은 no matches
             _write_text(out_path, cp.stderr or f"rg failed rc={cp.returncode}")
-            return {"status": "error", "rc": cp.returncode, "stderr": (cp.stderr or "").strip()}
+            return {
+                "status": "error",
+                "rc": cp.returncode,
+                "stderr": (cp.stderr or "").strip(),
+            }
         _write_text(out_path, cp.stdout or "")
-        return {"status": "ok", "rc": cp.returncode, "matches_found": bool((cp.stdout or "").strip())}
+        return {
+            "status": "ok",
+            "rc": cp.returncode,
+            "matches_found": bool((cp.stdout or "").strip()),
+        }
     except FileNotFoundError:
         # rg 미설치 환경 폴백: 자체 스캔(추정 아님, 실제 파일 내용을 직접 검색)
-        hits: List[str] = []
+        hits: list[str] = []
         for base in [project_root / "src", project_root / "reports"]:
             if not base.exists():
                 continue
@@ -1143,7 +1209,11 @@ def collect_to_markdown_hits(project_root: Path, out_path: Path) -> Dict[str, An
             "",
         ]
         _write_text(out_path, "\n".join(header + hits) + ("\n" if hits else ""))
-        return {"status": "missing_rg_fallback_used", "matches_found": bool(hits), "n_hits": len(hits)}
+        return {
+            "status": "missing_rg_fallback_used",
+            "matches_found": bool(hits),
+            "n_hits": len(hits),
+        }
     except Exception as e:
         _write_text(out_path, f"알 수 없습니다: {type(e).__name__}: {e}\n")
         return {"status": "error", "error": f"{type(e).__name__}: {e}"}
@@ -1153,31 +1223,69 @@ def build_readme_md() -> str:
     """
     [개선안 11번] reports/extract/README.md 매핑 표 생성.
     """
-    out: List[str] = []
+    out: list[str] = []
     out.append("# Reports Extract Output Map")
     out.append("")
     out.append("| 파일 | 용도(보고서 어디에 사용) |")
     out.append("|---|---|")
     out.append("| `repro_git.json` | 재현성: git 브랜치/커밋/dirty 상태 근거 |")
-    out.append("| `repro_env.json` | 재현성: Python 버전 및 핵심 패키지 버전(pip freeze) 근거 |")
-    out.append("| `repro_commands.md` | 재현성: 실제 실행 커맨드/로그 증거 (reports/*에서 수집) |")
-    out.append("| `cli_run_all.md` | 실행기 근거: `src/run_all.py` CLI 옵션(설명/기본값) 표 |")
-    out.append("| `config_snapshot.md` | 설정 근거: `configs/config.yaml`의 l4~l7 핵심 파라미터 스냅샷 |")
-    out.append("| `features_final.json` | 모델 입력 근거: L5 Ridge가 사용하는 feature 리스트(데이터셋 교집합) |")
-    out.append("| `backtest_contract.md` | 백테스트/벤치 정의 근거: L7/L7C 리밸런싱/비용/벤치 수식 및 소스 코드 스니펫 |")
-    out.append("| `kpi_snapshot.csv` | 실측 KPI 스냅샷: RUN_TAG/BASELINE_TAG 핵심 KPI 추출(복붙용) |")
-    out.append("| `charts/` | 발표용 그래프 입력 CSV: 지정된 bt_* 아티팩트 CSV export |")
-    out.append("| `charts_manifest.csv` | 그래프 입력 메타: 각 CSV의 rows/cols/date range 및 source 경로 |")
-    out.append("| `integrity_report.md` | 무결성: config vs 실측(예: cost_bps_used) 불일치 요약 |")
-    out.append("| `to_markdown_hits.txt` | Stage 체크리포트에서 지목된 to_markdown() 호출 위치(rg 결과) |")
-    out.append("| `kpi_units_check.md` | KPI 단위(% vs decimal) 정합성 점검 및 혼용 탐지 |")
-    out.append("| `phase_date_ranges.csv` | bt_returns 기반 phase별 기간(min/max date) 및 리밸런싱 횟수(n_rows) 근거 |")
-    out.append("| `data_quality__dataset_daily.csv` | dataset_daily 품질 통계(결측률/분포) CSV (피처별) |")
-    out.append("| `data_quality__dataset_daily.md` | dataset_daily 품질 통계(결측률/분포) 요약 Markdown |")
-    out.append("| `config_vs_code_matrix.csv` | 설정 존재(configured) vs 코드 적용(implemented) 매핑 표 |")
-    out.append("| `cost_model_contract.md` | 거래비용/turnover 수식 근거 + 산출물 컬럼 불일치(mismatch) 점검 |")
-    out.append("| `artifact_isolation_audit.csv` | 아티팩트 격리 감사: tag 경로 vs fallback 경로 집계 |")
-    out.append("| `artifact_isolation_audit.md` | 아티팩트 격리 감사 요약 및 missing_inputs 목록 |")
+    out.append(
+        "| `repro_env.json` | 재현성: Python 버전 및 핵심 패키지 버전(pip freeze) 근거 |"
+    )
+    out.append(
+        "| `repro_commands.md` | 재현성: 실제 실행 커맨드/로그 증거 (reports/*에서 수집) |"
+    )
+    out.append(
+        "| `cli_run_all.md` | 실행기 근거: `src/run_all.py` CLI 옵션(설명/기본값) 표 |"
+    )
+    out.append(
+        "| `config_snapshot.md` | 설정 근거: `configs/config.yaml`의 l4~l7 핵심 파라미터 스냅샷 |"
+    )
+    out.append(
+        "| `features_final.json` | 모델 입력 근거: L5 Ridge가 사용하는 feature 리스트(데이터셋 교집합) |"
+    )
+    out.append(
+        "| `backtest_contract.md` | 백테스트/벤치 정의 근거: L7/L7C 리밸런싱/비용/벤치 수식 및 소스 코드 스니펫 |"
+    )
+    out.append(
+        "| `kpi_snapshot.csv` | 실측 KPI 스냅샷: RUN_TAG/BASELINE_TAG 핵심 KPI 추출(복붙용) |"
+    )
+    out.append(
+        "| `charts/` | 발표용 그래프 입력 CSV: 지정된 bt_* 아티팩트 CSV export |"
+    )
+    out.append(
+        "| `charts_manifest.csv` | 그래프 입력 메타: 각 CSV의 rows/cols/date range 및 source 경로 |"
+    )
+    out.append(
+        "| `integrity_report.md` | 무결성: config vs 실측(예: cost_bps_used) 불일치 요약 |"
+    )
+    out.append(
+        "| `to_markdown_hits.txt` | Stage 체크리포트에서 지목된 to_markdown() 호출 위치(rg 결과) |"
+    )
+    out.append(
+        "| `kpi_units_check.md` | KPI 단위(% vs decimal) 정합성 점검 및 혼용 탐지 |"
+    )
+    out.append(
+        "| `phase_date_ranges.csv` | bt_returns 기반 phase별 기간(min/max date) 및 리밸런싱 횟수(n_rows) 근거 |"
+    )
+    out.append(
+        "| `data_quality__dataset_daily.csv` | dataset_daily 품질 통계(결측률/분포) CSV (피처별) |"
+    )
+    out.append(
+        "| `data_quality__dataset_daily.md` | dataset_daily 품질 통계(결측률/분포) 요약 Markdown |"
+    )
+    out.append(
+        "| `config_vs_code_matrix.csv` | 설정 존재(configured) vs 코드 적용(implemented) 매핑 표 |"
+    )
+    out.append(
+        "| `cost_model_contract.md` | 거래비용/turnover 수식 근거 + 산출물 컬럼 불일치(mismatch) 점검 |"
+    )
+    out.append(
+        "| `artifact_isolation_audit.csv` | 아티팩트 격리 감사: tag 경로 vs fallback 경로 집계 |"
+    )
+    out.append(
+        "| `artifact_isolation_audit.md` | 아티팩트 격리 감사 요약 및 missing_inputs 목록 |"
+    )
     out.append("")
     return "\n".join(out).rstrip() + "\n"
 
@@ -1215,7 +1323,9 @@ def _ratio_classify(a: Optional[float], b: Optional[float]) -> str:
     return "unknown"
 
 
-def build_kpi_units_check_md(*, project_root: Path, out_dir: Path, run_tag: str, baseline_tag: str) -> str:
+def build_kpi_units_check_md(
+    *, project_root: Path, out_dir: Path, run_tag: str, baseline_tag: str
+) -> str:
     """
     [개선안 11번] KPI 단위(% vs decimal) 정합성 점검 및 혼용 탐지.
     - kpi_snapshot.csv의 값만으로 단위 판정 불가 시 unit_unknown 플래그를 남김.
@@ -1224,7 +1334,7 @@ def build_kpi_units_check_md(*, project_root: Path, out_dir: Path, run_tag: str,
     import pandas as pd  # type: ignore
 
     kpi_path = out_dir / "kpi_snapshot.csv"
-    out: List[str] = []
+    out: list[str] = []
     out.append("# KPI Units Check (% vs decimal)")
     out.append("")
     out.append(f"- collected_at: `{_now_iso()}`")
@@ -1239,18 +1349,22 @@ def build_kpi_units_check_md(*, project_root: Path, out_dir: Path, run_tag: str,
 
     kpi = pd.read_csv(kpi_path)
     if kpi.empty or "tag" not in kpi.columns:
-        out.append("kpi_snapshot.csv가 비어있거나 tag 컬럼이 없습니다. 알 수 없습니다(근거 파일 없음)")
+        out.append(
+            "kpi_snapshot.csv가 비어있거나 tag 컬럼이 없습니다. 알 수 없습니다(근거 파일 없음)"
+        )
         out.append("")
         return "\n".join(out)
 
     tags = [t for t in [run_tag, baseline_tag] if t]
     kpi = kpi[kpi["tag"].astype(str).isin(tags)].copy()
     if kpi.empty:
-        out.append("kpi_snapshot.csv에 지정 태그 행이 없습니다. 알 수 없습니다(근거 파일 없음)")
+        out.append(
+            "kpi_snapshot.csv에 지정 태그 행이 없습니다. 알 수 없습니다(근거 파일 없음)"
+        )
         out.append("")
         return "\n".join(out)
 
-    def load_bt_returns(tag: str) -> Tuple[Optional[Any], str]:
+    def load_bt_returns(tag: str) -> tuple[Optional[Any], str]:
         p = out_dir / "charts" / f"{tag}__bt_returns.csv"
         if p.exists():
             try:
@@ -1265,7 +1379,7 @@ def build_kpi_units_check_md(*, project_root: Path, out_dir: Path, run_tag: str,
         except Exception:
             return None, str(ap.relative_to(project_root))
 
-    def load_bt_metrics(tag: str) -> Tuple[Optional[Any], str]:
+    def load_bt_metrics(tag: str) -> tuple[Optional[Any], str]:
         ap, _sel = _find_tag_or_root_artifact(project_root, tag, "bt_metrics")
         if ap is None:
             return None, "알 수 없습니다(근거 파일 없음)"
@@ -1274,7 +1388,7 @@ def build_kpi_units_check_md(*, project_root: Path, out_dir: Path, run_tag: str,
         except Exception:
             return None, str(ap.relative_to(project_root))
 
-    def load_bt_yearly(tag: str) -> Tuple[Optional[Any], str]:
+    def load_bt_yearly(tag: str) -> tuple[Optional[Any], str]:
         p = out_dir / "charts" / f"{tag}__bt_yearly_metrics.csv"
         if p.exists():
             try:
@@ -1289,7 +1403,7 @@ def build_kpi_units_check_md(*, project_root: Path, out_dir: Path, run_tag: str,
         except Exception:
             return None, str(ap.relative_to(project_root))
 
-    rows_out: List[Dict[str, Any]] = []
+    rows_out: list[dict[str, Any]] = []
 
     for tag in tags:
         row = kpi[kpi["tag"].astype(str) == str(tag)].head(1)
@@ -1305,7 +1419,11 @@ def build_kpi_units_check_md(*, project_root: Path, out_dir: Path, run_tag: str,
         # bt_returns 기반 holdout 누적 수익률/최대낙폭 계산(가능한 경우)
         derived_total_holdout: Optional[float] = None
         derived_mdd_holdout: Optional[float] = None
-        if bt_ret is not None and "phase" in bt_ret.columns and "net_return" in bt_ret.columns:
+        if (
+            bt_ret is not None
+            and "phase" in bt_ret.columns
+            and "net_return" in bt_ret.columns
+        ):
             try:
                 g = bt_ret[bt_ret["phase"].astype(str) == "holdout"].copy()
                 x = g["net_return"].astype(float).to_numpy()
@@ -1346,9 +1464,12 @@ def build_kpi_units_check_md(*, project_root: Path, out_dir: Path, run_tag: str,
 
         # unit 판정
         unit_flag = "unit_unknown"
-        ev: List[str] = []
-        mix: List[str] = []
-        if kpi_vals.get("net_total_return") is not None and derived_total_holdout is not None:
+        ev: list[str] = []
+        mix: list[str] = []
+        if (
+            kpi_vals.get("net_total_return") is not None
+            and derived_total_holdout is not None
+        ):
             cls = _ratio_classify(kpi_vals["net_total_return"], derived_total_holdout)
             ev.append(f"net_total_return kpi_vs_bt_returns_total={cls}")
             if cls == "same_scale(~1x)":
@@ -1359,17 +1480,41 @@ def build_kpi_units_check_md(*, project_root: Path, out_dir: Path, run_tag: str,
             ev.append("net_total_return: cannot compare (missing kpi or derived)")
 
         if kpi_vals.get("net_mdd") is not None and derived_mdd_holdout is not None:
-            mix.append(f"net_mdd kpi_vs_bt_returns_mdd={_ratio_classify(kpi_vals['net_mdd'], derived_mdd_holdout)}")
-        if kpi_vals.get("net_mdd") is not None and bt_met_hold.get("net_mdd") is not None:
-            mix.append(f"net_mdd kpi_vs_bt_metrics={_ratio_classify(kpi_vals['net_mdd'], bt_met_hold.get('net_mdd'))}")
+            mix.append(
+                f"net_mdd kpi_vs_bt_returns_mdd={_ratio_classify(kpi_vals['net_mdd'], derived_mdd_holdout)}"
+            )
+        if (
+            kpi_vals.get("net_mdd") is not None
+            and bt_met_hold.get("net_mdd") is not None
+        ):
+            mix.append(
+                f"net_mdd kpi_vs_bt_metrics={_ratio_classify(kpi_vals['net_mdd'], bt_met_hold.get('net_mdd'))}"
+            )
         if bt_met_hold.get("net_mdd") is not None and derived_mdd_holdout is not None:
-            mix.append(f"net_mdd bt_metrics_vs_bt_returns={_ratio_classify(bt_met_hold.get('net_mdd'), derived_mdd_holdout)}")
-        if kpi_vals.get("net_mdd") is not None and yearly_sample.get("net_mdd") is not None:
-            mix.append(f"net_mdd kpi_vs_yearly_sample={_ratio_classify(kpi_vals['net_mdd'], yearly_sample.get('net_mdd'))}")
-        if kpi_vals.get("net_total_return") is not None and bt_met_hold.get("net_total_return") is not None:
-            mix.append(f"net_total_return kpi_vs_bt_metrics={_ratio_classify(kpi_vals['net_total_return'], bt_met_hold.get('net_total_return'))}")
-        if bt_met_hold.get("net_total_return") is not None and derived_total_holdout is not None:
-            mix.append(f"net_total_return bt_metrics_vs_bt_returns={_ratio_classify(bt_met_hold.get('net_total_return'), derived_total_holdout)}")
+            mix.append(
+                f"net_mdd bt_metrics_vs_bt_returns={_ratio_classify(bt_met_hold.get('net_mdd'), derived_mdd_holdout)}"
+            )
+        if (
+            kpi_vals.get("net_mdd") is not None
+            and yearly_sample.get("net_mdd") is not None
+        ):
+            mix.append(
+                f"net_mdd kpi_vs_yearly_sample={_ratio_classify(kpi_vals['net_mdd'], yearly_sample.get('net_mdd'))}"
+            )
+        if (
+            kpi_vals.get("net_total_return") is not None
+            and bt_met_hold.get("net_total_return") is not None
+        ):
+            mix.append(
+                f"net_total_return kpi_vs_bt_metrics={_ratio_classify(kpi_vals['net_total_return'], bt_met_hold.get('net_total_return'))}"
+            )
+        if (
+            bt_met_hold.get("net_total_return") is not None
+            and derived_total_holdout is not None
+        ):
+            mix.append(
+                f"net_total_return bt_metrics_vs_bt_returns={_ratio_classify(bt_met_hold.get('net_total_return'), derived_total_holdout)}"
+            )
 
         rows_out.append(
             {
@@ -1379,9 +1524,13 @@ def build_kpi_units_check_md(*, project_root: Path, out_dir: Path, run_tag: str,
                 "bt_returns_holdout_total_return": derived_total_holdout,
                 "kpi_net_mdd": kpi_vals.get("net_mdd"),
                 "bt_returns_holdout_mdd": derived_mdd_holdout,
-                "bt_metrics_holdout_net_total_return": bt_met_hold.get("net_total_return"),
+                "bt_metrics_holdout_net_total_return": bt_met_hold.get(
+                    "net_total_return"
+                ),
                 "bt_metrics_holdout_net_mdd": bt_met_hold.get("net_mdd"),
-                "yearly_holdout_sample_net_total_return": yearly_sample.get("net_total_return"),
+                "yearly_holdout_sample_net_total_return": yearly_sample.get(
+                    "net_total_return"
+                ),
                 "sources": {
                     "kpi_snapshot": str(kpi_path.relative_to(project_root)),
                     "bt_returns": bt_ret_src,
@@ -1395,7 +1544,9 @@ def build_kpi_units_check_md(*, project_root: Path, out_dir: Path, run_tag: str,
 
     out.append("## 판정 요약")
     out.append("")
-    out.append("| tag | unit_flag | kpi_net_total_return | bt_returns_total_return(holdout) |")
+    out.append(
+        "| tag | unit_flag | kpi_net_total_return | bt_returns_total_return(holdout) |"
+    )
     out.append("|---|---|---:|---:|")
     for r in rows_out:
         out.append(
@@ -1423,13 +1574,15 @@ def build_kpi_units_check_md(*, project_root: Path, out_dir: Path, run_tag: str,
 # =========================
 # 추가 추출 2: Holdout 기간 확정
 # =========================
-def build_phase_date_ranges_rows(*, project_root: Path, out_dir: Path, run_tag: str, baseline_tag: str) -> List[Dict[str, Any]]:
+def build_phase_date_ranges_rows(
+    *, project_root: Path, out_dir: Path, run_tag: str, baseline_tag: str
+) -> list[dict[str, Any]]:
     """
     [개선안 11번] bt_returns.csv (RUN_TAG/Baseline)에서 phase별 min/max(date), n_rows를 집계.
     """
     import pandas as pd  # type: ignore
 
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for tag in [run_tag, baseline_tag]:
         src = out_dir / "charts" / f"{tag}__bt_returns.csv"
         df = None
@@ -1458,7 +1611,9 @@ def build_phase_date_ranges_rows(*, project_root: Path, out_dir: Path, run_tag: 
                     "date_min": "",
                     "date_max": "",
                     "n_rows": "",
-                    "source": src_label if src_label else "알 수 없습니다(근거 파일 없음)",
+                    "source": (
+                        src_label if src_label else "알 수 없습니다(근거 파일 없음)"
+                    ),
                 }
             )
             continue
@@ -1487,7 +1642,9 @@ def build_phase_date_ranges_rows(*, project_root: Path, out_dir: Path, run_tag: 
 # =========================
 # 추가 추출 3: 데이터 품질(결측률/커버리지)
 # =========================
-def build_dataset_daily_quality_outputs(*, project_root: Path, out_dir: Path, run_tag: str) -> Tuple[List[Dict[str, Any]], str]:
+def build_dataset_daily_quality_outputs(
+    *, project_root: Path, out_dir: Path, run_tag: str
+) -> tuple[list[dict[str, Any]], str]:
     """
     [개선안 11번] dataset_daily.parquet(가능하면 RUN_TAG 경로 우선, 없으면 루트 fallback)에서
     - rows/cols, ticker 수, date 수, (ticker,date) 중복 여부
@@ -1497,7 +1654,7 @@ def build_dataset_daily_quality_outputs(*, project_root: Path, out_dir: Path, ru
     import pandas as pd  # type: ignore
 
     features_json = out_dir / "features_final.json"
-    features: List[str] = []
+    features: list[str] = []
     if features_json.exists():
         try:
             j = json.loads(_read_text(features_json))
@@ -1532,7 +1689,9 @@ def build_dataset_daily_quality_outputs(*, project_root: Path, out_dir: Path, ru
         return [], "\n".join(md)
 
     rows_n, cols_n = int(df.shape[0]), int(df.shape[1])
-    ticker_n = int(df["ticker"].astype(str).nunique()) if "ticker" in df.columns else None
+    ticker_n = (
+        int(df["ticker"].astype(str).nunique()) if "ticker" in df.columns else None
+    )
     date_n = None
     if "date" in df.columns:
         try:
@@ -1549,7 +1708,7 @@ def build_dataset_daily_quality_outputs(*, project_root: Path, out_dir: Path, ru
         except Exception:
             dup_count = None
 
-    out_rows: List[Dict[str, Any]] = []
+    out_rows: list[dict[str, Any]] = []
     # summary row
     out_rows.append(
         {
@@ -1563,9 +1722,15 @@ def build_dataset_daily_quality_outputs(*, project_root: Path, out_dir: Path, ru
             "max": "",
             "rows": rows_n,
             "cols": cols_n,
-            "ticker_nunique": ticker_n if ticker_n is not None else "알 수 없습니다(근거 파일 없음)",
-            "date_nunique": date_n if date_n is not None else "알 수 없습니다(근거 파일 없음)",
-            "ticker_date_dup_count": dup_count if dup_count is not None else "알 수 없습니다(근거 파일 없음)",
+            "ticker_nunique": (
+                ticker_n if ticker_n is not None else "알 수 없습니다(근거 파일 없음)"
+            ),
+            "date_nunique": (
+                date_n if date_n is not None else "알 수 없습니다(근거 파일 없음)"
+            ),
+            "ticker_date_dup_count": (
+                dup_count if dup_count is not None else "알 수 없습니다(근거 파일 없음)"
+            ),
             "dataset_path": str(ds_path),
         }
     )
@@ -1635,7 +1800,7 @@ def build_dataset_daily_quality_outputs(*, project_root: Path, out_dir: Path, ru
             }
         )
 
-    md_lines: List[str] = []
+    md_lines: list[str] = []
     md_lines.append("# Data Quality: dataset_daily")
     md_lines.append("")
     md_lines.append(f"- collected_at: `{_now_iso()}`")
@@ -1646,14 +1811,22 @@ def build_dataset_daily_quality_outputs(*, project_root: Path, out_dir: Path, ru
     md_lines.append("")
     md_lines.append(f"- rows: `{rows_n}`")
     md_lines.append(f"- cols: `{cols_n}`")
-    md_lines.append(f"- ticker_nunique: `{ticker_n if ticker_n is not None else '알 수 없습니다(근거 파일 없음)'}`")
-    md_lines.append(f"- date_nunique: `{date_n if date_n is not None else '알 수 없습니다(근거 파일 없음)'}`")
-    md_lines.append(f"- (ticker,date) duplicates: `{dup_count if dup_count is not None else '알 수 없습니다(근거 파일 없음)'}`")
+    md_lines.append(
+        f"- ticker_nunique: `{ticker_n if ticker_n is not None else '알 수 없습니다(근거 파일 없음)'}`"
+    )
+    md_lines.append(
+        f"- date_nunique: `{date_n if date_n is not None else '알 수 없습니다(근거 파일 없음)'}`"
+    )
+    md_lines.append(
+        f"- (ticker,date) duplicates: `{dup_count if dup_count is not None else '알 수 없습니다(근거 파일 없음)'}`"
+    )
     md_lines.append("")
     md_lines.append("## 피처 후보 통계")
     md_lines.append("")
-    md_lines.append(f"- features_source: `{features_json.relative_to(project_root) if features_json.exists() else '알 수 없습니다(근거 파일 없음)'}`")
-    md_lines.append(f"- output_csv: `reports/extract/data_quality__dataset_daily.csv`")
+    md_lines.append(
+        f"- features_source: `{features_json.relative_to(project_root) if features_json.exists() else '알 수 없습니다(근거 파일 없음)'}`"
+    )
+    md_lines.append("- output_csv: `reports/extract/data_quality__dataset_daily.csv`")
     md_lines.append("")
 
     return out_rows, "\n".join(md_lines).rstrip() + "\n"
@@ -1662,7 +1835,9 @@ def build_dataset_daily_quality_outputs(*, project_root: Path, out_dir: Path, ru
 # =========================
 # 추가 추출 4: 설정 존재 vs 코드 적용 매핑
 # =========================
-def build_config_vs_code_matrix_rows(*, project_root: Path, out_dir: Path) -> List[Dict[str, Any]]:
+def build_config_vs_code_matrix_rows(
+    *, project_root: Path, out_dir: Path
+) -> list[dict[str, Any]]:
     """
     [개선안 11번] l7.diversify.*, l7.regime.* 키 존재(configured) vs 코드 참조(implemented) 매핑.
     """
@@ -1688,7 +1863,9 @@ def build_config_vs_code_matrix_rows(*, project_root: Path, out_dir: Path) -> Li
                         l7_reg = None
 
     code_path = project_root / "src" / "stages" / "l7_backtest.py"
-    code_lines: List[str] = _read_text(code_path).splitlines() if code_path.exists() else []
+    code_lines: list[str] = (
+        _read_text(code_path).splitlines() if code_path.exists() else []
+    )
 
     def hits(substr: str, limit: int = 3) -> str:
         out = []
@@ -1702,7 +1879,7 @@ def build_config_vs_code_matrix_rows(*, project_root: Path, out_dir: Path) -> Li
     def has(substr: str) -> bool:
         return any(substr in ln for ln in code_lines)
 
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
 
     div_keys = ["enabled", "group_col", "max_names_per_group"]
     for k in div_keys:
@@ -1729,11 +1906,23 @@ def build_config_vs_code_matrix_rows(*, project_root: Path, out_dir: Path) -> Li
                 "config_value": cfg_val,
                 "implemented": impl,
                 "code_hits": ev,
-                "code_file": str(code_path.relative_to(project_root)) if code_path.exists() else "알 수 없습니다(근거 파일 없음)",
+                "code_file": (
+                    str(code_path.relative_to(project_root))
+                    if code_path.exists()
+                    else "알 수 없습니다(근거 파일 없음)"
+                ),
             }
         )
 
-    reg_keys = ["enabled", "lookback_days", "threshold_pct", "top_k_bull", "top_k_bear", "exposure_bull", "exposure_bear"]
+    reg_keys = [
+        "enabled",
+        "lookback_days",
+        "threshold_pct",
+        "top_k_bull",
+        "top_k_bear",
+        "exposure_bull",
+        "exposure_bear",
+    ]
     for k in reg_keys:
         cfg_val = ""
         configured = False
@@ -1769,7 +1958,11 @@ def build_config_vs_code_matrix_rows(*, project_root: Path, out_dir: Path) -> Li
                 "config_value": cfg_val,
                 "implemented": impl,
                 "code_hits": ev,
-                "code_file": str(code_path.relative_to(project_root)) if code_path.exists() else "알 수 없습니다(근거 파일 없음)",
+                "code_file": (
+                    str(code_path.relative_to(project_root))
+                    if code_path.exists()
+                    else "알 수 없습니다(근거 파일 없음)"
+                ),
             }
         )
 
@@ -1779,14 +1972,16 @@ def build_config_vs_code_matrix_rows(*, project_root: Path, out_dir: Path) -> Li
 # =========================
 # 추가 추출 5: 거래비용 수식 확정
 # =========================
-def build_cost_model_contract_md(*, project_root: Path, out_dir: Path, run_tag: str, baseline_tag: str) -> str:
+def build_cost_model_contract_md(
+    *, project_root: Path, out_dir: Path, run_tag: str, baseline_tag: str
+) -> str:
     """
     [개선안 11번] L7 거래비용/turnover 수식 근거 추출 + bt_returns 산출물 컬럼 불일치 리포트.
     """
     import pandas as pd  # type: ignore
 
     l7 = project_root / "src" / "stages" / "l7_backtest.py"
-    out: List[str] = []
+    out: list[str] = []
     out.append("# Cost Model Contract (L7)")
     out.append("")
     out.append(f"- collected_at: `{_now_iso()}`")
@@ -1802,7 +1997,9 @@ def build_cost_model_contract_md(*, project_root: Path, out_dir: Path, run_tag: 
     sn = _snippet_by_regex(l7, r"def _compute_turnover_oneway", context=8, max_hits=1)
     if sn:
         s = sn[0]
-        out.append(f"- code: `{Path(s['path']).relative_to(project_root)}` L{s['start_line']}~L{s['end_line']}")
+        out.append(
+            f"- code: `{Path(s['path']).relative_to(project_root)}` L{s['start_line']}~L{s['end_line']}"
+        )
         out.append("```")
         out.extend(s["lines"])
         out.append("```")
@@ -1813,9 +2010,17 @@ def build_cost_model_contract_md(*, project_root: Path, out_dir: Path, run_tag: 
 
     out.append("## cost 계산 라인(코드 근거)")
     out.append("")
-    for pat in [r"daily_trading_cost\s*=", r"turnover_cost\s*=", r"if turnover_oneway\s*>\s*0", r"total_cost\s*=", r"net_ret\s*="]:
+    for pat in [
+        r"daily_trading_cost\s*=",
+        r"turnover_cost\s*=",
+        r"if turnover_oneway\s*>\s*0",
+        r"total_cost\s*=",
+        r"net_ret\s*=",
+    ]:
         for s in _snippet_by_regex(l7, pat, context=3, max_hits=2):
-            out.append(f"- code: `{Path(s['path']).relative_to(project_root)}` L{s['start_line']}~L{s['end_line']}")
+            out.append(
+                f"- code: `{Path(s['path']).relative_to(project_root)}` L{s['start_line']}~L{s['end_line']}"
+            )
             out.append("```")
             out.extend(s["lines"])
             out.append("```")
@@ -1823,7 +2028,16 @@ def build_cost_model_contract_md(*, project_root: Path, out_dir: Path, run_tag: 
 
     out.append("## bt_returns 컬럼 정합성 체크")
     out.append("")
-    expected = ["turnover_oneway", "daily_trading_cost", "turnover_cost", "total_cost", "gross_return", "net_return", "cost_bps", "cost_bps_used"]
+    expected = [
+        "turnover_oneway",
+        "daily_trading_cost",
+        "turnover_cost",
+        "total_cost",
+        "gross_return",
+        "net_return",
+        "cost_bps",
+        "cost_bps_used",
+    ]
     out.append(f"- expected_cols_from_code: `{expected}`")
     out.append("")
     out.append("| tag | bt_returns_source | missing_cols | mismatch |")
@@ -1850,11 +2064,15 @@ def build_cost_model_contract_md(*, project_root: Path, out_dir: Path, run_tag: 
                     src_label = str(ap.relative_to(project_root))
 
         if df is None:
-            out.append(f"| {tag} | 알 수 없습니다(근거 파일 없음) | {','.join(expected)} | mismatch |")
+            out.append(
+                f"| {tag} | 알 수 없습니다(근거 파일 없음) | {','.join(expected)} | mismatch |"
+            )
             continue
         cols = set(map(str, df.columns))
         missing = [c for c in expected if c not in cols]
-        out.append(f"| {tag} | {src_label} | {','.join(missing)} | {'mismatch' if missing else 'ok'} |")
+        out.append(
+            f"| {tag} | {src_label} | {','.join(missing)} | {'mismatch' if missing else 'ok'} |"
+        )
 
     out.append("")
     return "\n".join(out).rstrip() + "\n"
@@ -1863,7 +2081,9 @@ def build_cost_model_contract_md(*, project_root: Path, out_dir: Path, run_tag: 
 # =========================
 # 추가 추출 6: 아티팩트 혼용 원인 규명
 # =========================
-def build_artifact_isolation_audit_outputs(*, project_root: Path, out_dir: Path) -> Tuple[List[Dict[str, Any]], str]:
+def build_artifact_isolation_audit_outputs(
+    *, project_root: Path, out_dir: Path
+) -> tuple[list[dict[str, Any]], str]:
     """
     [개선안 11번] charts_manifest.csv 기반:
     - tag 경로인지 fallback 경로인지 집계
@@ -1872,7 +2092,7 @@ def build_artifact_isolation_audit_outputs(*, project_root: Path, out_dir: Path)
     import pandas as pd  # type: ignore
 
     manifest = out_dir / "charts_manifest.csv"
-    md: List[str] = []
+    md: list[str] = []
     md.append("# Artifact Isolation Audit (tag vs fallback)")
     md.append("")
     md.append(f"- collected_at: `{_now_iso()}`")
@@ -1889,8 +2109,8 @@ def build_artifact_isolation_audit_outputs(*, project_root: Path, out_dir: Path)
         md.append("")
         return [], "\n".join(md)
 
-    rows: List[Dict[str, Any]] = []
-    missing_inputs: Dict[str, List[str]] = {}
+    rows: list[dict[str, Any]] = []
+    missing_inputs: dict[str, list[str]] = {}
 
     for _, r in df.iterrows():
         tag = str(r.get("tag") or "")
@@ -1907,7 +2127,9 @@ def build_artifact_isolation_audit_outputs(*, project_root: Path, out_dir: Path)
             cand_csv = tag_dir / f"{artifact}.csv"
             if not cand_pq.exists() and not cand_csv.exists():
                 miss_reason = "missing_inputs"
-                missing_inputs.setdefault(tag, []).append(f"{tag}/{artifact} (missing {cand_pq.name} and {cand_csv.name})")
+                missing_inputs.setdefault(tag, []).append(
+                    f"{tag}/{artifact} (missing {cand_pq.name} and {cand_csv.name})"
+                )
 
         rows.append(
             {
@@ -1959,7 +2181,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     """
     import argparse
 
-    ap = argparse.ArgumentParser(description="보고서 증거자료 자동 추출기 (reports/extract 생성)")
+    ap = argparse.ArgumentParser(
+        description="보고서 증거자료 자동 추출기 (reports/extract 생성)"
+    )
     ap.add_argument("--run-tag", default=DEFAULT_RUN_TAG)
     ap.add_argument("--baseline-tag", default=DEFAULT_BASELINE_TAG)
     args = ap.parse_args(argv)
@@ -1987,24 +2211,45 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     run_all_path = project_root / "src" / "run_all.py"
     if run_all_path.exists():
         cli_rows = parse_run_all_cli_options(run_all_path)
-        _write_text(out_dir / "cli_run_all.md", build_cli_md(cli_rows, title="CLI Options: src/run_all.py"))
+        _write_text(
+            out_dir / "cli_run_all.md",
+            build_cli_md(cli_rows, title="CLI Options: src/run_all.py"),
+        )
     else:
-        _write_text(out_dir / "cli_run_all.md", "# CLI Options: src/run_all.py\n\n알 수 없습니다 (src/run_all.py 없음)\n")
+        _write_text(
+            out_dir / "cli_run_all.md",
+            "# CLI Options: src/run_all.py\n\n알 수 없습니다 (src/run_all.py 없음)\n",
+        )
 
     # 5) config snapshot
     if resolved.config_path and resolved.config_path.exists():
         cfg_snapshot = extract_config_snapshot(resolved.config_path)
-        _write_text(out_dir / "config_snapshot.md", build_config_snapshot_md(cfg_snapshot))
+        _write_text(
+            out_dir / "config_snapshot.md", build_config_snapshot_md(cfg_snapshot)
+        )
     else:
-        cfg_snapshot = {"error": "configs/config.yaml not found", "l4": None, "l5": None, "l6": None, "l7": None}
-        _write_text(out_dir / "config_snapshot.md", "# Config Snapshot (l4~l7)\n\n알 수 없습니다 (configs/config.yaml 없음)\n")
+        cfg_snapshot = {
+            "error": "configs/config.yaml not found",
+            "l4": None,
+            "l5": None,
+            "l6": None,
+            "l7": None,
+        }
+        _write_text(
+            out_dir / "config_snapshot.md",
+            "# Config Snapshot (l4~l7)\n\n알 수 없습니다 (configs/config.yaml 없음)\n",
+        )
 
     # 6) features_final.json
-    features_json = build_features_final_json(project_root=project_root, cfg_snapshot=cfg_snapshot, run_tag=args.run_tag)
+    features_json = build_features_final_json(
+        project_root=project_root, cfg_snapshot=cfg_snapshot, run_tag=args.run_tag
+    )
     _write_json(out_dir / "features_final.json", features_json)
 
     # 7) backtest contract
-    _write_text(out_dir / "backtest_contract.md", build_backtest_contract_md(project_root))
+    _write_text(
+        out_dir / "backtest_contract.md", build_backtest_contract_md(project_root)
+    )
 
     # 8) KPI snapshot
     tags = [args.run_tag, args.baseline_tag]
@@ -2012,7 +2257,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     _write_csv(
         out_dir / "kpi_snapshot.csv",
         kpi_rows,
-        fieldnames=["tag", "net_total_return", "net_cagr", "net_sharpe", "net_mdd", "cost_bps_used", "n_rebalances"],
+        fieldnames=[
+            "tag",
+            "net_total_return",
+            "net_cagr",
+            "net_sharpe",
+            "net_mdd",
+            "cost_bps_used",
+            "n_rebalances",
+        ],
     )
 
     # 9) charts export + manifest
@@ -2020,11 +2273,25 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     _write_csv(
         out_dir / "charts_manifest.csv",
         chart_manifest_rows,
-        fieldnames=["tag", "artifact", "status", "source_path", "exported_csv", "rows", "cols", "date_min", "date_max", "notes"],
+        fieldnames=[
+            "tag",
+            "artifact",
+            "status",
+            "source_path",
+            "exported_csv",
+            "rows",
+            "cols",
+            "date_min",
+            "date_max",
+            "notes",
+        ],
     )
 
     # 10) integrity report
-    _write_text(out_dir / "integrity_report.md", build_integrity_report_md(cfg_snapshot=cfg_snapshot, kpi_rows=kpi_rows))
+    _write_text(
+        out_dir / "integrity_report.md",
+        build_integrity_report_md(cfg_snapshot=cfg_snapshot, kpi_rows=kpi_rows),
+    )
 
     # 11) to_markdown hits via rg
     collect_to_markdown_hits(project_root, out_dir / "to_markdown_hits.txt")
@@ -2035,11 +2302,21 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     # [추가 1] KPI 단위 정규화/혼용 점검
     _write_text(
         out_dir / "kpi_units_check.md",
-        build_kpi_units_check_md(project_root=project_root, out_dir=out_dir, run_tag=args.run_tag, baseline_tag=args.baseline_tag),
+        build_kpi_units_check_md(
+            project_root=project_root,
+            out_dir=out_dir,
+            run_tag=args.run_tag,
+            baseline_tag=args.baseline_tag,
+        ),
     )
 
     # [추가 2] phase별 기간 확정
-    phase_rows = build_phase_date_ranges_rows(project_root=project_root, out_dir=out_dir, run_tag=args.run_tag, baseline_tag=args.baseline_tag)
+    phase_rows = build_phase_date_ranges_rows(
+        project_root=project_root,
+        out_dir=out_dir,
+        run_tag=args.run_tag,
+        baseline_tag=args.baseline_tag,
+    )
     _write_csv(
         out_dir / "phase_date_ranges.csv",
         phase_rows,
@@ -2047,7 +2324,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     )
 
     # [추가 3] dataset_daily 품질(결측률/분포)
-    dq_rows, dq_md = build_dataset_daily_quality_outputs(project_root=project_root, out_dir=out_dir, run_tag=args.run_tag)
+    dq_rows, dq_md = build_dataset_daily_quality_outputs(
+        project_root=project_root, out_dir=out_dir, run_tag=args.run_tag
+    )
     _write_csv(
         out_dir / "data_quality__dataset_daily.csv",
         dq_rows,
@@ -2071,25 +2350,49 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     _write_text(out_dir / "data_quality__dataset_daily.md", dq_md)
 
     # [추가 4] 설정 존재 vs 코드 적용 매핑
-    matrix_rows = build_config_vs_code_matrix_rows(project_root=project_root, out_dir=out_dir)
+    matrix_rows = build_config_vs_code_matrix_rows(
+        project_root=project_root, out_dir=out_dir
+    )
     _write_csv(
         out_dir / "config_vs_code_matrix.csv",
         matrix_rows,
-        fieldnames=["section", "key", "configured", "config_value", "implemented", "code_hits", "code_file"],
+        fieldnames=[
+            "section",
+            "key",
+            "configured",
+            "config_value",
+            "implemented",
+            "code_hits",
+            "code_file",
+        ],
     )
 
     # [추가 5] 거래비용 수식 확정 + 산출물 컬럼 불일치
     _write_text(
         out_dir / "cost_model_contract.md",
-        build_cost_model_contract_md(project_root=project_root, out_dir=out_dir, run_tag=args.run_tag, baseline_tag=args.baseline_tag),
+        build_cost_model_contract_md(
+            project_root=project_root,
+            out_dir=out_dir,
+            run_tag=args.run_tag,
+            baseline_tag=args.baseline_tag,
+        ),
     )
 
     # [추가 6] 아티팩트 혼용(격리) 감사
-    audit_rows, audit_md = build_artifact_isolation_audit_outputs(project_root=project_root, out_dir=out_dir)
+    audit_rows, audit_md = build_artifact_isolation_audit_outputs(
+        project_root=project_root, out_dir=out_dir
+    )
     _write_csv(
         out_dir / "artifact_isolation_audit.csv",
         audit_rows,
-        fieldnames=["tag", "artifact", "status", "source_path", "source_kind", "missing_reason"],
+        fieldnames=[
+            "tag",
+            "artifact",
+            "status",
+            "source_path",
+            "source_kind",
+            "missing_reason",
+        ],
     )
     _write_text(out_dir / "artifact_isolation_audit.md", audit_md)
 

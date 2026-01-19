@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/analysis/report_extract_core_data_full.py
 from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import pandas as pd
 
@@ -15,7 +14,10 @@ OUT_EXTRACTS = OUT_DIR / "extracts_full"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 OUT_EXTRACTS.mkdir(parents=True, exist_ok=True)
 
-MANIFEST_PQ = OUT_DIR / "_MANIFEST_core_extracts.parquet"  # (artifact_core_name, columns) 기대
+MANIFEST_PQ = (
+    OUT_DIR / "_MANIFEST_core_extracts.parquet"
+)  # (artifact_core_name, columns) 기대
+
 
 def _read_manifest() -> pd.DataFrame:
     if not MANIFEST_PQ.exists():
@@ -45,7 +47,8 @@ def _read_manifest() -> pd.DataFrame:
     m["columns"] = m["columns"].astype(str)
     return m
 
-def _parse_columns(s: str) -> List[str]:
+
+def _parse_columns(s: str) -> list[str]:
     """
     manifest의 columns가
     - "a,b,c" 또는
@@ -55,7 +58,9 @@ def _parse_columns(s: str) -> List[str]:
     if not s:
         return []
     # list-like
-    if (s.startswith("[") and s.endswith("]")) or (s.startswith("(") and s.endswith(")")):
+    if (s.startswith("[") and s.endswith("]")) or (
+        s.startswith("(") and s.endswith(")")
+    ):
         try:
             v = eval(s, {"__builtins__": {}})  # 안전 최소화
             if isinstance(v, (list, tuple)):
@@ -65,7 +70,8 @@ def _parse_columns(s: str) -> List[str]:
     # comma-separated
     return [x.strip() for x in s.split(",") if x.strip()]
 
-def _load_interim_artifact(name: str) -> Tuple[pd.DataFrame, Path]:
+
+def _load_interim_artifact(name: str) -> tuple[pd.DataFrame, Path]:
     # 프로젝트에서 save_artifact가 보통 name.parquet를 만들었으므로 우선 그 규칙을 사용
     p1 = INTERIM_DIR / f"{name}.parquet"
     if p1.exists():
@@ -76,14 +82,18 @@ def _load_interim_artifact(name: str) -> Tuple[pd.DataFrame, Path]:
     if p2.exists():
         return pd.read_parquet(p2), p2
 
-    raise FileNotFoundError(f"interim artifact parquet not found for '{name}': tried {p1} and {p2}")
+    raise FileNotFoundError(
+        f"interim artifact parquet not found for '{name}': tried {p1} and {p2}"
+    )
 
-def _save_dual(df: pd.DataFrame, out_base: Path) -> Tuple[Path, Path]:
+
+def _save_dual(df: pd.DataFrame, out_base: Path) -> tuple[Path, Path]:
     pq = out_base.with_suffix(".parquet")
     csv = out_base.with_suffix(".csv")
     df.to_parquet(pq, index=False)
     df.to_csv(csv, index=False, encoding="utf-8-sig")
     return pq, csv
+
 
 def _flatten_to_1col(df: pd.DataFrame, artifact_name: str) -> pd.DataFrame:
     """
@@ -105,15 +115,20 @@ def _flatten_to_1col(df: pd.DataFrame, artifact_name: str) -> pd.DataFrame:
 
     return pd.DataFrame({"data": lines})
 
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--flatten-1col", action="store_true", help="모든 셀을 n행1열(data)로 완전 펼침 저장(매우 큼)")
+    ap.add_argument(
+        "--flatten-1col",
+        action="store_true",
+        help="모든 셀을 n행1열(data)로 완전 펼침 저장(매우 큼)",
+    )
     args = ap.parse_args()
 
     m = _read_manifest()
 
-    summary_rows: List[Dict[str, Any]] = []
-    flat_parts: List[pd.DataFrame] = []
+    summary_rows: list[dict[str, Any]] = []
+    flat_parts: list[pd.DataFrame] = []
 
     for _, row in m.iterrows():
         name = str(row["artifact_core_name"])
@@ -150,9 +165,13 @@ def main():
         if args.flatten_1col:
             flat_parts.append(_flatten_to_1col(out_df, artifact_name=name))
 
-        print(f"[OK] {name}: saved rows={out_df.shape[0]:,} cols={out_df.shape[1]} -> {pq_path.name}, {csv_path.name}")
+        print(
+            f"[OK] {name}: saved rows={out_df.shape[0]:,} cols={out_df.shape[1]} -> {pq_path.name}, {csv_path.name}"
+        )
         if missing_cols:
-            print(f"     [WARN] missing_cols({len(missing_cols)}): {missing_cols[:10]}{' ...' if len(missing_cols)>10 else ''}")
+            print(
+                f"     [WARN] missing_cols({len(missing_cols)}): {missing_cols[:10]}{' ...' if len(missing_cols)>10 else ''}"
+            )
 
     # 요약 manifest 저장
     summary = pd.DataFrame(summary_rows)
@@ -160,11 +179,18 @@ def main():
 
     # 펼침 파일 저장(옵션)
     if args.flatten_1col:
-        flat = pd.concat(flat_parts, ignore_index=True) if flat_parts else pd.DataFrame({"data": []})
+        flat = (
+            pd.concat(flat_parts, ignore_index=True)
+            if flat_parts
+            else pd.DataFrame({"data": []})
+        )
         _save_dual(flat, OUT_DIR / "_CORE_DATA_flatten_1col_full")
-        print(f"[DONE] flatten saved rows={len(flat):,} -> _CORE_DATA_flatten_1col_full.(parquet/csv)")
+        print(
+            f"[DONE] flatten saved rows={len(flat):,} -> _CORE_DATA_flatten_1col_full.(parquet/csv)"
+        )
 
     print("\n[DONE] summary saved -> _SUMMARY_core_full_extracts.(parquet/csv)")
+
 
 if __name__ == "__main__":
     main()

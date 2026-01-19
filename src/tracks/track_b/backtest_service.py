@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Track B: 투자 모델 서비스 모듈
 
@@ -8,7 +7,7 @@ UI에서 import 가능한 형태로 백테스트 실행 함수를 제공합니�
 """
 import logging
 from pathlib import Path
-from typing import Dict, Literal, Optional
+from typing import Literal
 
 import pandas as pd
 
@@ -28,7 +27,7 @@ def run_backtest_strategy(
     strategy: Literal["bt20_short", "bt20_ens", "bt120_long", "bt120_ens"],
     config_path: str = "configs/config.yaml",
     force_rebuild: bool = False,
-) -> Dict[str, pd.DataFrame]:
+) -> dict[str, pd.DataFrame]:
     """
     백테스트 전략을 실행하는 함수 (Track B 핵심 기능).
 
@@ -72,7 +71,9 @@ def run_backtest_strategy(
 
     l7_config_key = strategy_config_map.get(strategy)
     if not l7_config_key:
-        raise ValueError(f"Unknown strategy: {strategy}. Use one of {list(strategy_config_map.keys())}")
+        raise ValueError(
+            f"Unknown strategy: {strategy}. Use one of {list(strategy_config_map.keys())}"
+        )
 
     l7_cfg = cfg.get(l7_config_key, {})
     if not l7_cfg:
@@ -86,18 +87,24 @@ def run_backtest_strategy(
     cfg_for_l6r["l7"]["rebalance_interval"] = strategy_rebalance_interval
 
     # 공통 데이터 준비
-    artifacts = prepare_common_data(config_path=config_path, force_rebuild=force_rebuild)
+    artifacts = prepare_common_data(
+        config_path=config_path, force_rebuild=force_rebuild
+    )
 
     # Track A 산출물 확인 (랭킹 데이터)
     interim_dir = Path(get_path(cfg, "data_interim"))
     ranking_short_path = interim_dir / "ranking_short_daily"
     ranking_long_path = interim_dir / "ranking_long_daily"
 
-    if (not artifact_exists(ranking_short_path) or
-        not artifact_exists(ranking_long_path) or
-        force_rebuild):
+    if (
+        not artifact_exists(ranking_short_path)
+        or not artifact_exists(ranking_long_path)
+        or force_rebuild
+    ):
         logger.info("랭킹 데이터가 없습니다. Track A를 실행합니다...")
-        rankings = generate_rankings(config_path=config_path, force_rebuild=force_rebuild)
+        rankings = generate_rankings(
+            config_path=config_path, force_rebuild=force_rebuild
+        )
         artifacts["ranking_short_daily"] = rankings["ranking_short_daily"]
         artifacts["ranking_long_daily"] = rankings["ranking_long_daily"]
     else:
@@ -108,7 +115,10 @@ def run_backtest_strategy(
     logger.info("[L6R] 랭킹 스코어 변환")
     # [개선안 24번] interval별 캐시 분리 (bt120이 bt20 캐시를 공유하는 문제 방지)
     if strategy_rebalance_interval and strategy_rebalance_interval > 1:
-        scores_path = interim_dir / f"rebalance_scores_from_ranking_interval_{strategy_rebalance_interval}"
+        scores_path = (
+            interim_dir
+            / f"rebalance_scores_from_ranking_interval_{strategy_rebalance_interval}"
+        )
     else:
         scores_path = interim_dir / "rebalance_scores_from_ranking"
 
@@ -124,7 +134,9 @@ def run_backtest_strategy(
                 "ranking_long_daily": artifacts["ranking_long_daily"],
                 "dataset_daily": artifacts["dataset_daily"],
                 "cv_folds_short": artifacts["cv_folds_short"],
-                "universe_k200_membership_monthly": artifacts["universe_k200_membership_monthly"],
+                "universe_k200_membership_monthly": artifacts[
+                    "universe_k200_membership_monthly"
+                ],
                 "ohlcv_daily": artifacts.get("ohlcv_daily"),  # 국면/interval 계산용
             },
             force=force_rebuild,
@@ -135,54 +147,143 @@ def run_backtest_strategy(
 
     # L7: 백테스트 실행
     logger.info("[L7] 백테스트 실행")
-    regime_cfg = l7_cfg.get("regime", {}) if isinstance(l7_cfg.get("regime", {}), dict) else {}
-    diversify_cfg = l7_cfg.get("diversify", {}) if isinstance(l7_cfg.get("diversify", {}), dict) else {}
+    regime_cfg = (
+        l7_cfg.get("regime", {}) if isinstance(l7_cfg.get("regime", {}), dict) else {}
+    )
+    diversify_cfg = (
+        l7_cfg.get("diversify", {})
+        if isinstance(l7_cfg.get("diversify", {}), dict)
+        else {}
+    )
     bt_cfg = BacktestConfig(
         holding_days=int(l7_cfg.get("holding_days", 20)),
         top_k=int(l7_cfg.get("top_k", 12)),
         cost_bps=float(l7_cfg.get("cost_bps", 10.0)),
-        slippage_bps=float(l7_cfg.get("slippage_bps", 0.0)),  # [개선안 3번] 슬리피지 비용
+        slippage_bps=float(
+            l7_cfg.get("slippage_bps", 0.0)
+        ),  # [개선안 3번] 슬리피지 비용
         score_col=str(l7_cfg.get("score_col", "score_ens")),
         ret_col=str(l7_cfg.get("return_col", "true_short")),
         weighting=str(l7_cfg.get("weighting", "equal")),
-        softmax_temp=float(l7_cfg.get("softmax_temperature", l7_cfg.get("softmax_temp", 1.0))),
+        softmax_temp=float(
+            l7_cfg.get("softmax_temperature", l7_cfg.get("softmax_temp", 1.0))
+        ),
         buffer_k=int(l7_cfg.get("buffer_k", 15)),
         rebalance_interval=int(l7_cfg.get("rebalance_interval", 1)),
         # [개선안 36번] 오버래핑 트랜치 옵션 매핑(필수 기능)
-        overlapping_tranches_enabled=bool(l7_cfg.get("overlapping_tranches_enabled", False)),
+        overlapping_tranches_enabled=bool(
+            l7_cfg.get("overlapping_tranches_enabled", False)
+        ),
         tranche_holding_days=int(l7_cfg.get("tranche_holding_days", 120)),
         tranche_max_active=int(l7_cfg.get("tranche_max_active", 4)),
-        tranche_allocation_mode=str(l7_cfg.get("tranche_allocation_mode", "fixed_equal")),
+        tranche_allocation_mode=str(
+            l7_cfg.get("tranche_allocation_mode", "fixed_equal")
+        ),
         # [개선안 25번] config.yaml 옵션이 실제 백테스트에 반영되도록 매핑 보강
         diversify_enabled=bool(diversify_cfg.get("enabled", False)),
         group_col=str(diversify_cfg.get("group_col", "sector_name")),
         max_names_per_group=int(diversify_cfg.get("max_names_per_group", 4)),
         regime_enabled=bool(regime_cfg.get("enabled", False)),
-        regime_top_k_bull_strong=(int(regime_cfg["top_k_bull_strong"]) if "top_k_bull_strong" in regime_cfg and regime_cfg["top_k_bull_strong"] is not None else None),
-        regime_top_k_bull_weak=(int(regime_cfg["top_k_bull_weak"]) if "top_k_bull_weak" in regime_cfg and regime_cfg["top_k_bull_weak"] is not None else None),
-        regime_top_k_bear_strong=(int(regime_cfg["top_k_bear_strong"]) if "top_k_bear_strong" in regime_cfg and regime_cfg["top_k_bear_strong"] is not None else None),
-        regime_top_k_bear_weak=(int(regime_cfg["top_k_bear_weak"]) if "top_k_bear_weak" in regime_cfg and regime_cfg["top_k_bear_weak"] is not None else None),
-        regime_top_k_neutral=(int(regime_cfg["top_k_neutral"]) if "top_k_neutral" in regime_cfg and regime_cfg["top_k_neutral"] is not None else None),
-        regime_exposure_bull_strong=(float(regime_cfg["exposure_bull_strong"]) if "exposure_bull_strong" in regime_cfg and regime_cfg["exposure_bull_strong"] is not None else None),
-        regime_exposure_bull_weak=(float(regime_cfg["exposure_bull_weak"]) if "exposure_bull_weak" in regime_cfg and regime_cfg["exposure_bull_weak"] is not None else None),
-        regime_exposure_bear_strong=(float(regime_cfg["exposure_bear_strong"]) if "exposure_bear_strong" in regime_cfg and regime_cfg["exposure_bear_strong"] is not None else None),
-        regime_exposure_bear_weak=(float(regime_cfg["exposure_bear_weak"]) if "exposure_bear_weak" in regime_cfg and regime_cfg["exposure_bear_weak"] is not None else None),
-        regime_exposure_neutral=(float(regime_cfg["exposure_neutral"]) if "exposure_neutral" in regime_cfg and regime_cfg["exposure_neutral"] is not None else None),
-        regime_top_k_bull=(int(regime_cfg["top_k_bull"]) if "top_k_bull" in regime_cfg and regime_cfg["top_k_bull"] is not None else None),
-        regime_top_k_bear=(int(regime_cfg["top_k_bear"]) if "top_k_bear" in regime_cfg and regime_cfg["top_k_bear"] is not None else None),
-        regime_exposure_bull=(float(regime_cfg["exposure_bull"]) if "exposure_bull" in regime_cfg and regime_cfg["exposure_bull"] is not None else None),
-        regime_exposure_bear=(float(regime_cfg["exposure_bear"]) if "exposure_bear" in regime_cfg and regime_cfg["exposure_bear"] is not None else None),
+        regime_top_k_bull_strong=(
+            int(regime_cfg["top_k_bull_strong"])
+            if "top_k_bull_strong" in regime_cfg
+            and regime_cfg["top_k_bull_strong"] is not None
+            else None
+        ),
+        regime_top_k_bull_weak=(
+            int(regime_cfg["top_k_bull_weak"])
+            if "top_k_bull_weak" in regime_cfg
+            and regime_cfg["top_k_bull_weak"] is not None
+            else None
+        ),
+        regime_top_k_bear_strong=(
+            int(regime_cfg["top_k_bear_strong"])
+            if "top_k_bear_strong" in regime_cfg
+            and regime_cfg["top_k_bear_strong"] is not None
+            else None
+        ),
+        regime_top_k_bear_weak=(
+            int(regime_cfg["top_k_bear_weak"])
+            if "top_k_bear_weak" in regime_cfg
+            and regime_cfg["top_k_bear_weak"] is not None
+            else None
+        ),
+        regime_top_k_neutral=(
+            int(regime_cfg["top_k_neutral"])
+            if "top_k_neutral" in regime_cfg and regime_cfg["top_k_neutral"] is not None
+            else None
+        ),
+        regime_exposure_bull_strong=(
+            float(regime_cfg["exposure_bull_strong"])
+            if "exposure_bull_strong" in regime_cfg
+            and regime_cfg["exposure_bull_strong"] is not None
+            else None
+        ),
+        regime_exposure_bull_weak=(
+            float(regime_cfg["exposure_bull_weak"])
+            if "exposure_bull_weak" in regime_cfg
+            and regime_cfg["exposure_bull_weak"] is not None
+            else None
+        ),
+        regime_exposure_bear_strong=(
+            float(regime_cfg["exposure_bear_strong"])
+            if "exposure_bear_strong" in regime_cfg
+            and regime_cfg["exposure_bear_strong"] is not None
+            else None
+        ),
+        regime_exposure_bear_weak=(
+            float(regime_cfg["exposure_bear_weak"])
+            if "exposure_bear_weak" in regime_cfg
+            and regime_cfg["exposure_bear_weak"] is not None
+            else None
+        ),
+        regime_exposure_neutral=(
+            float(regime_cfg["exposure_neutral"])
+            if "exposure_neutral" in regime_cfg
+            and regime_cfg["exposure_neutral"] is not None
+            else None
+        ),
+        regime_top_k_bull=(
+            int(regime_cfg["top_k_bull"])
+            if "top_k_bull" in regime_cfg and regime_cfg["top_k_bull"] is not None
+            else None
+        ),
+        regime_top_k_bear=(
+            int(regime_cfg["top_k_bear"])
+            if "top_k_bear" in regime_cfg and regime_cfg["top_k_bear"] is not None
+            else None
+        ),
+        regime_exposure_bull=(
+            float(regime_cfg["exposure_bull"])
+            if "exposure_bull" in regime_cfg and regime_cfg["exposure_bull"] is not None
+            else None
+        ),
+        regime_exposure_bear=(
+            float(regime_cfg["exposure_bear"])
+            if "exposure_bear" in regime_cfg and regime_cfg["exposure_bear"] is not None
+            else None
+        ),
         smart_buffer_enabled=bool(l7_cfg.get("smart_buffer_enabled", True)),
-        smart_buffer_stability_threshold=float(l7_cfg.get("smart_buffer_stability_threshold", 0.7)),
-        volatility_adjustment_enabled=bool(l7_cfg.get("volatility_adjustment_enabled", True)),
+        smart_buffer_stability_threshold=float(
+            l7_cfg.get("smart_buffer_stability_threshold", 0.7)
+        ),
+        volatility_adjustment_enabled=bool(
+            l7_cfg.get("volatility_adjustment_enabled", True)
+        ),
         volatility_lookback_days=int(l7_cfg.get("volatility_lookback_days", 60)),
         target_volatility=float(l7_cfg.get("target_volatility", 0.15)),
         volatility_adjustment_max=float(l7_cfg.get("volatility_adjustment_max", 1.2)),
         volatility_adjustment_min=float(l7_cfg.get("volatility_adjustment_min", 0.7)),
         risk_scaling_enabled=bool(l7_cfg.get("risk_scaling_enabled", True)),
-        risk_scaling_bear_multiplier=float(l7_cfg.get("risk_scaling_bear_multiplier", 0.8)),
-        risk_scaling_neutral_multiplier=float(l7_cfg.get("risk_scaling_neutral_multiplier", 1.0)),
-        risk_scaling_bull_multiplier=float(l7_cfg.get("risk_scaling_bull_multiplier", 1.0)),
+        risk_scaling_bear_multiplier=float(
+            l7_cfg.get("risk_scaling_bear_multiplier", 0.8)
+        ),
+        risk_scaling_neutral_multiplier=float(
+            l7_cfg.get("risk_scaling_neutral_multiplier", 1.0)
+        ),
+        risk_scaling_bull_multiplier=float(
+            l7_cfg.get("risk_scaling_bull_multiplier", 1.0)
+        ),
     )
 
     # 시장 국면 데이터 (regime_enabled일 때)
@@ -198,8 +299,12 @@ def run_backtest_strategy(
 
         # [개선안 23번] build_market_regime 시그니처 호환: start_date/end_date 제거, ohlcv_daily 기반으로 생성
         ohlcv_daily = artifacts.get("ohlcv_daily")
-        if ohlcv_daily is None or (hasattr(ohlcv_daily, "__len__") and len(ohlcv_daily) == 0):
-            logger.warning("  ⚠️ ohlcv_daily가 없어 시장 국면 생성을 건너뜁니다. (regime 비활성)")
+        if ohlcv_daily is None or (
+            hasattr(ohlcv_daily, "__len__") and len(ohlcv_daily) == 0
+        ):
+            logger.warning(
+                "  ⚠️ ohlcv_daily가 없어 시장 국면 생성을 건너뜁니다. (regime 비활성)"
+            )
             market_regime_df = None
         else:
             # [개선안 27번] neutral_band 보정(전략별 의도 존중)
@@ -232,9 +337,30 @@ def run_backtest_strategy(
 
     # 결과 처리
     if len(result) == 10:
-        bt_pos, bt_ret, bt_eq, bt_met, quality, warns, selection_diagnostics, bt_returns_diagnostics, runtime_profile, bt_regime_metrics = result
+        (
+            bt_pos,
+            bt_ret,
+            bt_eq,
+            bt_met,
+            quality,
+            warns,
+            selection_diagnostics,
+            bt_returns_diagnostics,
+            runtime_profile,
+            bt_regime_metrics,
+        ) = result
     elif len(result) == 9:
-        bt_pos, bt_ret, bt_eq, bt_met, quality, warns, selection_diagnostics, bt_returns_diagnostics, runtime_profile = result
+        (
+            bt_pos,
+            bt_ret,
+            bt_eq,
+            bt_met,
+            quality,
+            warns,
+            selection_diagnostics,
+            bt_returns_diagnostics,
+            runtime_profile,
+        ) = result
         bt_regime_metrics = None
     elif len(result) == 6:
         bt_pos, bt_ret, bt_eq, bt_met, quality, warns = result
@@ -254,13 +380,25 @@ def run_backtest_strategy(
 
     # [개선안 28번] 원인 진단 근거 저장 (옵션 산출물)
     if selection_diagnostics is not None:
-        save_artifact(selection_diagnostics, interim_dir / f"bt_selection_diagnostics{suffix}", force=True)
+        save_artifact(
+            selection_diagnostics,
+            interim_dir / f"bt_selection_diagnostics{suffix}",
+            force=True,
+        )
     if bt_returns_diagnostics is not None:
-        save_artifact(bt_returns_diagnostics, interim_dir / f"bt_returns_diagnostics{suffix}", force=True)
+        save_artifact(
+            bt_returns_diagnostics,
+            interim_dir / f"bt_returns_diagnostics{suffix}",
+            force=True,
+        )
     if runtime_profile is not None:
-        save_artifact(runtime_profile, interim_dir / f"bt_runtime_profile{suffix}", force=True)
+        save_artifact(
+            runtime_profile, interim_dir / f"bt_runtime_profile{suffix}", force=True
+        )
     if bt_regime_metrics is not None:
-        save_artifact(bt_regime_metrics, interim_dir / f"bt_regime_metrics{suffix}", force=True)
+        save_artifact(
+            bt_regime_metrics, interim_dir / f"bt_regime_metrics{suffix}", force=True
+        )
 
     logger.info("✅ 백테스트 전략 실행 완료")
 
@@ -274,10 +412,11 @@ def run_backtest_strategy(
 
 if __name__ == "__main__":
     import sys
+
     logging.basicConfig(
         level=logging.INFO,
         format="[%(asctime)s] [%(levelname)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     strategy = sys.argv[1] if len(sys.argv) > 1 else "bt20_short"

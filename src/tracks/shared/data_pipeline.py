@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 공통 데이터 준비 파이프라인 (L0~L4)
 
@@ -12,23 +11,16 @@
 """
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional
 
 import pandas as pd
 
 # 데이터 수집 함수들 (기존 그대로 사용)
 from src.tracks.shared.stages.data.l0_universe import build_k200_membership_month_end
 from src.tracks.shared.stages.data.l1_ohlcv import download_ohlcv_panel
-from src.tracks.shared.stages.data.l2_fundamentals_dart import (
-    download_annual_fundamentals,
-)
 from src.tracks.shared.stages.data.l3_panel_merge import build_panel_merged_daily
 from src.tracks.shared.stages.data.l4_walkforward_split import build_targets_and_folds
 from src.utils.config import get_path, load_config
 from src.utils.io import artifact_exists, load_artifact, save_artifact
-from src.utils.meta import build_meta, save_meta
-from src.utils.quality import fundamental_coverage_report, walkforward_quality_report
-from src.utils.validate import raise_if_invalid, validate_df
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +28,7 @@ logger = logging.getLogger(__name__)
 def prepare_common_data(
     config_path: str = "configs/config.yaml",
     force_rebuild: bool = False,
-) -> Dict[str, pd.DataFrame]:
+) -> dict[str, pd.DataFrame]:
     """
     공통 데이터 준비 파이프라인 실행 (L0~L4)
 
@@ -81,7 +73,9 @@ def prepare_common_data(
     uni_path = interim_dir / "universe_k200_membership_monthly"
     if artifact_exists(uni_path) and not force_rebuild:
         artifacts["universe_k200_membership_monthly"] = load_artifact(uni_path)
-        logger.info(f"  ✓ 캐시에서 로드: {len(artifacts['universe_k200_membership_monthly']):,}행")
+        logger.info(
+            f"  ✓ 캐시에서 로드: {len(artifacts['universe_k200_membership_monthly']):,}행"
+        )
     else:
         logger.info("  → 유니버스 생성 중...")
         df = build_k200_membership_month_end(
@@ -102,7 +96,12 @@ def prepare_common_data(
         logger.info(f"  ✓ 캐시에서 로드: {len(artifacts['ohlcv_daily']):,}행")
     else:
         logger.info("  → OHLCV 다운로드 중...")
-        tickers = sorted(artifacts["universe_k200_membership_monthly"]["ticker"].astype(str).unique().tolist())
+        tickers = sorted(
+            artifacts["universe_k200_membership_monthly"]["ticker"]
+            .astype(str)
+            .unique()
+            .tolist()
+        )
         df = download_ohlcv_panel(
             tickers=tickers,
             start_date=p.get("start_date", "2016-01-01"),
@@ -124,9 +123,13 @@ def prepare_common_data(
         # 기존 데이터가 있으면 사용, 없으면 None (L3에서 처리)
         if fund_path.exists():
             artifacts["fundamentals_annual"] = load_artifact(fund_path)
-            logger.info(f"  ✓ 기존 데이터 사용: {len(artifacts['fundamentals_annual']):,}행")
+            logger.info(
+                f"  ✓ 기존 데이터 사용: {len(artifacts['fundamentals_annual']):,}행"
+            )
         else:
-            logger.warning("  ⚠ 재무 데이터가 없습니다. L3에서 재무 데이터 없이 진행합니다.")
+            logger.warning(
+                "  ⚠ 재무 데이터가 없습니다. L3에서 재무 데이터 없이 진행합니다."
+            )
             artifacts["fundamentals_annual"] = None
 
     # L3: 패널 병합
@@ -144,8 +147,10 @@ def prepare_common_data(
             ohlcv_daily=artifacts["ohlcv_daily"],
             fundamentals_annual=artifacts.get("fundamentals_annual"),
             news_sentiment_daily=None,  # 선택적
-            esg_sentiment_daily=None,    # 선택적
-            universe_k200_membership_monthly=artifacts["universe_k200_membership_monthly"],
+            esg_sentiment_daily=None,  # 선택적
+            universe_k200_membership_monthly=artifacts[
+                "universe_k200_membership_monthly"
+            ],
             disclosure_lag_days=lag_days,
             sector_map_enabled=l3_cfg.get("sector_map_enabled", True),
         )
@@ -159,10 +164,12 @@ def prepare_common_data(
     cv_short_path = interim_dir / "cv_folds_short"
     cv_long_path = interim_dir / "cv_folds_long"
 
-    if (artifact_exists(dataset_path) and
-        artifact_exists(cv_short_path) and
-        artifact_exists(cv_long_path) and
-        not force_rebuild):
+    if (
+        artifact_exists(dataset_path)
+        and artifact_exists(cv_short_path)
+        and artifact_exists(cv_long_path)
+        and not force_rebuild
+    ):
         artifacts["dataset_daily"] = load_artifact(dataset_path)
         artifacts["cv_folds_short"] = load_artifact(cv_short_path)
         artifacts["cv_folds_long"] = load_artifact(cv_long_path)
@@ -191,7 +198,9 @@ def prepare_common_data(
         save_artifact(dataset, dataset_path, force=True)
         save_artifact(folds_short, cv_short_path, force=True)
         save_artifact(folds_long, cv_long_path, force=True)
-        logger.info(f"  ✓ 생성 완료: dataset {len(dataset):,}행, folds_short {len(folds_short):,}행, folds_long {len(folds_long):,}행")
+        logger.info(
+            f"  ✓ 생성 완료: dataset {len(dataset):,}행, folds_short {len(folds_short):,}행, folds_long {len(folds_long):,}행"
+        )
 
     logger.info("=" * 80)
     logger.info("✅ 공통 데이터 준비 완료")
@@ -202,10 +211,11 @@ def prepare_common_data(
 
 if __name__ == "__main__":
     import sys
+
     logging.basicConfig(
         level=logging.INFO,
         format="[%(asctime)s] [%(levelname)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     force = "--force" in sys.argv

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 L5~L7 파이프라인 실행 스크립트 (재현성 검증용)
 """
@@ -15,10 +14,11 @@ from src.stages.modeling.l5_train_models import train_oos_predictions
 from src.stages.modeling.l6_scoring import build_rebalance_scores
 from src.tracks.track_b.stages.backtest.l7_backtest import BacktestConfig, run_backtest
 from src.utils.config import get_path, load_config
-from src.utils.io import load_artifact, save_artifact
+from src.utils.io import load_artifact
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 def run_L5_train_models(cfg, artifacts, *, force=False):
     """L5: 앙상블 모델 학습"""
@@ -34,11 +34,12 @@ def run_L5_train_models(cfg, artifacts, *, force=False):
         dataset_daily=dataset_daily,
         targets_and_folds=targets_and_folds,
         cfg=cfg,
-        force=force
+        force=force,
     )
 
     logger.info(f"[L5] 완료: {len(predictions_df):,}행")
     return {"predictions_oos": predictions_df}, []
+
 
 def run_L6_scoring(cfg, artifacts, *, force=False):
     """L6: 리밸런싱 스코어 생성"""
@@ -50,13 +51,12 @@ def run_L6_scoring(cfg, artifacts, *, force=False):
 
     # 스코어 생성
     scores_df = build_rebalance_scores(
-        dataset_daily=dataset_daily,
-        predictions_df=predictions_df,
-        cfg=cfg
+        dataset_daily=dataset_daily, predictions_df=predictions_df, cfg=cfg
     )
 
     logger.info(f"[L6] 완료: {len(scores_df):,}행")
     return {"scores_daily": scores_df}, []
+
 
 def run_L7_backtest(cfg, artifacts, *, force=False):
     """L7: 백테스트 실행"""
@@ -76,7 +76,9 @@ def run_L7_backtest(cfg, artifacts, *, force=False):
         return_col=cfg.get("l7", {}).get("return_col", "true_short"),
         rebalance_interval=cfg.get("l7", {}).get("rebalance_interval", 20),
         smart_buffer_enabled=cfg.get("l7", {}).get("smart_buffer_enabled", True),
-        volatility_adjustment_enabled=cfg.get("l7", {}).get("volatility_adjustment_enabled", True),
+        volatility_adjustment_enabled=cfg.get("l7", {}).get(
+            "volatility_adjustment_enabled", True
+        ),
         volatility_lookback_days=cfg.get("l7", {}).get("volatility_lookback_days", 60),
     )
 
@@ -85,18 +87,19 @@ def run_L7_backtest(cfg, artifacts, *, force=False):
         scores_df=scores_df,
         targets_and_folds=targets_and_folds,
         dataset_daily=dataset_daily,
-        bt_cfg=bt_cfg
+        bt_cfg=bt_cfg,
     )
 
     logger.info(f"[L7] 완료: {len(bt_results):,}개 전략")
     return {"backtest_results": bt_results}, []
 
+
 def main():
     """L5~L7 파이프라인 실행"""
-    cfg = load_config('configs/config.yaml')
+    cfg = load_config("configs/config.yaml")
 
     print("🚀 L5~L7 파이프라인 실행 (재현성 검증)")
-    print("="*60)
+    print("=" * 60)
 
     artifacts = {}
 
@@ -119,8 +122,10 @@ def main():
     except Exception as e:
         print(f"❌ L5~L7 파이프라인 실패: {str(e)}")
         import traceback
+
         traceback.print_exc()
         return False
+
 
 if __name__ == "__main__":
     success = main()

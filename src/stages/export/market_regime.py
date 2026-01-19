@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/export/market_regime.py
 """
 [Stage10] 시장 국면(Regime) 지표 계산
@@ -12,7 +11,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -22,17 +21,23 @@ src_dir = Path(__file__).resolve().parent.parent
 if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
 
+
 def _require_pykrx():
     """pykrx 모듈 import"""
     try:
         from pykrx import stock
+
         return stock
     except ImportError as e:
-        raise ImportError("pykrx가 필요합니다. `pip install pykrx` 후 재실행하세요.") from e
+        raise ImportError(
+            "pykrx가 필요합니다. `pip install pykrx` 후 재실행하세요."
+        ) from e
+
 
 def _to_yyyymmdd(s: str) -> str:
     """날짜를 YYYYMMDD 형식으로 변환"""
     return pd.to_datetime(s).strftime("%Y%m%d")
+
 
 def download_kospi200_index(
     start_date: str,
@@ -125,6 +130,7 @@ def download_kospi200_index(
     except Exception as e:
         raise RuntimeError(f"KOSPI200 지수 다운로드 실패: {e}") from e
 
+
 def build_market_proxy_from_universe(
     ohlcv_daily: pd.DataFrame,
     universe_daily: pd.DataFrame,
@@ -143,7 +149,9 @@ def build_market_proxy_from_universe(
     """
     # 유니버스 멤버십 필터링
     if "in_universe" in universe_daily.columns:
-        universe_tickers = universe_daily[universe_daily["in_universe"]]["ticker"].unique()
+        universe_tickers = universe_daily[universe_daily["in_universe"]][
+            "ticker"
+        ].unique()
     else:
         universe_tickers = universe_daily["ticker"].unique()
 
@@ -164,12 +172,15 @@ def build_market_proxy_from_universe(
     cumulative_ret = (1 + daily_ret).cumprod() * 100
 
     # 결과 DataFrame 생성
-    result = pd.DataFrame({
-        "date": pd.to_datetime(daily_ret.index),
-        "close": cumulative_ret.values,
-    })
+    result = pd.DataFrame(
+        {
+            "date": pd.to_datetime(daily_ret.index),
+            "close": cumulative_ret.values,
+        }
+    )
 
     return result.sort_values("date").reset_index(drop=True)
+
 
 def calculate_regime_score(
     index_data: pd.DataFrame,
@@ -230,7 +241,9 @@ def calculate_regime_score(
     # 고점 대비 위치 (0~1)
     price_range = rolling_max - rolling_min
     price_position_ratio = (df["close"] - rolling_min) / price_range.replace(0, np.nan)
-    price_position_ratio = np.nan_to_num(price_position_ratio, nan=0.5)  # NaN이면 중간값
+    price_position_ratio = np.nan_to_num(
+        price_position_ratio, nan=0.5
+    )  # NaN이면 중간값
 
     # 0~30점으로 변환
     price_position = price_position_ratio * 30
@@ -244,13 +257,16 @@ def calculate_regime_score(
     regime_label[regime_score >= 60] = "BULL"
     regime_label[regime_score <= 40] = "BEAR"
 
-    result = pd.DataFrame({
-        "date": df["date"],
-        "regime_score": regime_score,
-        "regime_label": regime_label,
-    })
+    result = pd.DataFrame(
+        {
+            "date": df["date"],
+            "regime_score": regime_score,
+            "regime_label": regime_label,
+        }
+    )
 
     return result
+
 
 def build_market_regime_daily(
     start_date: str,
@@ -282,10 +298,12 @@ def build_market_regime_daily(
     if use_pykrx:
         try:
             index_data = download_kospi200_index(start_date, end_date, cache_dir)
-            print(f"[Market Regime] pykrx로 KOSPI200 지수 다운로드 성공: {len(index_data)} rows")
+            print(
+                f"[Market Regime] pykrx로 KOSPI200 지수 다운로드 성공: {len(index_data)} rows"
+            )
         except Exception as e:
             print(f"[Market Regime] pykrx 다운로드 실패: {e}")
-            print(f"[Market Regime] 우선순위 B로 전환: universe 동일가중 수익률 사용")
+            print("[Market Regime] 우선순위 B로 전환: universe 동일가중 수익률 사용")
             use_pykrx = False
 
     # 우선순위 B: universe 동일가중 수익률로 시장 proxy 생성
@@ -296,7 +314,9 @@ def build_market_regime_daily(
             )
 
         index_data = build_market_proxy_from_universe(ohlcv_daily, universe_daily)
-        print(f"[Market Regime] universe 동일가중 수익률로 시장 proxy 생성: {len(index_data)} rows")
+        print(
+            f"[Market Regime] universe 동일가중 수익률로 시장 proxy 생성: {len(index_data)} rows"
+        )
 
     # 국면 점수 계산
     regime_df = calculate_regime_score(index_data, lookback_days=lookback_days)

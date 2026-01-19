@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 간단한 Track A/B 재현성 검증 스크립트
 
@@ -14,22 +13,21 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from datetime import datetime
 
 import numpy as np
-import pandas as pd
 
 from src.utils.config import load_config
-from src.utils.io import load_artifact, save_artifact
+from src.utils.io import load_artifact
 
 
 def analyze_current_ensemble_weights():
     """현재 설정된 앙상블 가중치를 분석"""
     print("🔍 현재 앙상블 가중치 설정 분석")
-    print("="*60)
+    print("=" * 60)
 
-    cfg = load_config('configs/config.yaml')
-    l5 = cfg.get('l5', {})
+    cfg = load_config("configs/config.yaml")
+    l5 = cfg.get("l5", {})
 
     print("📊 단기 호리즌 앙상블 가중치:")
-    short_weights = l5.get('ensemble_weights_short', {})
+    short_weights = l5.get("ensemble_weights_short", {})
     if short_weights:
         for model, weight in short_weights.items():
             print(".3f")
@@ -38,7 +36,7 @@ def analyze_current_ensemble_weights():
         print("  ❌ 설정되지 않음")
 
     print("\n📊 장기 호리즌 앙상블 가중치:")
-    long_weights = l5.get('ensemble_weights_long', {})
+    long_weights = l5.get("ensemble_weights_long", {})
     if long_weights:
         for model, weight in long_weights.items():
             print(".3f")
@@ -48,25 +46,26 @@ def analyze_current_ensemble_weights():
 
     return short_weights, long_weights
 
+
 def check_available_data():
     """현재 사용 가능한 데이터 확인"""
     print("\n🔍 사용 가능한 데이터 파일 확인")
-    print("="*60)
+    print("=" * 60)
 
-    interim_dir = PROJECT_ROOT / 'data' / 'interim'
+    interim_dir = PROJECT_ROOT / "data" / "interim"
     available_files = []
 
     # 확인할 파일들
     required_files = [
-        'dataset_daily.parquet',
-        'cv_folds_short.parquet',
-        'cv_folds_long.parquet',
-        'universe_k200_membership_monthly.parquet',
-        'pred_short_oos.parquet',
-        'pred_long_oos.parquet',
-        'rebalance_scores.parquet',
-        'ranking_short_daily.parquet',
-        'ranking_long_daily.parquet'
+        "dataset_daily.parquet",
+        "cv_folds_short.parquet",
+        "cv_folds_long.parquet",
+        "universe_k200_membership_monthly.parquet",
+        "pred_short_oos.parquet",
+        "pred_long_oos.parquet",
+        "rebalance_scores.parquet",
+        "ranking_short_daily.parquet",
+        "ranking_long_daily.parquet",
     ]
 
     for file in required_files:
@@ -79,22 +78,25 @@ def check_available_data():
 
     return available_files
 
+
 def simulate_reproducibility_test(n_iterations=3):
     """재현성 검증 시뮬레이션 (데이터 기반)"""
     print(f"\n🔬 재현성 검증 시뮬레이션 (반복 {n_iterations}회)")
-    print("="*60)
+    print("=" * 60)
 
     # 현재 사용 가능한 데이터 확인
     available_data = check_available_data()
 
-    if 'rebalance_scores.parquet' in available_data:
+    if "rebalance_scores.parquet" in available_data:
         print("\n✅ L6 스코어 데이터 사용 가능")
         try:
-            scores_df = load_artifact(PROJECT_ROOT / 'data' / 'interim' / 'rebalance_scores.parquet')
+            scores_df = load_artifact(
+                PROJECT_ROOT / "data" / "interim" / "rebalance_scores.parquet"
+            )
             print(f"  데이터 크기: {len(scores_df):,}행 x {len(scores_df.columns)}열")
 
             # 기본 통계 계산
-            score_cols = [col for col in scores_df.columns if 'score' in col.lower()]
+            score_cols = [col for col in scores_df.columns if "score" in col.lower()]
             if score_cols:
                 print("  스코어 컬럼 통계:")
                 for col in score_cols[:3]:  # 상위 3개만
@@ -141,10 +143,11 @@ def simulate_reproducibility_test(n_iterations=3):
     else:
         print("❌ L6 스코어 데이터가 없어 재현성 검증을 수행할 수 없습니다.")
 
+
 def main():
     """메인 함수"""
     print("🎯 Track A/B 재현성 검증 (현재 설정 기반)")
-    print("="*80)
+    print("=" * 80)
     print(f"실행 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     # 현재 앙상블 가중치 분석
@@ -154,7 +157,7 @@ def main():
     simulate_reproducibility_test(n_iterations=3)
 
     print("\n🏆 검증 완료 요약")
-    print("="*50)
+    print("=" * 50)
     print("✅ 현재 앙상블 가중치 설정 확인")
     print("✅ 사용 가능한 데이터 파일 점검")
     print("✅ 재현성 시뮬레이션 수행")
@@ -164,6 +167,7 @@ def main():
         print("✅ 앙상블 가중치 정상 설정됨")
     else:
         print("⚠️ 앙상블 가중치 설정 필요")
+
 
 if __name__ == "__main__":
     main()

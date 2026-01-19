@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 [개선안 17번] 프로젝트 진행상황 보고서(MD) 자동 생성기
 
@@ -19,7 +18,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import pandas as pd
 
@@ -33,7 +32,9 @@ def _read_yaml(path: Path) -> dict:
     try:
         import yaml
     except Exception as e:
-        raise ImportError("PyYAML이 필요합니다. `pip install pyyaml` 후 재실행하세요.") from e
+        raise ImportError(
+            "PyYAML이 필요합니다. `pip install pyyaml` 후 재실행하세요."
+        ) from e
     with path.open("r", encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
@@ -92,8 +93,8 @@ def _fmt_num(x: Any, ndigits: int = 2) -> str:
         return ""
 
 
-def _pick_phase_rows(bt_metrics: pd.DataFrame) -> Dict[str, dict]:
-    out: Dict[str, dict] = {}
+def _pick_phase_rows(bt_metrics: pd.DataFrame) -> dict[str, dict]:
+    out: dict[str, dict] = {}
     if bt_metrics is None or bt_metrics.empty:
         return out
     for _, r in bt_metrics.iterrows():
@@ -105,6 +106,7 @@ def _pick_phase_rows(bt_metrics: pd.DataFrame) -> Dict[str, dict]:
 
 def _metrics_table_from_bt(bt: pd.DataFrame) -> str:
     rows = _pick_phase_rows(bt)
+
     # bt_metrics schema differs by experiment; handle best-effort
     def get(r: dict, key: str) -> Any:
         return r.get(key, "")
@@ -158,7 +160,7 @@ def _metrics_table_from_bt(bt: pd.DataFrame) -> str:
     return "".join(lines)
 
 
-def _load_feature_lists(root: Path) -> Tuple[List[str], List[str], List[str]]:
+def _load_feature_lists(root: Path) -> tuple[list[str], list[str], list[str]]:
     """
     feature_groups.yaml / feature_groups_short.yaml / feature_groups_long.yaml에서
     등장하는 피처명을 리스트로 수집한다.
@@ -169,10 +171,10 @@ def _load_feature_lists(root: Path) -> Tuple[List[str], List[str], List[str]]:
         cfg_dir / "feature_groups_short.yaml",
         cfg_dir / "feature_groups_long.yaml",
     ]
-    out: List[List[str]] = []
+    out: list[list[str]] = []
     for p in paths:
         d = _read_yaml(p) if p.exists() else {}
-        feats: List[str] = []
+        feats: list[str] = []
         fg = d.get("feature_groups", {}) or {}
         if isinstance(fg, dict):
             for _, grp in fg.items():
@@ -249,7 +251,13 @@ def build_report_md(
     # Feature group balance
     group_balance_md = ""
     if feature_group_balance_root is not None and not feature_group_balance_root.empty:
-        cols_need = ["group_name", "n_features", "target_weight", "actual_weight", "balance_ratio"]
+        cols_need = [
+            "group_name",
+            "n_features",
+            "target_weight",
+            "actual_weight",
+            "balance_ratio",
+        ]
         if all(c in feature_group_balance_root.columns for c in cols_need):
             gb = feature_group_balance_root[cols_need].copy()
             group_balance_md += "| group | n_features | target_weight | actual_weight | balance_ratio |\n"
@@ -262,44 +270,76 @@ def build_report_md(
         else:
             group_balance_md = "_feature_group_balance.parquet 스키마가 예상과 달라 요약을 생략했습니다._\n"
     else:
-        group_balance_md = "_feature_group_balance.parquet을 찾지 못해 요약을 생략했습니다._\n"
+        group_balance_md = (
+            "_feature_group_balance.parquet을 찾지 못해 요약을 생략했습니다._\n"
+        )
 
     # Feature importance (top by abs_coef_mean)
     feat_imp_md = ""
-    if feature_importance_summary_root is not None and not feature_importance_summary_root.empty:
-        cols_need = ["horizon", "phase", "feature", "abs_coef_mean", "coef_sign_stability", "n_folds"]
+    if (
+        feature_importance_summary_root is not None
+        and not feature_importance_summary_root.empty
+    ):
+        cols_need = [
+            "horizon",
+            "phase",
+            "feature",
+            "abs_coef_mean",
+            "coef_sign_stability",
+            "n_folds",
+        ]
         if all(c in feature_importance_summary_root.columns for c in cols_need):
             fi = feature_importance_summary_root[cols_need].copy()
-            fi = fi.sort_values(["phase", "horizon", "abs_coef_mean"], ascending=[True, True, False])
-            feat_imp_md += "상위 10개(phase=dev, horizon=20 기준, abs_coef_mean 내림차순):\n\n"
+            fi = fi.sort_values(
+                ["phase", "horizon", "abs_coef_mean"], ascending=[True, True, False]
+            )
+            feat_imp_md += (
+                "상위 10개(phase=dev, horizon=20 기준, abs_coef_mean 내림차순):\n\n"
+            )
             sub = fi[(fi["phase"] == "dev") & (fi["horizon"] == 20)].head(10)
-            feat_imp_md += "| feature | abs_coef_mean | coef_sign_stability | n_folds |\n"
+            feat_imp_md += (
+                "| feature | abs_coef_mean | coef_sign_stability | n_folds |\n"
+            )
             feat_imp_md += "|---|---:|---:|---:|\n"
             for _, r in sub.iterrows():
-                feat_imp_md += (
-                    f"| {r['feature']} | {_fmt_num(r['abs_coef_mean'], 4)} | {_fmt_num(r['coef_sign_stability'], 2)} | {int(r['n_folds'])} |\n"
-                )
+                feat_imp_md += f"| {r['feature']} | {_fmt_num(r['abs_coef_mean'], 4)} | {_fmt_num(r['coef_sign_stability'], 2)} | {int(r['n_folds'])} |\n"
         else:
             feat_imp_md = "_feature_importance_summary.parquet 스키마가 예상과 달라 요약을 생략했습니다._\n"
     else:
-        feat_imp_md = "_feature_importance_summary.parquet을 찾지 못해 요약을 생략했습니다._\n"
+        feat_imp_md = (
+            "_feature_importance_summary.parquet을 찾지 못해 요약을 생략했습니다._\n"
+        )
 
     # Backtest metrics
     bt_root_md = "_data/interim 루트 bt_metrics.parquet_:\n\n"
-    bt_root_md += _metrics_table_from_bt(bt_metrics_root) if bt_metrics_root is not None else "_없음_\n"
+    bt_root_md += (
+        _metrics_table_from_bt(bt_metrics_root)
+        if bt_metrics_root is not None
+        else "_없음_\n"
+    )
     bt_a_md = "_Option A only (20d) bt_metrics.parquet_:\n\n"
-    bt_a_md += _metrics_table_from_bt(bt_metrics_option_a_20d) if bt_metrics_option_a_20d is not None else "_없음_\n"
+    bt_a_md += (
+        _metrics_table_from_bt(bt_metrics_option_a_20d)
+        if bt_metrics_option_a_20d is not None
+        else "_없음_\n"
+    )
 
     # Config summary
     cfg_md = f"""- 기간: **{p.get('start_date')} ~ {p.get('end_date')}**\n- 유니버스: **KOSPI200** (index_code={p.get('index_code')})\n- L4: horizon_short={l4.get('horizon_short')}, horizon_long={l4.get('horizon_long')}, step_days={l4.get('step_days')}, embargo_days={l4.get('embargo_days')}\n- L5(모델): model_type={l5.get('model_type')}, target_transform={l5.get('target_transform')}, ridge_alpha={l5.get('ridge_alpha')}, tune_alpha={l5.get('tune_alpha')}\n- L6(앙상블): weight_short={l6.get('weight_short')}, weight_long={l6.get('weight_long')}, invert_score_sign={l6.get('invert_score_sign')}\n- L7(백테스트): holding_days={l7.get('holding_days')}, top_k={l7.get('top_k')}, cost_bps={l7.get('cost_bps')}, buffer_k={l7.get('buffer_k')}, weighting={l7.get('weighting')}\n- L7 Regime: enabled={((l7.get('regime') or {}).get('enabled'))}, lookback_days={((l7.get('regime') or {}).get('lookback_days'))}\n"""
 
     # Note about mismatches
     mismatch_note = ""
-    if bt_metrics_root is not None and not bt_metrics_root.empty and "buffer_k" in bt_metrics_root.columns:
+    if (
+        bt_metrics_root is not None
+        and not bt_metrics_root.empty
+        and "buffer_k" in bt_metrics_root.columns
+    ):
         # config vs root interim may mismatch due to skip
         try:
             buf_cfg = int(l7.get("buffer_k", 0))
-            buf_art = int(bt_metrics_root[bt_metrics_root["phase"] == "dev"]["buffer_k"].iloc[0])
+            buf_art = int(
+                bt_metrics_root[bt_metrics_root["phase"] == "dev"]["buffer_k"].iloc[0]
+            )
             if buf_cfg != buf_art:
                 mismatch_note = (
                     "\n> ⚠️ **주의**: 현재 `configs/config.yaml`의 값과 `data/interim` 루트 산출물이 불일치할 수 있습니다.\n"

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/pre_stage13_probe.py
 """
 [Stage13 사전 분석] L7 백테스트 실행 전 병목 분석
@@ -12,21 +11,16 @@
 import argparse
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 import pyarrow.parquet as pq
-import yaml
 
 # 프로젝트 루트 경로 고정
 BASE_DIR = Path(r"C:\Users\seong\OneDrive\Desktop\bootcamp\03_code")
 sys.path.insert(0, str(BASE_DIR / "src"))
 
-from src.utils.config import get_path, load_config
-from src.utils.io import artifact_exists, load_artifact
 
-
-def analyze_l7_code_scan(base_dir: Path) -> Dict:
+def analyze_l7_code_scan(base_dir: Path) -> dict:
     """
     [1] L7가 "정말로" 무엇을 수행하는지 확인 (코드 스캔)
     """
@@ -78,10 +72,9 @@ def analyze_l7_code_scan(base_dir: Path) -> Dict:
 
     return results
 
+
 def measure_input_files(
-    base_dir: Path,
-    pipeline_tag: str,
-    global_tag: str
+    base_dir: Path, pipeline_tag: str, global_tag: str
 ) -> pd.DataFrame:
     """
     [2] Stage13 실행에 필요한 "입력 파일 존재/크기/행수"만 빠르게 측정
@@ -95,7 +88,11 @@ def measure_input_files(
     files_to_check = [
         # Pipeline baseline (stage6)
         (pipeline_dir / "rebalance_scores.parquet", "rebalance_scores", "pipeline"),
-        (pipeline_dir / "rebalance_scores_summary.parquet", "rebalance_scores_summary", "pipeline"),
+        (
+            pipeline_dir / "rebalance_scores_summary.parquet",
+            "rebalance_scores_summary",
+            "pipeline",
+        ),
         (pipeline_dir / "ohlcv_daily.parquet", "ohlcv_daily", "pipeline"),
         (pipeline_dir / "panel_merged_daily.parquet", "panel_merged_daily", "pipeline"),
         # L2 재사용
@@ -134,7 +131,12 @@ def measure_input_files(
 
                     # 날짜 범위 확인 (date 컬럼이 있으면)
                     try:
-                        df_sample = pd.read_parquet(file_path, columns=["date"] if "date" in parquet_file.schema.names else [])
+                        df_sample = pd.read_parquet(
+                            file_path,
+                            columns=(
+                                ["date"] if "date" in parquet_file.schema.names else []
+                            ),
+                        )
                         if "date" in df_sample.columns:
                             df_sample["date"] = pd.to_datetime(df_sample["date"])
                             row["date_min"] = str(df_sample["date"].min())
@@ -163,16 +165,16 @@ def measure_input_files(
     df = pd.DataFrame(rows)
     return df
 
-def profile_rebalance_scores(
-    base_dir: Path,
-    pipeline_tag: str
-) -> Dict:
+
+def profile_rebalance_scores(base_dir: Path, pipeline_tag: str) -> dict:
     """
     [3] rebalance_scores 품질 점검 (L7 실행시간 결정 1순위)
     """
     print("[3] rebalance_scores 품질 점검 중...")
 
-    rebalance_scores_path = base_dir / "data" / "interim" / pipeline_tag / "rebalance_scores.parquet"
+    rebalance_scores_path = (
+        base_dir / "data" / "interim" / pipeline_tag / "rebalance_scores.parquet"
+    )
 
     if not rebalance_scores_path.exists():
         return {
@@ -243,11 +245,8 @@ def profile_rebalance_scores(
             "cols": None,
         }
 
-def check_regime_coverage(
-    base_dir: Path,
-    pipeline_tag: str,
-    global_tag: str
-) -> Dict:
+
+def check_regime_coverage(base_dir: Path, pipeline_tag: str, global_tag: str) -> dict:
     """
     [4] "regime 컬럼 결측 95% 문제" 재발 가능성 사전 판정
     """
@@ -316,7 +315,11 @@ def check_regime_coverage(
 
         # 겹침 계산
         overlap_dates = rebalance_dates & regime_dates
-        coverage_pct = (len(overlap_dates) / len(rebalance_dates) * 100) if rebalance_dates else 0.0
+        coverage_pct = (
+            (len(overlap_dates) / len(rebalance_dates) * 100)
+            if rebalance_dates
+            else 0.0
+        )
 
         return {
             "regime_source_path": str(regime_path),
@@ -332,7 +335,13 @@ def check_regime_coverage(
             },
             "overlap_dates_count": len(overlap_dates),
             "coverage_pct": round(coverage_pct, 2),
-            "risk_assessment": "HIGH" if coverage_pct < 50 else "LOW" if coverage_pct >= 90 else "MEDIUM",
+            "risk_assessment": (
+                "HIGH"
+                if coverage_pct < 50
+                else "LOW"
+                if coverage_pct >= 90
+                else "MEDIUM"
+            ),
         }
     except Exception as e:
         return {
@@ -340,7 +349,8 @@ def check_regime_coverage(
             "coverage_pct": None,
         }
 
-def analyze_min_run_plan(base_dir: Path) -> Dict:
+
+def analyze_min_run_plan(base_dir: Path) -> dict:
     """
     [5] Stage13 시간을 줄일 수 있는 "최소 실행 플랜" 후보 도출
     """
@@ -377,14 +387,19 @@ def analyze_min_run_plan(base_dir: Path) -> Dict:
         content = l7_backtest_file.read_text(encoding="utf-8")
         if "def run_backtest" in content:
             # 날짜 필터링 옵션 확인
-            if "date_range" not in content and "start_date" not in content and "end_date" not in content:
+            if (
+                "date_range" not in content
+                and "start_date" not in content
+                and "end_date" not in content
+            ):
                 results["B_date_range_limit"]["possible"] = False
             else:
                 results["B_date_range_limit"]["possible"] = True
 
     return results
 
-def save_scan_report(base_dir: Path, scan_results: Dict):
+
+def save_scan_report(base_dir: Path, scan_results: dict):
     """[1] L7 코드 스캔 결과 저장"""
     output_path = base_dir / "reports" / "analysis" / "pre_stage13_scan.md"
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -419,6 +434,7 @@ def save_scan_report(base_dir: Path, scan_results: Dict):
     output_path.write_text(md_content, encoding="utf-8")
     print(f"  [OK] 저장 완료: {output_path}")
 
+
 def save_inputs_report(base_dir: Path, df_inputs: pd.DataFrame):
     """[2] 입력 파일 존재/크기/행수 저장"""
     output_path = base_dir / "reports" / "analysis" / "pre_stage13_inputs.csv"
@@ -427,9 +443,12 @@ def save_inputs_report(base_dir: Path, df_inputs: pd.DataFrame):
     df_inputs.to_csv(output_path, index=False, encoding="utf-8-sig")
     print(f"  [OK] 저장 완료: {output_path}")
 
-def save_rebalance_profile(base_dir: Path, profile: Dict):
+
+def save_rebalance_profile(base_dir: Path, profile: dict):
     """[3] rebalance_scores 품질 점검 결과 저장"""
-    output_path = base_dir / "reports" / "analysis" / "pre_stage13_rebalance_scores_profile.md"
+    output_path = (
+        base_dir / "reports" / "analysis" / "pre_stage13_rebalance_scores_profile.md"
+    )
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     if "error" in profile:
@@ -445,7 +464,9 @@ def save_rebalance_profile(base_dir: Path, profile: Dict):
 - 최대: {stats['max']}개
 - P95: {stats['p95']:.1f}개
 """
-        null_pct_str = "\n".join(f"- {col}: {pct:.2f}%" for col, pct in profile.get("null_pct", {}).items())
+        null_pct_str = "\n".join(
+            f"- {col}: {pct:.2f}%" for col, pct in profile.get("null_pct", {}).items()
+        )
 
         md_content = f"""# Stage13 사전 분석: rebalance_scores 품질 점검
 
@@ -475,7 +496,8 @@ def save_rebalance_profile(base_dir: Path, profile: Dict):
     output_path.write_text(md_content, encoding="utf-8")
     print(f"  [OK] 저장 완료: {output_path}")
 
-def save_regime_coverage(base_dir: Path, coverage: Dict):
+
+def save_regime_coverage(base_dir: Path, coverage: dict):
     """[4] regime 컬럼 결측 문제 재발 가능성 판정 결과 저장"""
     output_path = base_dir / "reports" / "analysis" / "pre_stage13_regime_coverage.md"
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -515,7 +537,8 @@ def save_regime_coverage(base_dir: Path, coverage: Dict):
     output_path.write_text(md_content, encoding="utf-8")
     print(f"  [OK] 저장 완료: {output_path}")
 
-def save_min_run_plan(base_dir: Path, plan: Dict):
+
+def save_min_run_plan(base_dir: Path, plan: dict):
     """[5] 최소 실행 플랜 후보 저장"""
     output_path = base_dir / "reports" / "analysis" / "pre_stage13_min_run_plan.md"
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -523,7 +546,8 @@ def save_min_run_plan(base_dir: Path, plan: Dict):
     plan_items = []
     for key, value in plan.items():
         status = "✅ 가능" if value["possible"] else "❌ 불가능"
-        plan_items.append(f"""
+        plan_items.append(
+            f"""
 ## {key}
 
 **가능 여부**: {status}
@@ -531,7 +555,8 @@ def save_min_run_plan(base_dir: Path, plan: Dict):
 **이유**: {value['reason']}
 
 **코드 위치**: {value['code_location']}
-""")
+"""
+        )
 
     md_content = f"""# Stage13 사전 분석: 최소 실행 플랜 후보
 
@@ -540,12 +565,21 @@ def save_min_run_plan(base_dir: Path, plan: Dict):
     output_path.write_text(md_content, encoding="utf-8")
     print(f"  [OK] 저장 완료: {output_path}")
 
+
 def main():
     parser = argparse.ArgumentParser(description="Stage13 사전 분석 스크립트")
-    parser.add_argument("--pipeline-tag", type=str, required=True,
-                       help="Pipeline baseline 태그 (예: stage6_sector_relative_feature_balance_20251220_194928)")
-    parser.add_argument("--global-tag", type=str, required=True,
-                       help="Global baseline 태그 (예: stage12_final_export_20251221_013411)")
+    parser.add_argument(
+        "--pipeline-tag",
+        type=str,
+        required=True,
+        help="Pipeline baseline 태그 (예: stage6_sector_relative_feature_balance_20251220_194928)",
+    )
+    parser.add_argument(
+        "--global-tag",
+        type=str,
+        required=True,
+        help="Global baseline 태그 (예: stage12_final_export_20251221_013411)",
+    )
     args = parser.parse_args()
 
     base_dir = BASE_DIR
@@ -587,6 +621,7 @@ def main():
     print("  - reports/analysis/pre_stage13_rebalance_scores_profile.md")
     print("  - reports/analysis/pre_stage13_regime_coverage.md")
     print("  - reports/analysis/pre_stage13_min_run_plan.md")
+
 
 if __name__ == "__main__":
     main()

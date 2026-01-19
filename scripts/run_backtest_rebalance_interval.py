@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 rebalance_interval 적용 백테스트 재실행
 - BT20 모델: rebalance_interval=20
@@ -13,6 +12,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+
 def run_model(strategy: str, expected_interval: int):
     """개별 모델 실행"""
     print(f"\n{'='*80}")
@@ -25,8 +25,8 @@ def run_model(strategy: str, expected_interval: int):
     result = subprocess.run(
         cmd,
         cwd=project_root,
-        capture_output=False,  # 실시간 출력
-        text=True
+        capture_output=False,
+        text=True,  # 실시간 출력
     )
     elapsed = time.time() - start_time
 
@@ -34,8 +34,11 @@ def run_model(strategy: str, expected_interval: int):
         print(f"\n✓ {strategy} 완료 (소요 시간: {elapsed/60:.1f}분)\n")
         return True
     else:
-        print(f"\n✗ {strategy} 실패 (exit code: {result.returncode}, 소요 시간: {elapsed/60:.1f}분)\n")
+        print(
+            f"\n✗ {strategy} 실패 (exit code: {result.returncode}, 소요 시간: {elapsed/60:.1f}분)\n"
+        )
         return False
+
 
 def main():
     """4개 모델 순차 실행"""
@@ -46,12 +49,12 @@ def main():
         ("bt120_ens", 120),
     ]
 
-    print("="*80)
+    print("=" * 80)
     print("rebalance_interval 적용 백테스트 재실행")
-    print("="*80)
+    print("=" * 80)
     print("BT20 모델: rebalance_interval=20")
     print("BT120 모델: rebalance_interval=120")
-    print("="*80)
+    print("=" * 80)
 
     results = {}
     total_start = time.time()
@@ -61,20 +64,21 @@ def main():
 
     total_elapsed = time.time() - total_start
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("실행 결과 요약")
-    print("="*80)
+    print("=" * 80)
     for strategy, success in results.items():
         status = "✓ 성공" if success else "✗ 실패"
         print(f"{strategy}: {status}")
     print(f"\n총 소요 시간: {total_elapsed/60:.1f}분")
-    print("="*80)
+    print("=" * 80)
 
     # 결과 확인
     if all(results.values()):
         print("\n✓ 모든 모델 실행 완료!")
         print("\n결과 확인:")
         print("  python scripts/check_rebalance_interval_effect.py")
+
 
 if __name__ == "__main__":
     main()

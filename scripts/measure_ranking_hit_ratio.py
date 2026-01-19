@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 랭킹산정모델 Hit Ratio 측정 및 과적합 판단 스크립트
 
@@ -19,7 +18,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import yaml
 
 # 프로젝트 루트 추가
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -30,8 +28,12 @@ from src.utils.config import load_config
 from src.utils.io import artifact_exists, load_artifact
 
 
-def calculate_hit_ratio(scores: pd.DataFrame, return_col: str = "true_short",
-                        score_col: str = "score_ens", phase_col: str = "phase") -> dict:
+def calculate_hit_ratio(
+    scores: pd.DataFrame,
+    return_col: str = "true_short",
+    score_col: str = "score_ens",
+    phase_col: str = "phase",
+) -> dict:
     """
     Hit Ratio 계산: 예측 방향과 실제 수익률 방향이 일치하는 비율
 
@@ -73,15 +75,14 @@ def calculate_hit_ratio(scores: pd.DataFrame, return_col: str = "true_short",
         if len(phase_df) > 0:
             phase_hr[phase] = float(phase_df["hit"].mean())
 
-    result = {
-        "overall": overall_hr,
-        "n_samples": int(len(df)),
-        **phase_hr
-    }
+    result = {"overall": overall_hr, "n_samples": int(len(df)), **phase_hr}
 
     return result
 
-def calculate_individual_hit_ratios(scores: pd.DataFrame, phase_col: str = "phase") -> dict:
+
+def calculate_individual_hit_ratios(
+    scores: pd.DataFrame, phase_col: str = "phase"
+) -> dict:
     """
     단기/장기 랭킹의 개별 Hit Ratio 계산
 
@@ -100,10 +101,12 @@ def calculate_individual_hit_ratios(scores: pd.DataFrame, phase_col: str = "phas
             scores,
             return_col="true_short",
             score_col="score_total_short",
-            phase_col=phase_col
+            phase_col=phase_col,
         )
         results["short"] = short_hr
-        results["short"]["description"] = "단기 랭킹 (score_total_short vs true_short, 20일 수익률)"
+        results["short"][
+            "description"
+        ] = "단기 랭킹 (score_total_short vs true_short, 20일 수익률)"
     else:
         results["short"] = {"overall": np.nan, "description": "단기 랭킹 데이터 없음"}
 
@@ -113,29 +116,36 @@ def calculate_individual_hit_ratios(scores: pd.DataFrame, phase_col: str = "phas
             scores,
             return_col="true_long",
             score_col="score_total_long",
-            phase_col=phase_col
+            phase_col=phase_col,
         )
         results["long"] = long_hr
-        results["long"]["description"] = "장기 랭킹 (score_total_long vs true_long, 120일 수익률)"
+        results["long"][
+            "description"
+        ] = "장기 랭킹 (score_total_long vs true_long, 120일 수익률)"
     else:
         results["long"] = {"overall": np.nan, "description": "장기 랭킹 데이터 없음"}
 
     # 3. 통합 랭킹 Hit Ratio (score_ens vs true_short)
     if "score_ens" in scores.columns and "true_short" in scores.columns:
         ens_hr = calculate_hit_ratio(
-            scores,
-            return_col="true_short",
-            score_col="score_ens",
-            phase_col=phase_col
+            scores, return_col="true_short", score_col="score_ens", phase_col=phase_col
         )
         results["ensemble"] = ens_hr
-        results["ensemble"]["description"] = "통합 랭킹 (score_ens vs true_short, 단기/장기 결합)"
+        results["ensemble"][
+            "description"
+        ] = "통합 랭킹 (score_ens vs true_short, 단기/장기 결합)"
     else:
-        results["ensemble"] = {"overall": np.nan, "description": "통합 랭킹 데이터 없음"}
+        results["ensemble"] = {
+            "overall": np.nan,
+            "description": "통합 랭킹 데이터 없음",
+        }
 
     return results
 
-def detect_overfitting(dev_hr: float, holdout_hr: float, threshold: float = 0.10) -> dict:
+
+def detect_overfitting(
+    dev_hr: float, holdout_hr: float, threshold: float = 0.10
+) -> dict:
     """
     과적합 여부 판단: Dev와 Holdout Hit Ratio 차이 분석
 
@@ -152,7 +162,7 @@ def detect_overfitting(dev_hr: float, holdout_hr: float, threshold: float = 0.10
             "is_overfitting": None,
             "gap": np.nan,
             "severity": "unknown",
-            "message": "Dev 또는 Holdout Hit Ratio가 NaN입니다."
+            "message": "Dev 또는 Holdout Hit Ratio가 NaN입니다.",
         }
 
     gap = dev_hr - holdout_hr
@@ -174,10 +184,13 @@ def detect_overfitting(dev_hr: float, holdout_hr: float, threshold: float = 0.10
         "is_overfitting": is_overfitting,
         "gap": float(gap),
         "severity": severity,
-        "message": message
+        "message": message,
     }
 
-def run_ranking_model_only(cfg: dict, artifacts: dict, force: bool = False) -> pd.DataFrame:
+
+def run_ranking_model_only(
+    cfg: dict, artifacts: dict, force: bool = False
+) -> pd.DataFrame:
     """
     랭킹 모델만 실행 (L6R)
 
@@ -212,12 +225,21 @@ def run_ranking_model_only(cfg: dict, artifacts: dict, force: bool = False) -> p
     print(f"[랭킹 모델 실행] 완료: {len(rebalance_scores):,}행")
     return rebalance_scores
 
+
 def main():
-    parser = argparse.ArgumentParser(description="랭킹산정모델 Hit Ratio 측정 및 과적합 판단")
-    parser.add_argument("--config", type=str, default="configs/config.yaml", help="Config 파일 경로")
+    parser = argparse.ArgumentParser(
+        description="랭킹산정모델 Hit Ratio 측정 및 과적합 판단"
+    )
+    parser.add_argument(
+        "--config", type=str, default="configs/config.yaml", help="Config 파일 경로"
+    )
     parser.add_argument("--force", action="store_true", help="강제 재실행")
     parser.add_argument("--output", type=str, default=None, help="결과 저장 경로 (CSV)")
-    parser.add_argument("--generate-l8", action="store_true", help="L8 단기/장기 랭킹 자동 생성 (없을 경우)")
+    parser.add_argument(
+        "--generate-l8",
+        action="store_true",
+        help="L8 단기/장기 랭킹 자동 생성 (없을 경우)",
+    )
     args = parser.parse_args()
 
     config_path = PROJECT_ROOT / args.config
@@ -258,43 +280,55 @@ def main():
         artifacts["ranking_long_daily"] = load_artifact(ranking_long_path)
         print(f"  ✓ ranking_short_daily: {len(artifacts['ranking_short_daily']):,}행")
         print(f"  ✓ ranking_long_daily: {len(artifacts['ranking_long_daily']):,}행")
-        print(f"  → Dual Horizon 모드 활성화 (단기/장기 랭킹 결합, α=0.5:0.5)")
+        print("  → Dual Horizon 모드 활성화 (단기/장기 랭킹 결합, α=0.5:0.5)")
     else:
-        print(f"\n[경고] ranking_short_daily 또는 ranking_long_daily가 없습니다.")
+        print("\n[경고] ranking_short_daily 또는 ranking_long_daily가 없습니다.")
         if not artifact_exists(ranking_short_path):
             print(f"  ✗ {ranking_short_path} 없음")
         if not artifact_exists(ranking_long_path):
             print(f"  ✗ {ranking_long_path} 없음")
-        print(f"\n[해결 방법] L8 단기/장기 랭킹을 먼저 생성해야 합니다:")
-        print(f"  python -m src.pipeline.track_a_pipeline")
-        print(f"\n또는 --generate-l8 플래그를 사용하여 자동 생성할 수 있습니다.")
-        print(f"  (단일 랭킹 모드로 실행하려면 Enter를 누르세요)")
+        print("\n[해결 방법] L8 단기/장기 랭킹을 먼저 생성해야 합니다:")
+        print("  python -m src.pipeline.track_a_pipeline")
+        print("\n또는 --generate-l8 플래그를 사용하여 자동 생성할 수 있습니다.")
+        print("  (단일 랭킹 모드로 실행하려면 Enter를 누르세요)")
 
         # 사용자에게 선택권 제공 (자동 생성 옵션)
         # force 플래그가 있으면 무조건 재생성
         if args.force or args.generate_l8:
-            print(f"\n[자동 생성] L8 단기/장기 랭킹 생성 중...")
+            print("\n[자동 생성] L8 단기/장기 랭킹 생성 중...")
             try:
                 from src.pipeline.track_a_pipeline import run_track_a_pipeline
+
                 track_a_outputs = run_track_a_pipeline(
-                    config_path=str(config_path),
-                    force_rebuild=args.force
+                    config_path=str(config_path), force_rebuild=args.force
                 )
-                artifacts["ranking_short_daily"] = track_a_outputs.get("ranking_short_daily")
-                artifacts["ranking_long_daily"] = track_a_outputs.get("ranking_long_daily")
-                if artifacts["ranking_short_daily"] is not None and artifacts["ranking_long_daily"] is not None:
-                    print(f"  ✓ L8 랭킹 생성 완료")
-                    print(f"    - ranking_short_daily: {len(artifacts['ranking_short_daily']):,}행")
-                    print(f"    - ranking_long_daily: {len(artifacts['ranking_long_daily']):,}행")
+                artifacts["ranking_short_daily"] = track_a_outputs.get(
+                    "ranking_short_daily"
+                )
+                artifacts["ranking_long_daily"] = track_a_outputs.get(
+                    "ranking_long_daily"
+                )
+                if (
+                    artifacts["ranking_short_daily"] is not None
+                    and artifacts["ranking_long_daily"] is not None
+                ):
+                    print("  ✓ L8 랭킹 생성 완료")
+                    print(
+                        f"    - ranking_short_daily: {len(artifacts['ranking_short_daily']):,}행"
+                    )
+                    print(
+                        f"    - ranking_long_daily: {len(artifacts['ranking_long_daily']):,}행"
+                    )
                 else:
                     raise ValueError("L8 랭킹 생성 실패")
             except Exception as e:
                 print(f"  ✗ L8 랭킹 생성 실패: {e}", file=sys.stderr)
                 import traceback
+
                 traceback.print_exc()
-                print(f"  → 단일 랭킹 모드로 계속 진행합니다.")
+                print("  → 단일 랭킹 모드로 계속 진행합니다.")
         else:
-            print(f"  → 단일 랭킹 모드로 실행합니다.")
+            print("  → 단일 랭킹 모드로 실행합니다.")
 
     # ohlcv_daily (선택적, 시장 국면용)
     ohlcv_path = interim_dir / "ohlcv_daily"
@@ -303,101 +337,107 @@ def main():
         print(f"  ✓ ohlcv_daily: {len(artifacts['ohlcv_daily']):,}행")
 
     # 랭킹 모델 실행
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("[1단계] 랭킹 모델 실행 (L6R)")
-    print("="*60)
+    print("=" * 60)
 
     rebalance_scores = run_ranking_model_only(cfg, artifacts, force=args.force)
 
     # Hit Ratio 계산 (개별 + 통합)
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("[2단계] Hit Ratio 계산 (단기/장기/통합)")
-    print("="*60)
+    print("=" * 60)
 
     # 개별 Hit Ratio 계산
     individual_hr = calculate_individual_hit_ratios(rebalance_scores, phase_col="phase")
 
     # 단기 랭킹 Hit Ratio
-    print(f"\n[단기 랭킹 Hit Ratio]")
+    print("\n[단기 랭킹 Hit Ratio]")
     print(f"  기준: {individual_hr['short']['description']}")
-    if not pd.isna(individual_hr['short'].get('overall', np.nan)):
-        print(f"  전체: {individual_hr['short']['overall']:.2%} (n={individual_hr['short']['n_samples']:,})")
-        if "dev" in individual_hr['short']:
+    if not pd.isna(individual_hr["short"].get("overall", np.nan)):
+        print(
+            f"  전체: {individual_hr['short']['overall']:.2%} (n={individual_hr['short']['n_samples']:,})"
+        )
+        if "dev" in individual_hr["short"]:
             print(f"  Dev: {individual_hr['short']['dev']:.2%}")
-        if "holdout" in individual_hr['short']:
+        if "holdout" in individual_hr["short"]:
             print(f"  Holdout: {individual_hr['short']['holdout']:.2%}")
     else:
-        print(f"  데이터 없음")
+        print("  데이터 없음")
 
     # 장기 랭킹 Hit Ratio
-    print(f"\n[장기 랭킹 Hit Ratio]")
+    print("\n[장기 랭킹 Hit Ratio]")
     print(f"  기준: {individual_hr['long']['description']}")
-    if not pd.isna(individual_hr['long'].get('overall', np.nan)):
-        print(f"  전체: {individual_hr['long']['overall']:.2%} (n={individual_hr['long']['n_samples']:,})")
-        if "dev" in individual_hr['long']:
+    if not pd.isna(individual_hr["long"].get("overall", np.nan)):
+        print(
+            f"  전체: {individual_hr['long']['overall']:.2%} (n={individual_hr['long']['n_samples']:,})"
+        )
+        if "dev" in individual_hr["long"]:
             print(f"  Dev: {individual_hr['long']['dev']:.2%}")
-        if "holdout" in individual_hr['long']:
+        if "holdout" in individual_hr["long"]:
             print(f"  Holdout: {individual_hr['long']['holdout']:.2%}")
     else:
-        print(f"  데이터 없음")
+        print("  데이터 없음")
 
     # 통합 랭킹 Hit Ratio
-    print(f"\n[통합 랭킹 Hit Ratio]")
+    print("\n[통합 랭킹 Hit Ratio]")
     print(f"  기준: {individual_hr['ensemble']['description']}")
-    if not pd.isna(individual_hr['ensemble'].get('overall', np.nan)):
-        print(f"  전체: {individual_hr['ensemble']['overall']:.2%} (n={individual_hr['ensemble']['n_samples']:,})")
-        if "dev" in individual_hr['ensemble']:
+    if not pd.isna(individual_hr["ensemble"].get("overall", np.nan)):
+        print(
+            f"  전체: {individual_hr['ensemble']['overall']:.2%} (n={individual_hr['ensemble']['n_samples']:,})"
+        )
+        if "dev" in individual_hr["ensemble"]:
             print(f"  Dev: {individual_hr['ensemble']['dev']:.2%}")
-        if "holdout" in individual_hr['ensemble']:
+        if "holdout" in individual_hr["ensemble"]:
             print(f"  Holdout: {individual_hr['ensemble']['holdout']:.2%}")
     else:
-        print(f"  데이터 없음")
+        print("  데이터 없음")
 
     # 통합 결과를 기존 변수에 저장 (하위 호환성)
-    hit_ratio_results = individual_hr['ensemble']
+    hit_ratio_results = individual_hr["ensemble"]
 
     # 과적합 판단
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("[3단계] 과적합 여부 판단")
-    print("="*60)
+    print("=" * 60)
 
     dev_hr = hit_ratio_results.get("dev", np.nan)
     holdout_hr = hit_ratio_results.get("holdout", np.nan)
 
     overfitting_result = detect_overfitting(dev_hr, holdout_hr, threshold=0.10)
 
-    print(f"\n[과적합 판단 결과]")
+    print("\n[과적합 판단 결과]")
     print(f"  {overfitting_result['message']}")
     print(f"  심각도: {overfitting_result['severity']}")
     print(f"  Gap: {overfitting_result['gap']:.2%}p")
 
     # Config 파라미터 정보 출력
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("[현재 설정 파라미터]")
-    print("="*60)
+    print("=" * 60)
 
     l5 = cfg.get("l5", {}) or {}
     l6r = cfg.get("l6r", {}) or {}
 
-    print(f"\n[L5 모델 학습]")
+    print("\n[L5 모델 학습]")
     print(f"  ridge_alpha: {l5.get('ridge_alpha', 'N/A')}")
     print(f"  min_feature_ic: {l5.get('min_feature_ic', 'N/A')}")
     print(f"  filter_features_by_ic: {l5.get('filter_features_by_ic', 'N/A')}")
     print(f"  use_rank_ic: {l5.get('use_rank_ic', 'N/A')}")
 
-    print(f"\n[L6R 랭킹 스코어링]")
+    print("\n[L6R 랭킹 스코어링]")
     print(f"  alpha_short: {l6r.get('alpha_short', 'N/A')}")
     print(f"  alpha_long: {l6r.get('alpha_long', 'N/A')}")
     regime_alpha = l6r.get("regime_alpha", {})
     if regime_alpha:
-        print(f"  regime_alpha:")
+        print("  regime_alpha:")
         for regime, alpha in regime_alpha.items():
             print(f"    {regime}: {alpha}")
 
     # 결과 요약
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("[결과 요약]")
-    print("="*60)
+    print("=" * 60)
 
     summary = {
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -436,7 +476,7 @@ def main():
             "min_feature_ic": l5.get("min_feature_ic"),
             "alpha_short": l6r.get("alpha_short"),
             "regime_alpha": regime_alpha,
-        }
+        },
     }
 
     print(f"\n✓ Hit Ratio: 전체 {hit_ratio_results['overall']:.2%}")
@@ -454,50 +494,76 @@ def main():
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         # CSV로 저장 (개별 Hit Ratio 포함)
-        summary_df = pd.DataFrame([{
-            "timestamp": summary["timestamp"],
-            # 통합 랭킹
-            "hit_ratio_ensemble_overall": summary["hit_ratio"]["overall"],
-            "hit_ratio_ensemble_dev": summary["hit_ratio"]["dev"],
-            "hit_ratio_ensemble_holdout": summary["hit_ratio"]["holdout"],
-            "hit_ratio_ensemble_n_samples": summary["hit_ratio"]["n_samples"],
-            # 단기 랭킹
-            "hit_ratio_short_overall": summary["hit_ratio_individual"]["short"]["overall"],
-            "hit_ratio_short_dev": summary["hit_ratio_individual"]["short"]["dev"],
-            "hit_ratio_short_holdout": summary["hit_ratio_individual"]["short"]["holdout"],
-            "hit_ratio_short_n_samples": summary["hit_ratio_individual"]["short"]["n_samples"],
-            # 장기 랭킹
-            "hit_ratio_long_overall": summary["hit_ratio_individual"]["long"]["overall"],
-            "hit_ratio_long_dev": summary["hit_ratio_individual"]["long"]["dev"],
-            "hit_ratio_long_holdout": summary["hit_ratio_individual"]["long"]["holdout"],
-            "hit_ratio_long_n_samples": summary["hit_ratio_individual"]["long"]["n_samples"],
-            # 과적합 판단
-            "overfitting_gap": summary["overfitting"]["gap"],
-            "overfitting_severity": summary["overfitting"]["severity"],
-            # 파라미터
-            "ridge_alpha": summary["parameters"]["ridge_alpha"],
-            "min_feature_ic": summary["parameters"]["min_feature_ic"],
-            "alpha_short": summary["parameters"]["alpha_short"],
-        }])
+        summary_df = pd.DataFrame(
+            [
+                {
+                    "timestamp": summary["timestamp"],
+                    # 통합 랭킹
+                    "hit_ratio_ensemble_overall": summary["hit_ratio"]["overall"],
+                    "hit_ratio_ensemble_dev": summary["hit_ratio"]["dev"],
+                    "hit_ratio_ensemble_holdout": summary["hit_ratio"]["holdout"],
+                    "hit_ratio_ensemble_n_samples": summary["hit_ratio"]["n_samples"],
+                    # 단기 랭킹
+                    "hit_ratio_short_overall": summary["hit_ratio_individual"]["short"][
+                        "overall"
+                    ],
+                    "hit_ratio_short_dev": summary["hit_ratio_individual"]["short"][
+                        "dev"
+                    ],
+                    "hit_ratio_short_holdout": summary["hit_ratio_individual"]["short"][
+                        "holdout"
+                    ],
+                    "hit_ratio_short_n_samples": summary["hit_ratio_individual"][
+                        "short"
+                    ]["n_samples"],
+                    # 장기 랭킹
+                    "hit_ratio_long_overall": summary["hit_ratio_individual"]["long"][
+                        "overall"
+                    ],
+                    "hit_ratio_long_dev": summary["hit_ratio_individual"]["long"][
+                        "dev"
+                    ],
+                    "hit_ratio_long_holdout": summary["hit_ratio_individual"]["long"][
+                        "holdout"
+                    ],
+                    "hit_ratio_long_n_samples": summary["hit_ratio_individual"]["long"][
+                        "n_samples"
+                    ],
+                    # 과적합 판단
+                    "overfitting_gap": summary["overfitting"]["gap"],
+                    "overfitting_severity": summary["overfitting"]["severity"],
+                    # 파라미터
+                    "ridge_alpha": summary["parameters"]["ridge_alpha"],
+                    "min_feature_ic": summary["parameters"]["min_feature_ic"],
+                    "alpha_short": summary["parameters"]["alpha_short"],
+                }
+            ]
+        )
         summary_df.to_csv(output_path, index=False, encoding="utf-8-sig")
         print(f"\n[결과 저장] {output_path}")
 
         # 개별 Hit Ratio 비교 요약 출력
-        print(f"\n[개별 Hit Ratio 비교 요약]")
-        print(f"  단기: {summary['hit_ratio_individual']['short']['overall']:.2%} "
-              f"(Dev: {summary['hit_ratio_individual']['short']['dev']:.2%}, "
-              f"Holdout: {summary['hit_ratio_individual']['short']['holdout']:.2%})")
-        print(f"  장기: {summary['hit_ratio_individual']['long']['overall']:.2%} "
-              f"(Dev: {summary['hit_ratio_individual']['long']['dev']:.2%}, "
-              f"Holdout: {summary['hit_ratio_individual']['long']['holdout']:.2%})")
-        print(f"  통합: {summary['hit_ratio_individual']['ensemble']['overall']:.2%} "
-              f"(Dev: {summary['hit_ratio_individual']['ensemble']['dev']:.2%}, "
-              f"Holdout: {summary['hit_ratio_individual']['ensemble']['holdout']:.2%})")
+        print("\n[개별 Hit Ratio 비교 요약]")
+        print(
+            f"  단기: {summary['hit_ratio_individual']['short']['overall']:.2%} "
+            f"(Dev: {summary['hit_ratio_individual']['short']['dev']:.2%}, "
+            f"Holdout: {summary['hit_ratio_individual']['short']['holdout']:.2%})"
+        )
+        print(
+            f"  장기: {summary['hit_ratio_individual']['long']['overall']:.2%} "
+            f"(Dev: {summary['hit_ratio_individual']['long']['dev']:.2%}, "
+            f"Holdout: {summary['hit_ratio_individual']['long']['holdout']:.2%})"
+        )
+        print(
+            f"  통합: {summary['hit_ratio_individual']['ensemble']['overall']:.2%} "
+            f"(Dev: {summary['hit_ratio_individual']['ensemble']['dev']:.2%}, "
+            f"Holdout: {summary['hit_ratio_individual']['ensemble']['holdout']:.2%})"
+        )
 
     # 목표 달성 여부 확인
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("[목표 달성 여부]")
-    print("="*60)
+    print("=" * 60)
 
     target_hr = 0.50  # 목표 Hit Ratio 50%
     overall_hr = hit_ratio_results["overall"]
@@ -506,14 +572,19 @@ def main():
         print(f"✓ 목표 달성: Hit Ratio {overall_hr:.2%} ≥ {target_hr:.0%}")
     else:
         gap = target_hr - overall_hr
-        print(f"✗ 목표 미달: Hit Ratio {overall_hr:.2%} < {target_hr:.0%} (차이: {gap:.2%}p)")
+        print(
+            f"✗ 목표 미달: Hit Ratio {overall_hr:.2%} < {target_hr:.0%} (차이: {gap:.2%}p)"
+        )
 
     if not pd.isna(holdout_hr):
         if holdout_hr >= target_hr:
             print(f"✓ Holdout 목표 달성: {holdout_hr:.2%} ≥ {target_hr:.0%}")
         else:
             gap = target_hr - holdout_hr
-            print(f"✗ Holdout 목표 미달: {holdout_hr:.2%} < {target_hr:.0%} (차이: {gap:.2%}p)")
+            print(
+                f"✗ Holdout 목표 미달: {holdout_hr:.2%} < {target_hr:.0%} (차이: {gap:.2%}p)"
+            )
+
 
 if __name__ == "__main__":
     main()

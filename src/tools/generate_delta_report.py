@@ -1,13 +1,11 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/generate_delta_report.py
 """
 Delta 보고서 생성 스크립트
 베이스라인과 현재 stage_tag의 KPI를 비교하여 Delta 보고서 생성
 """
 import argparse
-import sys
 from pathlib import Path
-from typing import Any, Optional, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -23,6 +21,7 @@ CORE_KPIS = [
     "ic_rank_mean",
 ]
 
+
 def load_kpi_csv(csv_path: Path) -> pd.DataFrame:
     """KPI CSV 파일 로드"""
     if not csv_path.exists():
@@ -37,6 +36,7 @@ def load_kpi_csv(csv_path: Path) -> pd.DataFrame:
         raise ValueError(f"Missing required columns in KPI CSV: {missing_cols}")
 
     return df
+
 
 def calculate_delta(
     baseline_df: pd.DataFrame,
@@ -112,8 +112,15 @@ def calculate_delta(
         baseline_abs = baseline_dev_num.abs()
         # baseline의 절댓값이 충분히 큰 경우만 pct_diff 계산
         threshold = 1e-6
-        valid_mask = baseline_nonzero & (baseline_abs > threshold) & baseline_dev_num.notna() & current_dev_num.notna()
-        dev_pct_diff[valid_mask] = (dev_abs_diff[valid_mask] / baseline_abs[valid_mask]) * 100
+        valid_mask = (
+            baseline_nonzero
+            & (baseline_abs > threshold)
+            & baseline_dev_num.notna()
+            & current_dev_num.notna()
+        )
+        dev_pct_diff[valid_mask] = (
+            dev_abs_diff[valid_mask] / baseline_abs[valid_mask]
+        ) * 100
 
     # 방향 계산 (UP/DOWN/UNCHANGED) - 숫자 값만
     dev_direction = pd.Series(index=merged.index, dtype=str)
@@ -133,8 +140,15 @@ def calculate_delta(
         baseline_nonzero = baseline_holdout_num != 0
         baseline_abs = baseline_holdout_num.abs()
         threshold = 1e-6
-        valid_mask = baseline_nonzero & (baseline_abs > threshold) & baseline_holdout_num.notna() & current_holdout_num.notna()
-        holdout_pct_diff[valid_mask] = (holdout_abs_diff[valid_mask] / baseline_abs[valid_mask]) * 100
+        valid_mask = (
+            baseline_nonzero
+            & (baseline_abs > threshold)
+            & baseline_holdout_num.notna()
+            & current_holdout_num.notna()
+        )
+        holdout_pct_diff[valid_mask] = (
+            holdout_abs_diff[valid_mask] / baseline_abs[valid_mask]
+        ) * 100
 
     holdout_direction = pd.Series(index=merged.index, dtype=str)
     holdout_direction[:] = "UNCHANGED"
@@ -144,23 +158,26 @@ def calculate_delta(
     holdout_direction[valid_mask & (holdout_abs_diff < -1e-6)] = "DOWN"
 
     # 결과 DataFrame 구성
-    result = pd.DataFrame({
-        "section": merged["section"],
-        "metric": merged["metric"],
-        "unit": merged["unit"],
-        "baseline_dev_value": baseline_dev,
-        "baseline_holdout_value": baseline_holdout,
-        "current_dev_value": current_dev,
-        "current_holdout_value": current_holdout,
-        "dev_abs_diff": dev_abs_diff,
-        "dev_pct_diff": dev_pct_diff,
-        "dev_direction": dev_direction,
-        "holdout_abs_diff": holdout_abs_diff,
-        "holdout_pct_diff": holdout_pct_diff,
-        "holdout_direction": holdout_direction,
-    })
+    result = pd.DataFrame(
+        {
+            "section": merged["section"],
+            "metric": merged["metric"],
+            "unit": merged["unit"],
+            "baseline_dev_value": baseline_dev,
+            "baseline_holdout_value": baseline_holdout,
+            "current_dev_value": current_dev,
+            "current_holdout_value": current_holdout,
+            "dev_abs_diff": dev_abs_diff,
+            "dev_pct_diff": dev_pct_diff,
+            "dev_direction": dev_direction,
+            "holdout_abs_diff": holdout_abs_diff,
+            "holdout_pct_diff": holdout_pct_diff,
+            "holdout_direction": holdout_direction,
+        }
+    )
 
     return result
+
 
 def format_delta_value(val: Any, unit: str, is_diff: bool = False) -> str:
     """Delta 값 포맷팅"""
@@ -190,6 +207,7 @@ def format_delta_value(val: Any, unit: str, is_diff: bool = False) -> str:
     else:
         return f"{num_val:.4f}"
 
+
 def generate_markdown_report(
     delta_df: pd.DataFrame,
     baseline_tag: str,
@@ -217,7 +235,9 @@ def generate_markdown_report(
             core_rows.append(row.iloc[0])
 
     if core_rows:
-        lines.append("| Metric | Dev (Baseline → Current) | Holdout (Baseline → Current) | Unit |")
+        lines.append(
+            "| Metric | Dev (Baseline → Current) | Holdout (Baseline → Current) | Unit |"
+        )
         lines.append("|---|---|---|---|")
 
         for row in core_rows:
@@ -229,7 +249,11 @@ def generate_markdown_report(
             current_dev = format_delta_value(row["current_dev_value"], unit)
             dev_diff = format_delta_value(row["dev_abs_diff"], unit, is_diff=True)
             dev_dir = row["dev_direction"]
-            dev_pct = format_delta_value(row["dev_pct_diff"], "%") if pd.notna(row["dev_pct_diff"]) else ""
+            dev_pct = (
+                format_delta_value(row["dev_pct_diff"], "%")
+                if pd.notna(row["dev_pct_diff"])
+                else ""
+            )
 
             dev_str = f"{baseline_dev} → {current_dev}"
             if dev_dir != "UNCHANGED":
@@ -241,9 +265,15 @@ def generate_markdown_report(
             # Holdout
             baseline_holdout = format_delta_value(row["baseline_holdout_value"], unit)
             current_holdout = format_delta_value(row["current_holdout_value"], unit)
-            holdout_diff = format_delta_value(row["holdout_abs_diff"], unit, is_diff=True)
+            holdout_diff = format_delta_value(
+                row["holdout_abs_diff"], unit, is_diff=True
+            )
             holdout_dir = row["holdout_direction"]
-            holdout_pct = format_delta_value(row["holdout_pct_diff"], "%") if pd.notna(row["holdout_pct_diff"]) else ""
+            holdout_pct = (
+                format_delta_value(row["holdout_pct_diff"], "%")
+                if pd.notna(row["holdout_pct_diff"])
+                else ""
+            )
 
             holdout_str = f"{baseline_holdout} → {current_holdout}"
             if holdout_dir != "UNCHANGED":
@@ -274,7 +304,9 @@ def generate_markdown_report(
         lines.append(f"## {section}")
         lines.append("")
 
-        lines.append("| Metric | Dev (Baseline → Current) | Holdout (Baseline → Current) | Unit |")
+        lines.append(
+            "| Metric | Dev (Baseline → Current) | Holdout (Baseline → Current) | Unit |"
+        )
         lines.append("|---|---|---|---|")
 
         for _, row in section_df.iterrows():
@@ -286,7 +318,11 @@ def generate_markdown_report(
             current_dev = format_delta_value(row["current_dev_value"], unit)
             dev_diff = format_delta_value(row["dev_abs_diff"], unit, is_diff=True)
             dev_dir = row["dev_direction"]
-            dev_pct = format_delta_value(row["dev_pct_diff"], "%") if pd.notna(row["dev_pct_diff"]) else ""
+            dev_pct = (
+                format_delta_value(row["dev_pct_diff"], "%")
+                if pd.notna(row["dev_pct_diff"])
+                else ""
+            )
 
             dev_str = f"{baseline_dev} → {current_dev}"
             if dev_dir != "UNCHANGED":
@@ -298,9 +334,15 @@ def generate_markdown_report(
             # Holdout
             baseline_holdout = format_delta_value(row["baseline_holdout_value"], unit)
             current_holdout = format_delta_value(row["current_holdout_value"], unit)
-            holdout_diff = format_delta_value(row["holdout_abs_diff"], unit, is_diff=True)
+            holdout_diff = format_delta_value(
+                row["holdout_abs_diff"], unit, is_diff=True
+            )
             holdout_dir = row["holdout_direction"]
-            holdout_pct = format_delta_value(row["holdout_pct_diff"], "%") if pd.notna(row["holdout_pct_diff"]) else ""
+            holdout_pct = (
+                format_delta_value(row["holdout_pct_diff"], "%")
+                if pd.notna(row["holdout_pct_diff"])
+                else ""
+            )
 
             holdout_str = f"{baseline_holdout} → {current_holdout}"
             if holdout_dir != "UNCHANGED":
@@ -315,13 +357,33 @@ def generate_markdown_report(
 
     return "\n".join(lines)
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Generate Delta Report comparing baseline vs current stage")
-    parser.add_argument("--baseline-tag", type=str, required=True, help="Baseline tag (e.g., baseline_prerefresh_20251219_143636)")
-    parser.add_argument("--current-tag", type=str, required=True, help="Current stage tag (e.g., stage0_repro_fix_20251219_143636)")
+    parser = argparse.ArgumentParser(
+        description="Generate Delta Report comparing baseline vs current stage"
+    )
+    parser.add_argument(
+        "--baseline-tag",
+        type=str,
+        required=True,
+        help="Baseline tag (e.g., baseline_prerefresh_20251219_143636)",
+    )
+    parser.add_argument(
+        "--current-tag",
+        type=str,
+        required=True,
+        help="Current stage tag (e.g., stage0_repro_fix_20251219_143636)",
+    )
     parser.add_argument("--root", type=str, default=None, help="Project root directory")
-    parser.add_argument("--kpi-dir", type=str, default="reports/kpi", help="KPI directory")
-    parser.add_argument("--delta-dir", type=str, default="reports/delta", help="Delta report output directory")
+    parser.add_argument(
+        "--kpi-dir", type=str, default="reports/kpi", help="KPI directory"
+    )
+    parser.add_argument(
+        "--delta-dir",
+        type=str,
+        default="reports/delta",
+        help="Delta report output directory",
+    )
     args = parser.parse_args()
 
     # 루트 경로 결정
@@ -359,7 +421,9 @@ def main():
     print(f"[Delta Report] CSV saved: {csv_path}")
 
     # Markdown 저장
-    md_path = delta_dir / f"delta_report__{args.baseline_tag}__vs__{args.current_tag}.md"
+    md_path = (
+        delta_dir / f"delta_report__{args.baseline_tag}__vs__{args.current_tag}.md"
+    )
     md_content = generate_markdown_report(delta_df, args.baseline_tag, args.current_tag)
     md_path.write_text(md_content, encoding="utf-8")
     print(f"[Delta Report] Markdown saved: {md_path}")
@@ -372,15 +436,28 @@ def main():
             r = row.iloc[0]
             print(f"{metric}:")
             if pd.notna(r["baseline_dev_value"]) and pd.notna(r["current_dev_value"]):
-                baseline_str = format_delta_value(r['baseline_dev_value'], r.get('unit', ''))
-                current_str = format_delta_value(r['current_dev_value'], r.get('unit', ''))
+                baseline_str = format_delta_value(
+                    r["baseline_dev_value"], r.get("unit", "")
+                )
+                current_str = format_delta_value(
+                    r["current_dev_value"], r.get("unit", "")
+                )
                 print(f"  Dev: {baseline_str} -> {current_str} ({r['dev_direction']})")
-            if pd.notna(r["baseline_holdout_value"]) and pd.notna(r["current_holdout_value"]):
-                baseline_str = format_delta_value(r['baseline_holdout_value'], r.get('unit', ''))
-                current_str = format_delta_value(r['current_holdout_value'], r.get('unit', ''))
-                print(f"  Holdout: {baseline_str} -> {current_str} ({r['holdout_direction']})")
+            if pd.notna(r["baseline_holdout_value"]) and pd.notna(
+                r["current_holdout_value"]
+            ):
+                baseline_str = format_delta_value(
+                    r["baseline_holdout_value"], r.get("unit", "")
+                )
+                current_str = format_delta_value(
+                    r["current_holdout_value"], r.get("unit", "")
+                )
+                print(
+                    f"  Holdout: {baseline_str} -> {current_str} ({r['holdout_direction']})"
+                )
 
-    print(f"\n[Delta Report] Completed.")
+    print("\n[Delta Report] Completed.")
+
 
 if __name__ == "__main__":
     main()

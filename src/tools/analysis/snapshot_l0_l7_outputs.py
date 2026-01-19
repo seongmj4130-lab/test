@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/analysis/snapshot_l0_l7_outputs.py
 from __future__ import annotations
 
@@ -9,7 +8,6 @@ import shutil
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 from src.utils.config import get_path, load_config
 
@@ -49,6 +47,7 @@ DEFAULT_ARTIFACTS = [
 
 EXPORT_EXTS = [".parquet", ".csv"]
 
+
 @dataclass
 class ArtifactRecord:
     name: str
@@ -65,21 +64,26 @@ class ArtifactRecord:
     meta_n_rows: int
     meta_n_cols: int
 
+
 def _root() -> Path:
     # .../03_code/src/stages/snapshot_l0_l7_outputs.py -> parents[2] == 03_code
     return Path(__file__).resolve().parents[2]
 
+
 def _cfg_path(root: Path) -> Path:
     return root / "configs" / "config.yaml"
+
 
 def _read_json(path: Path) -> dict:
     with path.open("r", encoding="utf-8") as f:
         return json.load(f)
 
+
 def _safe_mkdir(p: Path) -> None:
     p.mkdir(parents=True, exist_ok=True)
 
-def _discover_artifacts_from_meta(interim: Path) -> List[str]:
+
+def _discover_artifacts_from_meta(interim: Path) -> list[str]:
     names = []
     for mp in sorted(interim.glob("*__meta.json")):
         # e.g., pred_short_oos__meta.json -> pred_short_oos
@@ -88,8 +92,10 @@ def _discover_artifacts_from_meta(interim: Path) -> List[str]:
             names.append(stem)
     return sorted(set(names))
 
+
 def _file_size(path: Path) -> int:
     return int(path.stat().st_size) if path.exists() else 0
+
 
 def _copy_if_exists(src: Path, dst: Path) -> bool:
     if not src.exists():
@@ -98,7 +104,8 @@ def _copy_if_exists(src: Path, dst: Path) -> bool:
     shutil.copy2(src, dst)
     return True
 
-def _parse_meta(meta_path: Path) -> Tuple[str, str, int, int]:
+
+def _parse_meta(meta_path: Path) -> tuple[str, str, int, int]:
     """
     meta JSON 구조는 utils.meta.build_meta() 결과를 따른다고 가정.
     최소한 stage/run_id/df_shape(혹은 n_rows/n_cols)를 안전하게 읽는다.
@@ -133,13 +140,14 @@ def _parse_meta(meta_path: Path) -> Tuple[str, str, int, int]:
 
     return stage, run_id, n_rows, n_cols
 
+
 def snapshot(
     *,
     root: Path,
     interim: Path,
     out_dir: Path,
     include_discovered: bool,
-) -> List[ArtifactRecord]:
+) -> list[ArtifactRecord]:
     _safe_mkdir(out_dir)
 
     # export 대상 artifact 목록 확정
@@ -148,7 +156,7 @@ def snapshot(
         names += _discover_artifacts_from_meta(interim)
     names = sorted(set(names))
 
-    records: List[ArtifactRecord] = []
+    records: list[ArtifactRecord] = []
 
     for name in names:
         src_base = interim / name
@@ -197,38 +205,43 @@ def snapshot(
 
     return records
 
-def write_manifest(out_dir: Path, records: List[ArtifactRecord]) -> None:
+
+def write_manifest(out_dir: Path, records: list[ArtifactRecord]) -> None:
     # CSV
     manifest_csv = out_dir / "manifest.csv"
     with manifest_csv.open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
-        w.writerow([
-            "name",
-            "has_parquet",
-            "has_csv",
-            "has_meta",
-            "parquet_bytes",
-            "csv_bytes",
-            "meta_bytes",
-            "meta_stage",
-            "meta_run_id",
-            "meta_n_rows",
-            "meta_n_cols",
-        ])
+        w.writerow(
+            [
+                "name",
+                "has_parquet",
+                "has_csv",
+                "has_meta",
+                "parquet_bytes",
+                "csv_bytes",
+                "meta_bytes",
+                "meta_stage",
+                "meta_run_id",
+                "meta_n_rows",
+                "meta_n_cols",
+            ]
+        )
         for r in records:
-            w.writerow([
-                r.name,
-                int(r.has_parquet),
-                int(r.has_csv),
-                int(r.has_meta),
-                r.parquet_bytes,
-                r.csv_bytes,
-                r.meta_bytes,
-                r.meta_stage,
-                r.meta_run_id,
-                r.meta_n_rows,
-                r.meta_n_cols,
-            ])
+            w.writerow(
+                [
+                    r.name,
+                    int(r.has_parquet),
+                    int(r.has_csv),
+                    int(r.has_meta),
+                    r.parquet_bytes,
+                    r.csv_bytes,
+                    r.meta_bytes,
+                    r.meta_stage,
+                    r.meta_run_id,
+                    r.meta_n_rows,
+                    r.meta_n_cols,
+                ]
+            )
 
     # JSON
     manifest_json = out_dir / "manifest.json"
@@ -251,6 +264,7 @@ def write_manifest(out_dir: Path, records: List[ArtifactRecord]) -> None:
         f.write("  - *.parquet / *.csv per artifact (if existed in interim)\n")
         f.write("  - *__meta.json per artifact (if existed in interim)\n")
         f.write("  - manifest.csv / manifest.json\n")
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -300,6 +314,7 @@ def main():
     print(f"has_meta: {n_meta} / has_parquet: {n_parq} / has_csv: {n_csv}")
     print(f"fully packaged (parquet+csv+meta): {n_full}")
     print("✅ Snapshot completed.")
+
 
 if __name__ == "__main__":
     main()

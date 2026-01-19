@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Track A 산출물을 CSV로 저장
 - 날짜 범위: 2023-01-01 ~ 2024-12-31
@@ -8,9 +7,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
 
-import numpy as np
 import pandas as pd
 import yaml
 
@@ -35,13 +32,13 @@ FACTOR_GROUP_NAMES = {
 }
 
 
-def load_feature_weights(weights_config_path: Path) -> Dict[str, float]:
+def load_feature_weights(weights_config_path: Path) -> dict[str, float]:
     """피처 가중치 파일 로드"""
     if not weights_config_path.exists():
         print(f"경고: 가중치 파일을 찾을 수 없습니다: {weights_config_path}")
         return {}
 
-    with open(weights_config_path, 'r', encoding='utf-8') as f:
+    with open(weights_config_path, encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
 
     return data.get("feature_weights", {})
@@ -49,8 +46,8 @@ def load_feature_weights(weights_config_path: Path) -> Dict[str, float]:
 
 def calculate_feature_contributions(
     df: pd.DataFrame,
-    feature_cols: List[str],
-    feature_weights: Dict[str, float],
+    feature_cols: list[str],
+    feature_weights: dict[str, float],
     normalization_method: str = "percentile",
     sector_col: str = None,
     use_sector_relative: bool = True,
@@ -97,7 +94,7 @@ def calculate_feature_contributions(
 
 def get_feature_to_group_mapping(
     feature_groups_config: Path,
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """
     피처명을 그룹명으로 매핑하는 딕셔너리 생성
 
@@ -120,10 +117,10 @@ def get_feature_to_group_mapping(
 
 def get_top3_factor_groups(
     row: pd.Series,
-    feature_cols: List[str],
-    feature_to_group: Dict[str, str],
+    feature_cols: list[str],
+    feature_to_group: dict[str, str],
     prefix: str = "contrib_",
-) -> Tuple[str, str, str]:
+) -> tuple[str, str, str]:
     """
     한 행에서 절댓값 기준 top3 팩터 그룹 추출 (한글명)
 
@@ -162,7 +159,7 @@ def get_top3_factor_groups(
     return tuple(top3[:3])
 
 
-def get_stock_names(tickers: List[str]) -> Dict[str, str]:
+def get_stock_names(tickers: list[str]) -> dict[str, str]:
     """
     티커 리스트로부터 종목명 딕셔너리 생성
 
@@ -183,7 +180,7 @@ def get_stock_names(tickers: List[str]) -> Dict[str, str]:
         try:
             name = stock.get_market_ticker_name(ticker)
             stock_names[ticker] = name if name else ""
-        except Exception as e:
+        except Exception:
             stock_names[ticker] = ""
             if (i + 1) % 50 == 0:
                 print(f"    진행: {i+1}/{len(unique_tickers)}")
@@ -221,7 +218,7 @@ def export_track_a_to_csv(
     groups_path = project_root / groups_config
     output_path = project_root / output_file
 
-    print(f"[1/5] 데이터 로드 중...")
+    print("[1/5] 데이터 로드 중...")
     print(f"  - Ranking: {ranking_path}")
     print(f"  - Dataset: {dataset_path}")
 
@@ -236,7 +233,9 @@ def export_track_a_to_csv(
         (ranking_df["date"] >= start_dt) & (ranking_df["date"] <= end_dt)
     ].copy()
 
-    print(f"  - 랭킹 데이터: {len(ranking_df):,}행, {ranking_df['date'].nunique()}개 날짜")
+    print(
+        f"  - 랭킹 데이터: {len(ranking_df):,}행, {ranking_df['date'].nunique()}개 날짜"
+    )
 
     # 원본 데이터 로드 (피처 포함)
     dataset_df = pd.read_parquet(dataset_path)
@@ -250,7 +249,7 @@ def export_track_a_to_csv(
     print(f"  - 원본 데이터: {len(dataset_df):,}행")
 
     # 랭킹과 원본 데이터 병합
-    print(f"[2/5] 데이터 병합 중...")
+    print("[2/5] 데이터 병합 중...")
     merged_df = ranking_df.merge(
         dataset_df,
         on=["date", "ticker"],
@@ -259,7 +258,7 @@ def export_track_a_to_csv(
     print(f"  - 병합 결과: {len(merged_df):,}행")
 
     # 피처 컬럼 선택
-    print(f"[3/5] 피처 가중치 로드 및 기여도 계산 중...")
+    print("[3/5] 피처 가중치 로드 및 기여도 계산 중...")
     feature_cols = _pick_feature_cols(merged_df)
     print(f"  - 사용 피처: {len(feature_cols)}개")
 
@@ -268,7 +267,9 @@ def export_track_a_to_csv(
     print(f"  - 가중치 로드: {len(feature_weights)}개")
 
     # 가중치가 없는 피처는 제외
-    feature_cols_with_weights = [f for f in feature_cols if f in feature_weights and feature_weights[f] != 0]
+    feature_cols_with_weights = [
+        f for f in feature_cols if f in feature_weights and feature_weights[f] != 0
+    ]
     print(f"  - 가중치가 있는 피처: {len(feature_cols_with_weights)}개")
 
     if len(feature_cols_with_weights) == 0:
@@ -291,42 +292,60 @@ def export_track_a_to_csv(
     )
 
     # 피처-그룹 매핑 로드
-    print(f"[4/6] 피처 그룹 매핑 로드 중...")
+    print("[4/6] 피처 그룹 매핑 로드 중...")
     feature_to_group = get_feature_to_group_mapping(groups_path)
     print(f"  - 그룹 매핑: {len(feature_to_group)}개 피처")
 
-    print(f"[5/6] Top3 팩터 그룹 추출 중...")
+    print("[5/6] Top3 팩터 그룹 추출 중...")
     # Top3 팩터 그룹 추출 (한글명)
     top3_groups = merged_with_contrib.apply(
-        lambda row: get_top3_factor_groups(row, feature_cols_with_weights, feature_to_group),
+        lambda row: get_top3_factor_groups(
+            row, feature_cols_with_weights, feature_to_group
+        ),
         axis=1,
     )
 
     # 종목명 조회
-    print(f"[6/6] 종목명 조회 중...")
+    print("[6/6] 종목명 조회 중...")
     unique_tickers = merged_with_contrib["ticker"].unique().tolist()
     stock_names = get_stock_names(unique_tickers)
 
     # 종목명과 티커 결합
     merged_with_contrib["stock_name"] = merged_with_contrib["ticker"].map(stock_names)
     merged_with_contrib["종목명_티커"] = merged_with_contrib.apply(
-        lambda row: f"{row['stock_name']}({row['ticker']})" if row['stock_name'] else row['ticker'],
+        lambda row: (
+            f"{row['stock_name']}({row['ticker']})"
+            if row["stock_name"]
+            else row["ticker"]
+        ),
         axis=1,
     )
 
     # 결과 DataFrame 구성
-    result_df = pd.DataFrame({
-        "날짜": merged_with_contrib["date"].dt.strftime("%Y-%m-%d"),
-        "종목명(티커)": merged_with_contrib["종목명_티커"],
-        "스코어": merged_with_contrib["score_total"],
-        "Top1_팩터그룹": [f[0] for f in top3_groups],
-        "Top2_팩터그룹": [f[1] for f in top3_groups],
-        "Top3_팩터그룹": [f[2] for f in top3_groups],
-    })
+    result_df = pd.DataFrame(
+        {
+            "날짜": merged_with_contrib["date"].dt.strftime("%Y-%m-%d"),
+            "종목명(티커)": merged_with_contrib["종목명_티커"],
+            "스코어": merged_with_contrib["score_total"],
+            "Top1_팩터그룹": [f[0] for f in top3_groups],
+            "Top2_팩터그룹": [f[1] for f in top3_groups],
+            "Top3_팩터그룹": [f[2] for f in top3_groups],
+        }
+    )
 
     # Top3 팩터셋을 하나의 컬럼으로 합치기 (예: "팩터1|팩터2|팩터3")
     result_df["Top3_영향_팩터셋"] = result_df.apply(
-        lambda row: "|".join([f for f in [row["Top1_팩터그룹"], row["Top2_팩터그룹"], row["Top3_팩터그룹"]] if f]),
+        lambda row: "|".join(
+            [
+                f
+                for f in [
+                    row["Top1_팩터그룹"],
+                    row["Top2_팩터그룹"],
+                    row["Top3_팩터그룹"],
+                ]
+                if f
+            ]
+        ),
         axis=1,
     )
 
@@ -336,21 +355,21 @@ def export_track_a_to_csv(
     # 정렬 (날짜, 스코어 내림차순)
     final_df = final_df.sort_values(["날짜", "스코어"], ascending=[True, False])
 
-    print(f"[7/7] CSV 저장 중...")
+    print("[7/7] CSV 저장 중...")
     # 출력 디렉토리 생성
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # CSV 저장
     final_df.to_csv(output_path, index=False, encoding="utf-8-sig")
 
-    print(f"\n✅ 완료!")
+    print("\n✅ 완료!")
     print(f"  - 출력 파일: {output_path}")
     print(f"  - 총 행 수: {len(final_df):,}")
     print(f"  - 날짜 범위: {final_df['날짜'].min()} ~ {final_df['날짜'].max()}")
     print(f"  - 종목 수: {final_df['종목명(티커)'].nunique()}개")
 
     # 샘플 출력
-    print(f"\n📊 샘플 데이터 (상위 10행):")
+    print("\n📊 샘플 데이터 (상위 10행):")
     print(final_df.head(10).to_string(index=False))
 
 
@@ -358,20 +377,42 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Track A 산출물을 CSV로 저장")
-    parser.add_argument("--ranking", type=str, default="data/interim/ranking_short_daily.parquet",
-                       help="랭킹 파일 경로")
-    parser.add_argument("--dataset", type=str, default="data/interim/dataset_daily.parquet",
-                       help="원본 데이터 파일 경로")
-    parser.add_argument("--weights", type=str, default="configs/feature_weights_short_hitratio_optimized.yaml",
-                       help="피처 가중치 설정 파일 경로")
-    parser.add_argument("--groups", type=str, default="configs/feature_groups_short.yaml",
-                       help="피처 그룹 설정 파일 경로")
-    parser.add_argument("--output", type=str, default="data/processed/track_a_output_2023_2024.csv",
-                       help="출력 CSV 파일 경로")
-    parser.add_argument("--start-date", type=str, default="2023-01-01",
-                       help="시작 날짜 (YYYY-MM-DD)")
-    parser.add_argument("--end-date", type=str, default="2024-12-31",
-                       help="종료 날짜 (YYYY-MM-DD)")
+    parser.add_argument(
+        "--ranking",
+        type=str,
+        default="data/interim/ranking_short_daily.parquet",
+        help="랭킹 파일 경로",
+    )
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        default="data/interim/dataset_daily.parquet",
+        help="원본 데이터 파일 경로",
+    )
+    parser.add_argument(
+        "--weights",
+        type=str,
+        default="configs/feature_weights_short_hitratio_optimized.yaml",
+        help="피처 가중치 설정 파일 경로",
+    )
+    parser.add_argument(
+        "--groups",
+        type=str,
+        default="configs/feature_groups_short.yaml",
+        help="피처 그룹 설정 파일 경로",
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="data/processed/track_a_output_2023_2024.csv",
+        help="출력 CSV 파일 경로",
+    )
+    parser.add_argument(
+        "--start-date", type=str, default="2023-01-01", help="시작 날짜 (YYYY-MM-DD)"
+    )
+    parser.add_argument(
+        "--end-date", type=str, default="2024-12-31", help="종료 날짜 (YYYY-MM-DD)"
+    )
 
     args = parser.parse_args()
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 국면별 전략 모듈
 - 시장 국면(bull/bear)에 따라 다른 팩터 가중치 적용
@@ -7,7 +6,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 
 import pandas as pd
 import yaml
@@ -32,7 +31,9 @@ def get_market_regime(
         "bull" | "bear" | "neutral"
     """
     if len(kospi200_returns) < window:
-        logger.warning(f"[Regime] 데이터 부족 ({len(kospi200_returns)} < {window}), neutral 반환")
+        logger.warning(
+            f"[Regime] 데이터 부족 ({len(kospi200_returns)} < {window}), neutral 반환"
+        )
         return "neutral"
 
     recent_returns = kospi200_returns[-window:]
@@ -57,7 +58,7 @@ def get_market_regime(
 def load_regime_weights(
     config_path: Optional[str] = None,
     base_dir: Optional[Path] = None,
-) -> Dict[str, Dict[str, float]]:
+) -> dict[str, dict[str, float]]:
     """
     국면별 가중치 로드
 
@@ -84,7 +85,7 @@ def load_regime_weights(
         return {}
 
     try:
-        with open(config_path, 'r', encoding='utf-8') as f:
+        with open(config_path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
 
         regime_weights = {}
@@ -107,9 +108,9 @@ def load_regime_weights(
 def get_regime_weights_for_date(
     date: pd.Timestamp,
     market_regime_df: pd.DataFrame,
-    regime_weights_config: Dict[str, Dict[str, float]],
-    default_weights: Optional[Dict[str, float]] = None,
-) -> Dict[str, float]:
+    regime_weights_config: dict[str, dict[str, float]],
+    default_weights: Optional[dict[str, float]] = None,
+) -> dict[str, float]:
     """
     특정 날짜의 국면에 맞는 가중치 반환
 
@@ -126,7 +127,9 @@ def get_regime_weights_for_date(
     regime_row = market_regime_df[market_regime_df["date"] == date]
 
     if len(regime_row) == 0:
-        logger.debug(f"[Regime] {date.strftime('%Y-%m-%d')}: 국면 데이터 없음, 기본 가중치 사용")
+        logger.debug(
+            f"[Regime] {date.strftime('%Y-%m-%d')}: 국면 데이터 없음, 기본 가중치 사용"
+        )
         return default_weights or {}
 
     regime = regime_row.iloc[0]["regime"]
@@ -134,22 +137,30 @@ def get_regime_weights_for_date(
     # 국면별 가중치 조회
     if regime in regime_weights_config:
         weights = regime_weights_config[regime]
-        logger.debug(f"[Regime] {date.strftime('%Y-%m-%d')}: {regime} 가중치 사용 ({len(weights)}개 팩터)")
+        logger.debug(
+            f"[Regime] {date.strftime('%Y-%m-%d')}: {regime} 가중치 사용 ({len(weights)}개 팩터)"
+        )
         return weights
 
     # bull_strong -> bull, bear_strong -> bear 매핑
     if regime == "bull_strong" and "bull" in regime_weights_config:
         weights = regime_weights_config["bull"]
-        logger.debug(f"[Regime] {date.strftime('%Y-%m-%d')}: bull_strong -> bull 가중치 사용")
+        logger.debug(
+            f"[Regime] {date.strftime('%Y-%m-%d')}: bull_strong -> bull 가중치 사용"
+        )
         return weights
 
     if regime == "bear_strong" and "bear" in regime_weights_config:
         weights = regime_weights_config["bear"]
-        logger.debug(f"[Regime] {date.strftime('%Y-%m-%d')}: bear_strong -> bear 가중치 사용")
+        logger.debug(
+            f"[Regime] {date.strftime('%Y-%m-%d')}: bear_strong -> bear 가중치 사용"
+        )
         return weights
 
     # 기본 가중치 사용
-    logger.debug(f"[Regime] {date.strftime('%Y-%m-%d')}: {regime} 가중치 없음, 기본 가중치 사용")
+    logger.debug(
+        f"[Regime] {date.strftime('%Y-%m-%d')}: {regime} 가중치 없음, 기본 가중치 사용"
+    )
     return default_weights or {}
 
 

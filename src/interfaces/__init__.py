@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """UI 연동 인터페이스 모듈"""
 
 from .ui_service import (

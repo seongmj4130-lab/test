@@ -10,7 +10,7 @@ import yaml
 
 def main():
     print("💰 Live 환경 비용 최적화 (1bps 목표)")
-    print("="*60)
+    print("=" * 60)
 
     print("📊 현재 비용 구조:")
     print("  • bt20_short: cost_bps 10.0 + slippage_bps 4.0 = 14.0bps")
@@ -38,37 +38,39 @@ def main():
     print("\n✅ 비용 최적화 적용 완료!")
     print("📊 Alpha 증폭 효과: 비용 절감 = 수익률 상승")
 
+
 def update_cost_config():
     """비용 최적화 설정 적용"""
-    config_path = 'configs/config.yaml'
+    config_path = "configs/config.yaml"
 
     try:
         if Path(config_path).exists():
-            with open(config_path, 'r', encoding='utf-8') as f:
+            with open(config_path, encoding="utf-8") as f:
                 config = yaml.safe_load(f)
         else:
             config = {}
 
         # 비용 최적화 설정
-        config['cost_optimization'] = {
-            'target_bps': 1.0,
-            'phase': 1,
-            'methods': ['algorithmic_trading', 'smart_routing']
+        config["cost_optimization"] = {
+            "target_bps": 1.0,
+            "phase": 1,
+            "methods": ["algorithmic_trading", "smart_routing"],
         }
 
         # 모든 전략 비용 설정
-        for strategy_key in ['l7_bt20_short', 'l7_bt20_ens', 'l7_bt120_long']:
+        for strategy_key in ["l7_bt20_short", "l7_bt20_ens", "l7_bt120_long"]:
             if strategy_key in config:
-                config[strategy_key]['cost_bps'] = 1.0
-                config[strategy_key]['slippage_bps'] = 0.0
+                config[strategy_key]["cost_bps"] = 1.0
+                config[strategy_key]["slippage_bps"] = 0.0
 
-        with open(config_path, 'w', encoding='utf-8') as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             yaml.dump(config, f, default_flow_style=False, allow_unicode=True, indent=2)
 
         print("✅ config.yaml에 1bps 비용 최적화 적용")
 
     except Exception as e:
         print(f"❌ 설정 업데이트 실패: {e}")
+
 
 if __name__ == "__main__":
     main()

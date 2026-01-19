@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/backtest/__init__.py
 from .l1d_market_regime import build_market_regime
 from .l7_backtest import BacktestConfig, run_backtest

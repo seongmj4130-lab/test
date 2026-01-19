@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 데이터 수집 함수 모듈
 
@@ -11,7 +10,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 
 import pandas as pd
 
@@ -37,7 +36,7 @@ try:
         download_annual_fundamentals,
     )
 except ImportError:
-    from src.stages.data.l2_fundamentals_dart import download_annual_fundamentals
+    pass
 
 try:
     from src.tracks.shared.stages.data.l3_panel_merge import build_panel_merged_daily
@@ -247,26 +246,43 @@ def collect_panel(
             cached_df = load_artifact(cache_path)
 
             # 기술적 지표가 포함되어 있는지 확인하고 없으면 병합
-            technical_cols = [c for c in cached_df.columns if c in [
-                "price_momentum_20d", "volatility_20d", "market_cap"
-            ]]
+            technical_cols = [
+                c
+                for c in cached_df.columns
+                if c in ["price_momentum_20d", "volatility_20d", "market_cap"]
+            ]
             if not technical_cols and ohlcv_daily is not None:
-                technical_cols_ohlcv = [c for c in ohlcv_daily.columns if c in [
-                    "price_momentum_20d", "price_momentum_60d", "volatility_20d",
-                    "volatility_60d", "max_drawdown_60d", "volume_ratio", "momentum_reversal"
-                ]]
+                technical_cols_ohlcv = [
+                    c
+                    for c in ohlcv_daily.columns
+                    if c
+                    in [
+                        "price_momentum_20d",
+                        "price_momentum_60d",
+                        "volatility_20d",
+                        "volatility_60d",
+                        "max_drawdown_60d",
+                        "volume_ratio",
+                        "momentum_reversal",
+                    ]
+                ]
                 if technical_cols_ohlcv:
                     cached_df = cached_df.merge(
                         ohlcv_daily[["date", "ticker"] + technical_cols_ohlcv],
                         on=["date", "ticker"],
                         how="left",
-                        suffixes=("", "_new")
+                        suffixes=("", "_new"),
                     )
                     for col in technical_cols_ohlcv:
-                        if col not in cached_df.columns and f"{col}_new" in cached_df.columns:
+                        if (
+                            col not in cached_df.columns
+                            and f"{col}_new" in cached_df.columns
+                        ):
                             cached_df[col] = cached_df[f"{col}_new"]
                             cached_df = cached_df.drop(columns=[f"{col}_new"])
-                    logger.info(f"[L3] 기술적 지표 병합 완료: {len(technical_cols_ohlcv)}개")
+                    logger.info(
+                        f"[L3] 기술적 지표 병합 완료: {len(technical_cols_ohlcv)}개"
+                    )
 
             return cached_df
 
@@ -284,7 +300,9 @@ def collect_panel(
         universe_membership_monthly=universe_membership_monthly,
         fundamental_lag_days=fundamental_lag_days,
         filter_k200_members_only=filter_k200_members_only,
-        fundamentals_effective_date_col=l3_cfg.get("fundamentals_effective_date_col", "effective_date"),
+        fundamentals_effective_date_col=l3_cfg.get(
+            "fundamentals_effective_date_col", "effective_date"
+        ),
     )
 
     if warns:
@@ -308,7 +326,7 @@ def collect_dataset(
     config_path: Optional[str] = None,
     save_to_cache: bool = True,
     force_rebuild: bool = False,
-) -> Dict[str, any]:
+) -> dict[str, any]:
     """
     L4: Walk-Forward CV 분할 및 타겟 생성
 
@@ -341,10 +359,12 @@ def collect_dataset(
         cv_short_path = interim_dir / "cv_folds_short"
         cv_long_path = interim_dir / "cv_folds_long"
 
-        if (artifact_exists(dataset_path) and
-            artifact_exists(cv_short_path) and
-            artifact_exists(cv_long_path)):
-            logger.info(f"[L4] 캐시에서 로드")
+        if (
+            artifact_exists(dataset_path)
+            and artifact_exists(cv_short_path)
+            and artifact_exists(cv_long_path)
+        ):
+            logger.info("[L4] 캐시에서 로드")
             return {
                 "dataset_daily": load_artifact(dataset_path),
                 "cv_folds_short": load_artifact(cv_short_path),
@@ -375,9 +395,11 @@ def collect_dataset(
         save_artifact(df, interim_dir / "dataset_daily", force=True)
         save_artifact(cv_s, interim_dir / "cv_folds_short", force=True)
         save_artifact(cv_l, interim_dir / "cv_folds_long", force=True)
-        logger.info(f"[L4] 캐시에 저장")
+        logger.info("[L4] 캐시에 저장")
 
-    logger.info(f"[L4] 완료: dataset_daily {len(df):,}행, cv_folds_short {len(cv_s)}개, cv_folds_long {len(cv_l)}개")
+    logger.info(
+        f"[L4] 완료: dataset_daily {len(df):,}행, cv_folds_short {len(cv_s)}개, cv_folds_long {len(cv_l)}개"
+    )
 
     return {
         "dataset_daily": df,
@@ -389,7 +411,7 @@ def collect_dataset(
 def collect_all_data(
     config_path: str = "configs/config.yaml",
     force_rebuild: bool = False,
-) -> Dict[str, any]:
+) -> dict[str, any]:
     """
     L0~L4 전체 데이터 수집
 

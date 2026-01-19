@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/validation/validate_l5_outputs.py
 from __future__ import annotations
 
@@ -13,8 +12,8 @@ import pandas as pd
 # Path bootstrap (Spyder/Windows 안정화)
 # ----------------------------
 THIS = Path(__file__).resolve()
-ROOT = THIS.parents[2]          # .../03_code
-SRC = THIS.parents[1]           # .../03_code/src
+ROOT = THIS.parents[2]  # .../03_code
+SRC = THIS.parents[1]  # .../03_code/src
 CFG_PATH = ROOT / "configs" / "config.yaml"
 
 if str(SRC) not in sys.path:
@@ -29,7 +28,10 @@ from src.utils.io import artifact_exists, load_artifact
 # ----------------------------
 def _must_exist(base: Path, name: str) -> None:
     if not artifact_exists(base):
-        raise FileNotFoundError(f"[FAIL] artifact missing: {name} -> {base}(.parquet/.csv)")
+        raise FileNotFoundError(
+            f"[FAIL] artifact missing: {name} -> {base}(.parquet/.csv)"
+        )
+
 
 def _load_df(interim: Path, name: str) -> pd.DataFrame:
     base = interim / name
@@ -39,11 +41,13 @@ def _load_df(interim: Path, name: str) -> pd.DataFrame:
         raise ValueError(f"[FAIL] artifact empty or not DataFrame: {name}")
     return df
 
+
 def _load_meta(interim: Path, name: str) -> dict:
     meta_path = interim / f"{name}__meta.json"
     if not meta_path.exists():
         raise FileNotFoundError(f"[FAIL] meta missing: {meta_path}")
     return json.loads(meta_path.read_text(encoding="utf-8"))
+
 
 def _ensure_datetime(df: pd.DataFrame, col: str) -> None:
     if col not in df.columns:
@@ -51,10 +55,12 @@ def _ensure_datetime(df: pd.DataFrame, col: str) -> None:
     if not np.issubdtype(df[col].dtype, np.datetime64):
         df[col] = pd.to_datetime(df[col], errors="raise")
 
+
 def _ensure_ticker_str(df: pd.DataFrame) -> None:
     if "ticker" not in df.columns:
         raise KeyError("[FAIL] missing column: ticker")
     df["ticker"] = df["ticker"].astype(str).str.zfill(6)
+
 
 def _basic_checks(df: pd.DataFrame, name: str) -> None:
     for c in ["date", "ticker"]:
@@ -72,6 +78,7 @@ def _basic_checks(df: pd.DataFrame, name: str) -> None:
     if df["ticker"].isna().any():
         raise ValueError(f"[FAIL] {name} has NA in ticker")
 
+
 def _pick_pred_col(df: pd.DataFrame) -> str:
     candidates = ["y_pred", "pred", "prediction", "yhat"]
     for c in candidates:
@@ -79,10 +86,17 @@ def _pick_pred_col(df: pd.DataFrame) -> str:
             return c
     raise KeyError(f"[FAIL] prediction column not found. existing={list(df.columns)}")
 
+
 def _metrics(y: np.ndarray, p: np.ndarray) -> dict:
     mask = np.isfinite(y) & np.isfinite(p)
     if mask.sum() == 0:
-        return {"n": 0, "rmse": np.nan, "mae": np.nan, "corr": np.nan, "hit_ratio": np.nan}
+        return {
+            "n": 0,
+            "rmse": np.nan,
+            "mae": np.nan,
+            "corr": np.nan,
+            "hit_ratio": np.nan,
+        }
 
     yy = y[mask]
     pp = p[mask]
@@ -90,9 +104,18 @@ def _metrics(y: np.ndarray, p: np.ndarray) -> dict:
     mae = float(np.mean(np.abs(pp - yy)))
     corr = float(np.corrcoef(pp, yy)[0, 1]) if len(yy) > 1 else np.nan
     hit = float(np.mean((pp > 0) == (yy > 0)))
-    return {"n": int(mask.sum()), "rmse": rmse, "mae": mae, "corr": corr, "hit_ratio": hit}
+    return {
+        "n": int(mask.sum()),
+        "rmse": rmse,
+        "mae": mae,
+        "corr": corr,
+        "hit_ratio": hit,
+    }
 
-def _merged_intervals(intervals: list[tuple[pd.Timestamp, pd.Timestamp]]) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
+
+def _merged_intervals(
+    intervals: list[tuple[pd.Timestamp, pd.Timestamp]],
+) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
     intervals = sorted(intervals, key=lambda x: x[0])
     out: list[tuple[pd.Timestamp, pd.Timestamp]] = []
     for s, e in intervals:
@@ -106,18 +129,18 @@ def _merged_intervals(intervals: list[tuple[pd.Timestamp, pd.Timestamp]]) -> lis
             out.append((s, e))
     return out
 
-def _mask_by_intervals(dates: pd.Series, merged: list[tuple[pd.Timestamp, pd.Timestamp]]) -> pd.Series:
+
+def _mask_by_intervals(
+    dates: pd.Series, merged: list[tuple[pd.Timestamp, pd.Timestamp]]
+) -> pd.Series:
     m = pd.Series(False, index=dates.index)
     for s, e in merged:
         m |= (dates >= s) & (dates <= e)
     return m
 
+
 def _attach_target_from_dataset(
-    pred: pd.DataFrame,
-    dataset: pd.DataFrame,
-    target_col: str,
-    *,
-    name: str
+    pred: pd.DataFrame, dataset: pd.DataFrame, target_col: str, *, name: str
 ) -> pd.DataFrame:
     """
     pred에 target_col이 없으면 dataset_daily에서 (date,ticker)로 조인해 붙인다.
@@ -135,11 +158,16 @@ def _attach_target_from_dataset(
     _ensure_ticker_str(dkey)
     dup = int(dkey.duplicated(subset=["date", "ticker"]).sum())
     if dup != 0:
-        raise ValueError(f"[FAIL] dataset_daily has duplicate (date,ticker) keys: {dup} (cannot attach targets safely)")
+        raise ValueError(
+            f"[FAIL] dataset_daily has duplicate (date,ticker) keys: {dup} (cannot attach targets safely)"
+        )
 
     merged = pred.merge(dkey, on=["date", "ticker"], how="left", validate="one_to_one")
-    print(f"[INFO] {name}: target '{target_col}' attached from dataset_daily (missing before attach = {merged[target_col].isna().mean()*100:.4f}%)")
+    print(
+        f"[INFO] {name}: target '{target_col}' attached from dataset_daily (missing before attach = {merged[target_col].isna().mean()*100:.4f}%)"
+    )
     return merged
+
 
 def _coverage_against_folds(
     dataset: pd.DataFrame,
@@ -163,7 +191,9 @@ def _coverage_against_folds(
     intervals = [(s, e) for s, e in zip(starts.tolist(), ends.tolist())]
     merged_intv = _merged_intervals(intervals)
 
-    eligible_mask = _mask_by_intervals(dataset["date"], merged_intv) & dataset[target_col].notna()
+    eligible_mask = (
+        _mask_by_intervals(dataset["date"], merged_intv) & dataset[target_col].notna()
+    )
     eligible = dataset.loc[eligible_mask, ["date", "ticker"]].drop_duplicates()
 
     pred_keys = pred.loc[pred[target_col].notna(), ["date", "ticker"]].drop_duplicates()
@@ -171,7 +201,9 @@ def _coverage_against_folds(
     pred_outside = ~_mask_by_intervals(pred["date"], merged_intv)
     outside_cnt = int(pred_outside.sum())
     if outside_cnt != 0:
-        raise ValueError(f"[FAIL] pred_oos contains {outside_cnt} rows outside test windows (leakage or bad slicing).")
+        raise ValueError(
+            f"[FAIL] pred_oos contains {outside_cnt} rows outside test windows (leakage or bad slicing)."
+        )
 
     cov = (len(pred_keys) / len(eligible)) * 100.0 if len(eligible) > 0 else np.nan
     return {
@@ -183,7 +215,10 @@ def _coverage_against_folds(
         "test_date_max": str(ends.max().date()),
     }
 
-def _fold_level_report(pred: pd.DataFrame, pred_col: str, true_col: str) -> pd.DataFrame:
+
+def _fold_level_report(
+    pred: pd.DataFrame, pred_col: str, true_col: str
+) -> pd.DataFrame:
     if "fold_id" not in pred.columns:
         y = pd.to_numeric(pred[true_col], errors="coerce").to_numpy()
         p = pd.to_numeric(pred[pred_col], errors="coerce").to_numpy()
@@ -197,6 +232,7 @@ def _fold_level_report(pred: pd.DataFrame, pred_col: str, true_col: str) -> pd.D
         m = _metrics(y, p)
         rows.append({"fold_id": str(fid), **m})
     return pd.DataFrame(rows)
+
 
 def main():
     print("=== L5 Validation Runner ===")
@@ -276,8 +312,12 @@ def main():
     q_mm = meta_mm.get("quality", {})
 
     print("\n=== [PASS] L5 artifacts loaded and basic checks ok ===")
-    print(f"- pred_short_oos rows={len(ps):,} cols={ps.shape[1]} pred_col={pred_col_s} target={t_s}")
-    print(f"- pred_long_oos  rows={len(pl):,} cols={pl.shape[1]} pred_col={pred_col_l} target={t_l}")
+    print(
+        f"- pred_short_oos rows={len(ps):,} cols={ps.shape[1]} pred_col={pred_col_s} target={t_s}"
+    )
+    print(
+        f"- pred_long_oos  rows={len(pl):,} cols={pl.shape[1]} pred_col={pred_col_l} target={t_l}"
+    )
     print(f"- model_metrics  rows={len(mm):,} cols={mm.shape[1]}")
 
     print("\n=== Missingness (row has any NA in [target,pred]) ===")
@@ -285,14 +325,22 @@ def main():
     print(f"- long : {miss_l}%")
 
     print("\n=== Overall OOS Metrics ===")
-    print(f"- short: n={ms['n']:,} rmse={ms['rmse']:.6f} mae={ms['mae']:.6f} corr={ms['corr']:.6f} hit={ms['hit_ratio']:.6f}")
-    print(f"- long : n={ml['n']:,} rmse={ml['rmse']:.6f} mae={ml['mae']:.6f} corr={ml['corr']:.6f} hit={ml['hit_ratio']:.6f}")
+    print(
+        f"- short: n={ms['n']:,} rmse={ms['rmse']:.6f} mae={ms['mae']:.6f} corr={ms['corr']:.6f} hit={ms['hit_ratio']:.6f}"
+    )
+    print(
+        f"- long : n={ml['n']:,} rmse={ml['rmse']:.6f} mae={ml['mae']:.6f} corr={ml['corr']:.6f} hit={ml['hit_ratio']:.6f}"
+    )
 
     print("\n=== Coverage vs Eligible rows (test windows ∩ target notna) ===")
-    print(f"- short: coverage={cov_s['coverage_pct']}% pred={cov_s['pred_rows']:,} eligible={cov_s['eligible_rows']:,} folds={cov_s['folds']} "
-          f"test_range=[{cov_s['test_date_min']} ~ {cov_s['test_date_max']}]")
-    print(f"- long : coverage={cov_l['coverage_pct']}% pred={cov_l['pred_rows']:,} eligible={cov_l['eligible_rows']:,} folds={cov_l['folds']} "
-          f"test_range=[{cov_l['test_date_min']} ~ {cov_l['test_date_max']}]")
+    print(
+        f"- short: coverage={cov_s['coverage_pct']}% pred={cov_s['pred_rows']:,} eligible={cov_s['eligible_rows']:,} folds={cov_s['folds']} "
+        f"test_range=[{cov_s['test_date_min']} ~ {cov_s['test_date_max']}]"
+    )
+    print(
+        f"- long : coverage={cov_l['coverage_pct']}% pred={cov_l['pred_rows']:,} eligible={cov_l['eligible_rows']:,} folds={cov_l['folds']} "
+        f"test_range=[{cov_l['test_date_min']} ~ {cov_l['test_date_max']}]"
+    )
 
     print("\n=== Fold-level sample (first 5 rows) ===")
     print("[short]\n", rep_s.to_string(index=False))
@@ -305,6 +353,7 @@ def main():
 
     print("\n✅ L5 VALIDATION COMPLETE: All critical checks passed.")
     print("➡️ Next: proceed to L6 (scoring / ranking / rebalance inputs).")
+
 
 if __name__ == "__main__":
     main()

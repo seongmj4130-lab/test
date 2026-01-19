@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import yaml
@@ -18,15 +17,15 @@ def show_strategy_parameters():
         return
 
     # YAML 파일 로드
-    with open(config_path, 'r', encoding='utf-8') as f:
+    with open(config_path, encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
     # 전략 이름 매핑
     strategy_mapping = {
-        'l7_bt20_short': 'BT20 단기',
-        'l7_bt20_ens': 'BT20 앙상블',
-        'l7_bt120_long': 'BT120 장기',
-        'l7_bt120_ens': 'BT120 앙상블'
+        "l7_bt20_short": "BT20 단기",
+        "l7_bt20_ens": "BT20 앙상블",
+        "l7_bt120_long": "BT120 장기",
+        "l7_bt120_ens": "BT120 앙상블",
     }
 
     # 각 전략별 파라미터 추출 및 표시
@@ -44,15 +43,39 @@ def show_strategy_parameters():
             regime_params = {}
 
             for key, value in params.items():
-                if key in ['top_k', 'holding_days', 'rebalance_interval', 'cost_bps', 'slippage_bps', 'score_col', 'return_col', 'weighting']:
+                if key in [
+                    "top_k",
+                    "holding_days",
+                    "rebalance_interval",
+                    "cost_bps",
+                    "slippage_bps",
+                    "score_col",
+                    "return_col",
+                    "weighting",
+                ]:
                     core_params[key] = value
-                elif key in ['volatility_adjustment_enabled', 'target_volatility', 'volatility_adjustment_max', 'volatility_adjustment_min', 'volatility_lookback_days']:
+                elif key in [
+                    "volatility_adjustment_enabled",
+                    "target_volatility",
+                    "volatility_adjustment_max",
+                    "volatility_adjustment_min",
+                    "volatility_lookback_days",
+                ]:
                     risk_params[key] = value
-                elif key in ['smart_buffer_enabled', 'smart_buffer_stability_threshold', 'buffer_k']:
+                elif key in [
+                    "smart_buffer_enabled",
+                    "smart_buffer_stability_threshold",
+                    "buffer_k",
+                ]:
                     buffer_params[key] = value
-                elif key in ['overlapping_tranches_enabled', 'tranche_holding_days', 'tranche_max_active', 'tranche_allocation_mode']:
+                elif key in [
+                    "overlapping_tranches_enabled",
+                    "tranche_holding_days",
+                    "tranche_max_active",
+                    "tranche_allocation_mode",
+                ]:
                     tranche_params[key] = value
-                elif 'regime' in key or 'risk_scaling' in key or 'exposure' in key:
+                elif "regime" in key or "risk_scaling" in key or "exposure" in key:
                     if isinstance(value, dict):
                         regime_params[key] = str(value)
                     else:
@@ -98,6 +121,7 @@ def show_strategy_parameters():
     print("- volatility_adjustment: 변동성 기반 스케일링")
     print("- risk_scaling: 시장 국면별 리스크 조정")
     print("- smart_buffer: 종목 유지율 기반 조정")
+
 
 if __name__ == "__main__":
     show_strategy_parameters()

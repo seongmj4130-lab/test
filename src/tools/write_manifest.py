@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/write_manifest.py
 """
 Manifest 생성 스크립트
@@ -10,7 +9,7 @@ import json
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 import yaml
 
@@ -19,6 +18,7 @@ def get_git_commit(repo_dir: Path) -> Optional[str]:
     """Git 커밋 해시 반환"""
     try:
         import subprocess
+
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],
             cwd=str(repo_dir),
@@ -32,16 +32,18 @@ def get_git_commit(repo_dir: Path) -> Optional[str]:
         pass
     return None
 
+
 def compute_config_hash(config_path: Path) -> str:
     """Config 파일의 해시 계산"""
     try:
-        with open(config_path, 'r', encoding='utf-8') as f:
+        with open(config_path, encoding="utf-8") as f:
             content = f.read()
-        return hashlib.sha256(content.encode('utf-8')).hexdigest()[:16]
+        return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
     except Exception:
         return "unknown"
 
-def scan_artifacts(interim_dir: Path, run_tag: str) -> List[Dict]:
+
+def scan_artifacts(interim_dir: Path, run_tag: str) -> list[dict]:
     """Interim 디렉토리에서 생성된 파일 스캔"""
     artifacts = []
 
@@ -58,25 +60,37 @@ def scan_artifacts(interim_dir: Path, run_tag: str) -> List[Dict]:
         for file_path in scan_dir.glob(f"*{ext}"):
             if file_path.is_file():
                 stat = file_path.stat()
-                artifacts.append({
-                    "name": file_path.name,
-                    "path": str(file_path.relative_to(interim_dir.parent.parent)),
-                    "size_bytes": stat.st_size,
-                    "mtime": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                    "type": ext.replace(".", "").replace("__meta.json", "meta"),
-                })
+                artifacts.append(
+                    {
+                        "name": file_path.name,
+                        "path": str(file_path.relative_to(interim_dir.parent.parent)),
+                        "size_bytes": stat.st_size,
+                        "mtime": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                        "type": ext.replace(".", "").replace("__meta.json", "meta"),
+                    }
+                )
 
     # 정렬: 이름 순
     artifacts.sort(key=lambda x: x["name"])
     return artifacts
 
+
 def main():
     parser = argparse.ArgumentParser(description="Generate manifest for pipeline run")
     parser.add_argument("--run-tag", type=str, required=True, help="Run tag")
-    parser.add_argument("--config", type=str, default="configs/config.yaml", help="Config file path")
-    parser.add_argument("--interim-dir", type=str, default=None, help="Interim directory (default: from config)")
+    parser.add_argument(
+        "--config", type=str, default="configs/config.yaml", help="Config file path"
+    )
+    parser.add_argument(
+        "--interim-dir",
+        type=str,
+        default=None,
+        help="Interim directory (default: from config)",
+    )
     parser.add_argument("--root", type=str, default=None, help="Project root directory")
-    parser.add_argument("--out-dir", type=str, default="reports/manifests", help="Output directory")
+    parser.add_argument(
+        "--out-dir", type=str, default="reports/manifests", help="Output directory"
+    )
     args = parser.parse_args()
 
     # 루트 경로 결정
@@ -95,10 +109,11 @@ def main():
         interim_dir = Path(args.interim_dir)
     else:
         try:
-            with open(config_path, 'r', encoding='utf-8') as f:
+            with open(config_path, encoding="utf-8") as f:
                 cfg = yaml.safe_load(f) or {}
             sys.path.insert(0, str(root / "src"))
             from src.utils.config import get_path
+
             interim_dir = Path(get_path(cfg, "data_interim"))
         except Exception as e:
             print(f"ERROR: Failed to get interim_dir from config: {e}", file=sys.stderr)
@@ -137,7 +152,7 @@ def main():
 
     # JSON 저장
     json_path = out_dir / f"manifest__{args.run_tag}.json"
-    with open(json_path, 'w', encoding='utf-8') as f:
+    with open(json_path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2, ensure_ascii=False)
 
     print(f"[Manifest] Saved: {json_path}")
@@ -147,6 +162,7 @@ def main():
     print(f"[Manifest] Artifacts: {len(artifacts)} files")
 
     return json_path
+
 
 if __name__ == "__main__":
     main()

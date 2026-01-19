@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/maintenance/replay_stages_0_13.py
 """
 [TASK B-1] Stage0~13 리플레이 자동화 스크립트
@@ -19,7 +18,7 @@ import time
 import warnings
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import pandas as pd
 import yaml
@@ -36,15 +35,17 @@ logger = logging.getLogger(__name__)
 # 프로젝트 루트 경로 고정
 PROJECT_ROOT = Path("C:/Users/seong/OneDrive/Desktop/bootcamp/03_code")
 
-def load_plan(plan_path: Path) -> Dict[str, Any]:
+
+def load_plan(plan_path: Path) -> dict[str, Any]:
     """plan.yaml 로드"""
     if not plan_path.exists():
         raise FileNotFoundError(f"Plan 파일을 찾을 수 없습니다: {plan_path}")
 
-    with open(plan_path, "r", encoding="utf-8") as f:
+    with open(plan_path, encoding="utf-8") as f:
         plan = yaml.safe_load(f)
 
     return plan
+
 
 def resolve_baseline_tag(
     baseline_for_delta: str,
@@ -76,7 +77,9 @@ def resolve_baseline_tag(
             if folder.is_dir() and folder.name.startswith(stage_prefix):
                 # Track에 맞는 산출물 확인
                 if track == "pipeline":
-                    if (folder / "rebalance_scores.parquet").exists() or (folder / "bt_returns.parquet").exists():
+                    if (folder / "rebalance_scores.parquet").exists() or (
+                        folder / "bt_returns.parquet"
+                    ).exists():
                         candidates.append((folder.name, folder.stat().st_mtime))
                 elif track == "ranking":
                     if (folder / "ranking_daily.parquet").exists():
@@ -89,17 +92,19 @@ def resolve_baseline_tag(
     # 기본값 반환
     return baseline_for_delta
 
+
 def generate_run_tag(prefix: str) -> str:
     """Stage 실행용 run_tag 생성"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     return f"{prefix}{timestamp}"
 
+
 def run_stage(
-    stage_def: Dict[str, Any],
+    stage_def: dict[str, Any],
     config_path: Path,
     base_dir: Path,
-    plan: Dict[str, Any],
-) -> Tuple[bool, str, str, float]:
+    plan: dict[str, Any],
+) -> tuple[bool, str, str, float]:
     """
     단일 Stage 실행 (실시간 스트리밍)
 
@@ -122,7 +127,10 @@ def run_stage(
     if input_tag is None:
         # Pipeline track (L7 포함)은 전역 input_tag 기본값 사용
         if stage_def["track"] == "pipeline":
-            input_tag = plan.get("default_input_tag", "stage6_sector_relative_feature_balance_20251220_194928")
+            input_tag = plan.get(
+                "default_input_tag",
+                "stage6_sector_relative_feature_balance_20251220_194928",
+            )
         else:
             input_tag = None  # Ranking track은 input_tag 불필요
 
@@ -141,11 +149,16 @@ def run_stage(
         sys.executable,
         "-u",  # unbuffered 출력
         str(base_dir / "src" / "run_all.py"),
-        "--from", stage_def["from"],
-        "--to", stage_def["to"],
-        "--run-tag", run_tag,
-        "--baseline-tag", baseline_tag,
-        "--config", str(config_path),
+        "--from",
+        stage_def["from"],
+        "--to",
+        stage_def["to"],
+        "--run-tag",
+        run_tag,
+        "--baseline-tag",
+        baseline_tag,
+        "--config",
+        str(config_path),
         "--skip-l2",  # 기본 옵션 강제
         "--force-rebuild",  # 기본 옵션 강제
         "--no-scan",  # 가능한 경우 활성화
@@ -162,7 +175,7 @@ def run_stage(
 
     # [TASK B-stable] 실시간 스트리밍 실행
     logger.info(f"[실행] 명령: {' '.join(cmd)}")
-    logger.info(f"[실행] 실시간 로그 스트리밍 시작...\n")
+    logger.info("[실행] 실시간 로그 스트리밍 시작...\n")
     start_time = time.time()
 
     try:
@@ -191,27 +204,35 @@ def run_stage(
         stdout_text = "\n".join(stdout_lines)
 
         if return_code == 0:
-            logger.info(f"\n[성공] Stage {stage_def['stage_no']} 실행 완료: {elapsed:.1f}초")
+            logger.info(
+                f"\n[성공] Stage {stage_def['stage_no']} 실행 완료: {elapsed:.1f}초"
+            )
             return True, run_tag, baseline_tag, elapsed
         else:
-            logger.error(f"\n[실패] Stage {stage_def['stage_no']} 실행 실패: {elapsed:.1f}초")
+            logger.error(
+                f"\n[실패] Stage {stage_def['stage_no']} 실행 실패: {elapsed:.1f}초"
+            )
             logger.error(f"[실패] Return code: {return_code}")
             logger.error(f"[실패] 출력:\n{stdout_text}")
             return False, run_tag, baseline_tag, elapsed
 
     except Exception as e:
         elapsed = time.time() - start_time
-        logger.error(f"[실패] Stage {stage_def['stage_no']} 실행 중 예외 발생: {elapsed:.1f}초")
+        logger.error(
+            f"[실패] Stage {stage_def['stage_no']} 실행 중 예외 발생: {elapsed:.1f}초"
+        )
         logger.error(f"[실패] 예외: {e}")
         import traceback
+
         logger.error(f"[실패] 트레이스백:\n{traceback.format_exc()}")
         return False, run_tag, baseline_tag, elapsed
+
 
 def check_artifacts(
     run_tag: str,
     base_dir: Path,
     track: str,
-) -> Dict[str, bool]:
+) -> dict[str, bool]:
     """
     산출물 존재 체크
 
@@ -233,7 +254,9 @@ def check_artifacts(
         # Ranking track: 랭킹 산출물 확인
         checks["ranking_daily"] = (run_dir / "ranking_daily.parquet").exists()
         checks["ranking_snapshot"] = (run_dir / "ranking_snapshot.parquet").exists()
-        sector_csv = base_dir / "reports" / "ranking" / f"sector_concentration__{run_tag}.csv"
+        sector_csv = (
+            base_dir / "reports" / "ranking" / f"sector_concentration__{run_tag}.csv"
+        )
         checks["sector_concentration"] = sector_csv.exists()
 
     # 공통 리포트 확인
@@ -242,10 +265,11 @@ def check_artifacts(
 
     return checks
 
+
 def extract_kpi_from_bt_metrics(
     run_tag: str,
     base_dir: Path,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     bt_metrics.parquet에서 KPI 추출
 
@@ -267,14 +291,40 @@ def extract_kpi_from_bt_metrics(
         else:
             row = df.iloc[0]
 
-        kpis["holdout_sharpe"] = float(row.get("net_sharpe", None)) if pd.notna(row.get("net_sharpe")) else None
-        kpis["holdout_mdd"] = float(row.get("net_mdd", None)) if pd.notna(row.get("net_mdd")) else None
-        kpis["holdout_cagr"] = float(row.get("net_cagr", None)) if pd.notna(row.get("net_cagr")) else None
-        kpis["holdout_total_return"] = float(row.get("net_total_return", None)) if pd.notna(row.get("net_total_return")) else None
-        kpis["avg_turnover"] = float(row.get("avg_turnover_oneway", None)) if pd.notna(row.get("avg_turnover_oneway")) else None
-        kpis["avg_n_tickers"] = float(row.get("avg_n_tickers", None)) if pd.notna(row.get("avg_n_tickers")) else None
-        kpis["cost_bps_used"] = float(row.get("cost_bps", None)) if pd.notna(row.get("cost_bps")) else None
-        kpis["n_rebalances"] = int(row.get("n_rebalances", None)) if pd.notna(row.get("n_rebalances")) else None
+        kpis["holdout_sharpe"] = (
+            float(row.get("net_sharpe", None))
+            if pd.notna(row.get("net_sharpe"))
+            else None
+        )
+        kpis["holdout_mdd"] = (
+            float(row.get("net_mdd", None)) if pd.notna(row.get("net_mdd")) else None
+        )
+        kpis["holdout_cagr"] = (
+            float(row.get("net_cagr", None)) if pd.notna(row.get("net_cagr")) else None
+        )
+        kpis["holdout_total_return"] = (
+            float(row.get("net_total_return", None))
+            if pd.notna(row.get("net_total_return"))
+            else None
+        )
+        kpis["avg_turnover"] = (
+            float(row.get("avg_turnover_oneway", None))
+            if pd.notna(row.get("avg_turnover_oneway"))
+            else None
+        )
+        kpis["avg_n_tickers"] = (
+            float(row.get("avg_n_tickers", None))
+            if pd.notna(row.get("avg_n_tickers"))
+            else None
+        )
+        kpis["cost_bps_used"] = (
+            float(row.get("cost_bps", None)) if pd.notna(row.get("cost_bps")) else None
+        )
+        kpis["n_rebalances"] = (
+            int(row.get("n_rebalances", None))
+            if pd.notna(row.get("n_rebalances"))
+            else None
+        )
 
         kpis["metric_source"] = "bt_metrics.parquet"
     except Exception as e:
@@ -283,10 +333,11 @@ def extract_kpi_from_bt_metrics(
 
     return kpis
 
+
 def extract_kpi_from_kpi_table(
     run_tag: str,
     base_dir: Path,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     kpi_table__{run_tag}.csv에서 KPI 추출
 
@@ -324,10 +375,11 @@ def extract_kpi_from_kpi_table(
 
     return kpis
 
+
 def extract_ranking_kpi(
     run_tag: str,
     base_dir: Path,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     ranking KPI 추출 (sector_concentration CSV에서)
 
@@ -336,7 +388,9 @@ def extract_ranking_kpi(
     """
     kpis = {}
 
-    sector_csv = base_dir / "reports" / "ranking" / f"sector_concentration__{run_tag}.csv"
+    sector_csv = (
+        base_dir / "reports" / "ranking" / f"sector_concentration__{run_tag}.csv"
+    )
     if not sector_csv.exists():
         return kpis
 
@@ -354,12 +408,13 @@ def extract_ranking_kpi(
 
     return kpis
 
+
 def collect_stage_kpis(
     stage_no: int,
     run_tag: str,
     base_dir: Path,
     track: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Stage별 KPI 수집
 
@@ -382,7 +437,9 @@ def collect_stage_kpis(
             # kpi_table 시도
             kpi_table_kpis = extract_kpi_from_kpi_table(run_tag, base_dir)
             kpis.update(kpi_table_kpis)
-            if "metric_source" not in kpis or not kpis["metric_source"].startswith("kpi_table"):
+            if "metric_source" not in kpis or not kpis["metric_source"].startswith(
+                "kpi_table"
+            ):
                 kpis["metric_source"] = "NA(no backtest)"
 
     # Ranking track: ranking KPI 추출
@@ -393,8 +450,9 @@ def collect_stage_kpis(
 
     return kpis
 
+
 def build_evolution_csv(
-    stage_results: List[Dict[str, Any]],
+    stage_results: list[dict[str, Any]],
     output_path: Path,
 ) -> None:
     """
@@ -422,8 +480,9 @@ def build_evolution_csv(
     df.to_csv(output_path, index=False, encoding="utf-8-sig")
     logger.info(f"[진화 CSV] 저장 완료: {output_path}")
 
+
 def build_changes_csv(
-    stage_results: List[Dict[str, Any]],
+    stage_results: list[dict[str, Any]],
     output_path: Path,
     compare_type: str,  # "prev" or "baseline"
 ) -> None:
@@ -472,7 +531,13 @@ def build_changes_csv(
         }
 
         # 백테스트 KPI 변화량
-        for metric in ["holdout_sharpe", "holdout_mdd", "holdout_cagr", "avg_turnover", "cost_bps_used"]:
+        for metric in [
+            "holdout_sharpe",
+            "holdout_mdd",
+            "holdout_cagr",
+            "avg_turnover",
+            "cost_bps_used",
+        ]:
             current_val = kpis.get(metric)
             baseline_val = baseline_kpis.get(metric)
 
@@ -481,7 +546,9 @@ def build_changes_csv(
                 change_row[f"{metric}_baseline"] = baseline_val
                 change_row[f"{metric}_delta"] = current_val - baseline_val
                 if baseline_val != 0:
-                    change_row[f"{metric}_pct_change"] = (current_val - baseline_val) / abs(baseline_val) * 100
+                    change_row[f"{metric}_pct_change"] = (
+                        (current_val - baseline_val) / abs(baseline_val) * 100
+                    )
 
         # Ranking KPI 변화량
         for metric in ["mean_hhi", "mean_max_sector_share", "mean_n_sectors"]:
@@ -500,7 +567,9 @@ def build_changes_csv(
             baseline_kpis = kpis.copy()
 
     if not rows:
-        logger.warning(f"[변화량 CSV] 데이터가 없어 CSV를 생성하지 않습니다. (type: {compare_type})")
+        logger.warning(
+            f"[변화량 CSV] 데이터가 없어 CSV를 생성하지 않습니다. (type: {compare_type})"
+        )
         return
 
     df = pd.DataFrame(rows)
@@ -508,9 +577,10 @@ def build_changes_csv(
     df.to_csv(output_path, index=False, encoding="utf-8-sig")
     logger.info(f"[변화량 CSV] 저장 완료: {output_path}")
 
+
 def build_summary_md(
-    stage_results: List[Dict[str, Any]],
-    plan: Dict[str, Any],
+    stage_results: list[dict[str, Any]],
+    plan: dict[str, Any],
     output_path: Path,
     base_dir: Path,
 ) -> None:
@@ -610,11 +680,13 @@ def build_summary_md(
             ]:
                 val = kpis.get(metric)
                 if val is not None:
-                    lines.append(f"| {label} | {val:.4f} | sector_concentration CSV |\n")
+                    lines.append(
+                        f"| {label} | {val:.4f} | sector_concentration CSV |\n"
+                    )
                 else:
                     lines.append(f"| {label} | N/A | sector_concentration CSV |\n")
 
-            lines.append(f"| 백테스트 KPI | N/A | NA(no backtest) |\n")
+            lines.append("| 백테스트 KPI | N/A | NA(no backtest) |\n")
 
         lines.append("\n")
 
@@ -622,6 +694,7 @@ def build_summary_md(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n".join(lines), encoding="utf-8")
     logger.info(f"[요약 MD] 저장 완료: {output_path}")
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -658,7 +731,9 @@ def main():
     plan = load_plan(plan_path)
     logger.info(f"Plan 로드 완료: {plan_path}")
     logger.info(f"Baseline Tag: {plan.get('baseline_tag', 'N/A')} (비교 기준)")
-    logger.info(f"Input Tag (기본값): {plan.get('default_input_tag', 'N/A')} (입력 산출물 소스)")
+    logger.info(
+        f"Input Tag (기본값): {plan.get('default_input_tag', 'N/A')} (입력 산출물 소스)"
+    )
     logger.info(f"총 {len(plan['stages'])}개 Stage")
 
     # Stage별 실행
@@ -692,18 +767,22 @@ def main():
             )
             logger.info(f"[KPI 수집] 완료: {kpis.get('metric_source', 'N/A')}")
 
-        stage_results.append({
-            "stage_no": stage_def["stage_no"],
-            "run_tag": run_tag,
-            "baseline_tag": baseline_tag,
-            "success": success,
-            "elapsed_time": elapsed,
-            "artifact_checks": artifact_checks,
-            "kpis": kpis,
-        })
+        stage_results.append(
+            {
+                "stage_no": stage_def["stage_no"],
+                "run_tag": run_tag,
+                "baseline_tag": baseline_tag,
+                "success": success,
+                "elapsed_time": elapsed,
+                "artifact_checks": artifact_checks,
+                "kpis": kpis,
+            }
+        )
 
         if not success:
-            logger.error(f"[중단] Stage {stage_def['stage_no']} 실행 실패로 인해 리플레이를 중단합니다.")
+            logger.error(
+                f"[중단] Stage {stage_def['stage_no']} 실행 실패로 인해 리플레이를 중단합니다."
+            )
             break
 
     total_elapsed = time.time() - total_start_time
@@ -735,6 +814,7 @@ def main():
     logger.info(f"변화량 CSV (vs-baseline): {changes_baseline_csv}")
     logger.info(f"요약 MD: {summary_md}")
     logger.info(f"{'='*80}\n")
+
 
 if __name__ == "__main__":
     main()

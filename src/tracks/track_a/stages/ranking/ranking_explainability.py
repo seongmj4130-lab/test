@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/ranking/ranking_explainability.py
 """
 [Stage9] Ranking 설명가능성 확장
@@ -10,9 +9,8 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
-import numpy as np
 import pandas as pd
 
 # ranking 모듈 import를 위한 경로 추가
@@ -22,24 +20,19 @@ if str(src_dir) not in sys.path:
 
 from src.components.ranking.score_engine import (
     _pick_feature_cols,
-    build_score_total,
     normalize_feature_cross_sectional,
 )
 from src.utils.feature_groups import (
     get_feature_groups,  # [개선안 14번] feature_groups.yaml 스키마 파싱 정정
 )
-from src.utils.feature_groups import (
-    get_group_target_weights,
-    load_feature_groups,
-    map_features_to_groups,
-)
+from src.utils.feature_groups import load_feature_groups, map_features_to_groups
 
 
 def calculate_feature_contributions(
     df: pd.DataFrame,
-    feature_cols: List[str],
-    feature_weights: Dict[str, float],
-    normalized_features: Dict[str, pd.Series],
+    feature_cols: list[str],
+    feature_weights: dict[str, float],
+    normalized_features: dict[str, pd.Series],
     score_total: pd.Series,
 ) -> pd.DataFrame:
     """
@@ -67,11 +60,12 @@ def calculate_feature_contributions(
 
     return out
 
+
 def calculate_group_contributions(
     df: pd.DataFrame,
-    feature_cols: List[str],
-    feature_weights: Dict[str, float],
-    normalized_features: Dict[str, pd.Series],
+    feature_cols: list[str],
+    feature_weights: dict[str, float],
+    normalized_features: dict[str, pd.Series],
     feature_groups_config: Optional[Path] = None,
 ) -> pd.DataFrame:
     """
@@ -107,11 +101,16 @@ def calculate_group_contributions(
         # 그룹 매핑 규칙
         for group_name, group_features in groups_map.items():
             group_lower = group_name.lower()
-            if any(x in group_lower for x in ["value", "profitability", "fundamental", "roe", "debt"]):
+            if any(
+                x in group_lower
+                for x in ["value", "profitability", "fundamental", "roe", "debt"]
+            ):
                 standard_groups_map["fundamental"].extend(group_features)
             elif any(x in group_lower for x in ["sector", "relative"]):
                 standard_groups_map["sector_adj"].extend(group_features)
-            elif any(x in group_lower for x in ["technical", "momentum", "volume", "price"]):
+            elif any(
+                x in group_lower for x in ["technical", "momentum", "volume", "price"]
+            ):
                 standard_groups_map["price"].extend(group_features)
             elif any(x in group_lower for x in ["core", "base"]):
                 standard_groups_map["core"].extend(group_features)
@@ -131,11 +130,17 @@ def calculate_group_contributions(
 
         for feat in feature_cols:
             feat_lower = feat.lower()
-            if any(x in feat_lower for x in ["roe", "debt", "equity", "income", "asset", "net_income"]):
+            if any(
+                x in feat_lower
+                for x in ["roe", "debt", "equity", "income", "asset", "net_income"]
+            ):
                 groups_map["fundamental"].append(feat)
             elif any(x in feat_lower for x in ["sector", "relative", "_sector_", "_z"]):
                 groups_map["sector_adj"].append(feat)
-            elif any(x in feat_lower for x in ["momentum", "volume", "volatility", "price", "volume_ratio"]):
+            elif any(
+                x in feat_lower
+                for x in ["momentum", "volume", "volatility", "price", "volume_ratio"]
+            ):
                 groups_map["price"].append(feat)
             elif any(x in feat_lower for x in ["core", "base"]):
                 groups_map["core"].append(feat)
@@ -159,11 +164,12 @@ def calculate_group_contributions(
 
     return out
 
+
 def extract_top_features(
     df: pd.DataFrame,
-    feature_cols: List[str],
-    feature_weights: Dict[str, float],
-    normalized_features: Dict[str, pd.Series],
+    feature_cols: list[str],
+    feature_weights: dict[str, float],
+    normalized_features: dict[str, pd.Series],
     top_k: int = 5,
 ) -> pd.Series:
     """
@@ -187,18 +193,31 @@ def extract_top_features(
         for feat in feature_cols:
             if feat in normalized_features and feat in feature_weights:
                 weight = feature_weights[feat]
-                normalized_val = normalized_features[feat].loc[idx] if idx in normalized_features[feat].index else 0.0
+                normalized_val = (
+                    normalized_features[feat].loc[idx]
+                    if idx in normalized_features[feat].index
+                    else 0.0
+                )
                 contrib = weight * (normalized_val if pd.notna(normalized_val) else 0.0)
                 contribs[feat] = contrib
 
         # 절댓값 기준 상위 K개 선택
-        sorted_contribs = sorted(contribs.items(), key=lambda x: abs(x[1]), reverse=True)[:top_k]
+        sorted_contribs = sorted(
+            contribs.items(), key=lambda x: abs(x[1]), reverse=True
+        )[:top_k]
 
         # 문자열 형식으로 변환
-        top_features_str = ";".join([f"{feat}:{contrib:.4f}" for feat, contrib in sorted_contribs if abs(contrib) > 1e-6])
+        top_features_str = ";".join(
+            [
+                f"{feat}:{contrib:.4f}"
+                for feat, contrib in sorted_contribs
+                if abs(contrib) > 1e-6
+            ]
+        )
         top_features_list.append(top_features_str if top_features_str else "")
 
     return pd.Series(top_features_list, index=df.index)
+
 
 def build_ranking_with_explainability(
     ranking_daily: pd.DataFrame,
@@ -282,17 +301,27 @@ def build_ranking_with_explainability(
                 if feat in gf:
                     n_features_in_group = len([f for f in feature_cols if f in gf])
                     if n_features_in_group > 0:
-                        feature_weights[feat] = group_weights.get(group_name, 0.0) / n_features_in_group
+                        feature_weights[feat] = (
+                            group_weights.get(group_name, 0.0) / n_features_in_group
+                        )
                     break
             if feat not in feature_weights:
                 feature_weights[feat] = 1.0 / len(feature_cols)
     else:
-        feature_weights = {feat: 1.0 / len(normalized_features) for feat in normalized_features.keys()}
+        feature_weights = {
+            feat: 1.0 / len(normalized_features) for feat in normalized_features.keys()
+        }
 
     # 가중치 정규화
-    total_weight = sum(feature_weights.get(feat, 0.0) for feat in normalized_features.keys())
+    total_weight = sum(
+        feature_weights.get(feat, 0.0) for feat in normalized_features.keys()
+    )
     if total_weight > 1e-8:
-        feature_weights = {feat: w / total_weight for feat, w in feature_weights.items() if feat in normalized_features}
+        feature_weights = {
+            feat: w / total_weight
+            for feat, w in feature_weights.items()
+            if feat in normalized_features
+        }
 
     # 그룹별 기여도 계산
     result = calculate_group_contributions(
@@ -328,6 +357,7 @@ def build_ranking_with_explainability(
     output_cols.append("top_features")
 
     return result[output_cols].copy()
+
 
 def make_snapshot_with_explainability(
     ranking_daily: pd.DataFrame,
@@ -365,7 +395,13 @@ def make_snapshot_with_explainability(
     bottom_k_df["snapshot_type"] = "bottom10"
 
     # 컬럼 선택
-    output_cols = ["snapshot_date", "snapshot_type", "ticker", "score_total", "rank_total"]
+    output_cols = [
+        "snapshot_date",
+        "snapshot_type",
+        "ticker",
+        "score_total",
+        "rank_total",
+    ]
     if "top_features" in snapshot_df.columns:
         output_cols.append("top_features")
 

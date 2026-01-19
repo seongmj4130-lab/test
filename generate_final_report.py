@@ -1,7 +1,3 @@
-import pandas as pd
-import yaml
-
-
 def generate_final_report():
     """Track A, B 설정값, 파라미터값, 최종 성과 지표를 모은 종합 보고서 생성"""
 
@@ -284,13 +280,16 @@ Track B: CAGR 9.22% (BT20 단기와 동일)
 """
 
     # 보고서 저장
-    with open('artifacts/reports/final_comprehensive_report.md', 'w', encoding='utf-8') as f:
+    with open(
+        "artifacts/reports/final_comprehensive_report.md", "w", encoding="utf-8"
+    ) as f:
         f.write(report_content)
 
     print("✅ 최종 종합 보고서 생성 완료!")
     print("📁 artifacts/reports/final_comprehensive_report.md")
 
     return report_content
+
 
 if __name__ == "__main__":
     report = generate_final_report()

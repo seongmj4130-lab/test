@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 BT20_SHORT 모델 Hit Ratio 최적화 스크립트
 
@@ -13,8 +12,6 @@ BT20_SHORT 모델 Hit Ratio 최적화 스크립트
 
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
 import yaml
 
 
@@ -22,56 +19,79 @@ def analyze_current_weights():
     """현재 가중치 분석"""
     base_dir = Path(__file__).parent.parent
 
-    weights_path = base_dir / 'configs' / 'feature_weights_short_ic_optimized.yaml'
+    weights_path = base_dir / "configs" / "feature_weights_short_ic_optimized.yaml"
 
     if not weights_path.exists():
         return None
 
-    with open(weights_path, 'r', encoding='utf-8') as f:
+    with open(weights_path, encoding="utf-8") as f:
         weights_data = yaml.safe_load(f) or {}
         feature_weights = weights_data.get("feature_weights", {})
         group_weights = weights_data.get("group_weights", {})
 
     return feature_weights, group_weights
 
+
 def suggest_optimized_weights():
     """과적합 감소를 위한 가중치 제안"""
 
     # 현재 가중치
     current_weights = {
-        'value': 0.15,
-        'profitability': 0.10,
-        'technical': 0.60,  # 과적합 유발 가능성 높음
-        'other': 0.10,
-        'news': 0.05
+        "value": 0.15,
+        "profitability": 0.10,
+        "technical": 0.60,  # 과적합 유발 가능성 높음
+        "other": 0.10,
+        "news": 0.05,
     }
 
     # 최적화 제안: technical 축소, value/profitability 강화
     # 이유: technical 피쳐가 단기에서 과적합 유발 가능성
     optimized_weights = {
-        'value': 0.20,  # 0.15 → 0.20 (재무 지표 강화)
-        'profitability': 0.15,  # 0.10 → 0.15 (수익성 지표 강화)
-        'technical': 0.50,  # 0.60 → 0.50 (과적합 유발 피쳐 축소)
-        'other': 0.10,
-        'news': 0.05
+        "value": 0.20,  # 0.15 → 0.20 (재무 지표 강화)
+        "profitability": 0.15,  # 0.10 → 0.15 (수익성 지표 강화)
+        "technical": 0.50,  # 0.60 → 0.50 (과적합 유발 피쳐 축소)
+        "other": 0.10,
+        "news": 0.05,
     }
 
     return current_weights, optimized_weights
 
+
 def create_optimized_weights_file(weights: dict, output_path: Path):
     """최적화된 가중치 파일 생성"""
     feature_groups = {
-        'value': ['equity', 'total_liabilities', 'net_income', 'debt_ratio', 'debt_ratio_sector_z'],
-        'profitability': ['roe', 'roe_sector_z'],
-        'technical': [
-            'volatility_60d', 'volatility_20d', 'volatility', 'downside_volatility_60d',
-            'price_momentum_60d', 'price_momentum_20d', 'price_momentum', 'momentum_rank',
-            'momentum_3m', 'momentum_6m', 'momentum_reversal',
-            'max_drawdown_60d', 'volume', 'volume_ratio', 'turnover',
-            'close', 'high', 'low', 'open', 'ret_daily'
+        "value": [
+            "equity",
+            "total_liabilities",
+            "net_income",
+            "debt_ratio",
+            "debt_ratio_sector_z",
         ],
-        'other': ['in_universe'],
-        'news': []
+        "profitability": ["roe", "roe_sector_z"],
+        "technical": [
+            "volatility_60d",
+            "volatility_20d",
+            "volatility",
+            "downside_volatility_60d",
+            "price_momentum_60d",
+            "price_momentum_20d",
+            "price_momentum",
+            "momentum_rank",
+            "momentum_3m",
+            "momentum_6m",
+            "momentum_reversal",
+            "max_drawdown_60d",
+            "volume",
+            "volume_ratio",
+            "turnover",
+            "close",
+            "high",
+            "low",
+            "open",
+            "ret_daily",
+        ],
+        "other": ["in_universe"],
+        "news": [],
     }
 
     feature_weights = {}
@@ -86,28 +106,31 @@ def create_optimized_weights_file(weights: dict, output_path: Path):
                     feature_weights[feature] = weight_per_feature
 
     yaml_data = {
-        'description': f"Hit Ratio 최적화 - 과적합 감소 (합={sum(weights.values()):.2f})",
-        'feature_weights': feature_weights,
-        'group_weights': weights,
-        'metadata': {
-            'total_weight': sum(weights.values()),
-            'n_groups': len(weights),
-            'n_features': len(feature_weights),
-            'optimization_target': 'hit_ratio_50pct_no_overfitting'
-        }
+        "description": f"Hit Ratio 최적화 - 과적합 감소 (합={sum(weights.values()):.2f})",
+        "feature_weights": feature_weights,
+        "group_weights": weights,
+        "metadata": {
+            "total_weight": sum(weights.values()),
+            "n_groups": len(weights),
+            "n_features": len(feature_weights),
+            "optimization_target": "hit_ratio_50pct_no_overfitting",
+        },
     }
 
-    with open(output_path, 'w', encoding='utf-8') as f:
-        yaml.dump(yaml_data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+    with open(output_path, "w", encoding="utf-8") as f:
+        yaml.dump(
+            yaml_data, f, default_flow_style=False, allow_unicode=True, sort_keys=False
+        )
 
     return yaml_data
+
 
 def main():
     base_dir = Path(__file__).parent.parent
 
-    print("="*80)
+    print("=" * 80)
     print("BT20_SHORT Hit Ratio 최적화 방안")
-    print("="*80)
+    print("=" * 80)
 
     print("\n현재 상태:")
     print("  Dev Hit Ratio: 57.32%")
@@ -135,25 +158,27 @@ def main():
         change = opt - curr
         direction = "↑" if change > 0 else "↓" if change < 0 else "="
 
-        if group == 'technical':
+        if group == "technical":
             reason = "과적합 유발 가능성 높음 → 축소"
-        elif group in ['value', 'profitability']:
+        elif group in ["value", "profitability"]:
             reason = "안정적 예측력 → 강화"
         else:
             reason = "유지"
 
-        print(f"| {group:15s} | {curr:4.2f} | {opt:4.2f} | {change:+5.2f} {direction} | {reason} |")
+        print(
+            f"| {group:15s} | {curr:4.2f} | {opt:4.2f} | {change:+5.2f} {direction} | {reason} |"
+        )
 
     # 최적화된 가중치 파일 생성
-    output_path = base_dir / 'configs' / 'feature_weights_short_hitratio_optimized.yaml'
+    output_path = base_dir / "configs" / "feature_weights_short_hitratio_optimized.yaml"
     create_optimized_weights_file(optimized, output_path)
 
     print(f"\n✅ 최적화된 가중치 파일 생성: {output_path}")
 
     # 추가 최적화 방안
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("추가 최적화 방안")
-    print("="*80)
+    print("=" * 80)
 
     print("\n1. 정규화 강화 (ridge_alpha 조정)")
     print("   현재: ridge_alpha = 0.5")
@@ -171,15 +196,18 @@ def main():
     print("   - top_k 조정 (12 → 10 또는 15)")
     print("   - buffer_k 조정 (15 → 20)")
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("적용 방법")
-    print("="*80)
+    print("=" * 80)
     print("\n1. config.yaml 수정:")
     print("   l5:")
-    print("     feature_weights_config_short: configs/feature_weights_short_hitratio_optimized.yaml")
+    print(
+        "     feature_weights_config_short: configs/feature_weights_short_hitratio_optimized.yaml"
+    )
     print("     ridge_alpha: 0.8  # 0.5 → 0.8")
     print("\n2. L5 재학습 및 백테스트 실행")
     print("3. Holdout Hit Ratio 확인 (목표: ≥ 50%)")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

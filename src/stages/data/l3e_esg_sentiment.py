@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # src/stages/data/l3e_esg_sentiment.py
 # [ESG 통합] ESG 감성 피처 통합 모듈 (래퍼)
 

@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/data/l3n_news_sentiment.py
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -23,10 +22,12 @@ class NewsSentimentConfig:
       - lookahead 방지: 기본 lag_days=1 (t일 매매 신호에 t-1일까지의 뉴스만 반영)
       - 입력 파일이 없으면: 절대 실패하지 않고 "스킵" + 경고만 남김 (placeholder 뼈대)
     """
+
     enabled: bool = False
     source_path: str = "data/external/news_sentiment_daily.parquet"
     lag_days: int = 1
     shrink_k: int = 5  # (P-N)/(T+k) 안정화 상수
+
 
 def _read_table(path: Path) -> pd.DataFrame:
     if path.suffix.lower() == ".parquet":
@@ -35,6 +36,7 @@ def _read_table(path: Path) -> pd.DataFrame:
         return pd.read_csv(path)
     raise ValueError(f"Unsupported file extension: {path.suffix}")
 
+
 def _ensure_date_ticker(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
     if "date" not in out.columns or "ticker" not in out.columns:
@@ -42,6 +44,7 @@ def _ensure_date_ticker(df: pd.DataFrame) -> pd.DataFrame:
     out["date"] = pd.to_datetime(out["date"], errors="raise")
     out["ticker"] = out["ticker"].astype(str).str.zfill(6)
     return out
+
 
 def _aggregate_from_article_labels(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -68,7 +71,10 @@ def _aggregate_from_article_labels(df: pd.DataFrame) -> pd.DataFrame:
     agg["T"] = agg["P"] + agg["N"] + agg["Z"]
     return agg
 
-def _compute_features_from_counts(counts: pd.DataFrame, *, shrink_k: int) -> pd.DataFrame:
+
+def _compute_features_from_counts(
+    counts: pd.DataFrame, *, shrink_k: int
+) -> pd.DataFrame:
     """
     [개선안 15번] counts(P,N,Z,T) -> (news_sentiment, news_conviction, news_volume)
     """
@@ -88,7 +94,16 @@ def _compute_features_from_counts(counts: pd.DataFrame, *, shrink_k: int) -> pd.
     x["news_conviction_raw"] = (P - N).abs() / denom
     x["news_volume_raw"] = np.log1p(T)
 
-    return x[["date", "ticker", "news_sentiment_raw", "news_conviction_raw", "news_volume_raw"]].copy()
+    return x[
+        [
+            "date",
+            "ticker",
+            "news_sentiment_raw",
+            "news_conviction_raw",
+            "news_volume_raw",
+        ]
+    ].copy()
+
 
 def _apply_lag_by_ticker(df: pd.DataFrame, *, lag_days: int) -> pd.DataFrame:
     """
@@ -105,7 +120,9 @@ def _apply_lag_by_ticker(df: pd.DataFrame, *, lag_days: int) -> pd.DataFrame:
                 "news_volume_raw": "news_volume",
             }
         )
-        return out[["date", "ticker", "news_sentiment", "news_conviction", "news_volume"]].copy()
+        return out[
+            ["date", "ticker", "news_sentiment", "news_conviction", "news_volume"]
+        ].copy()
 
     x = x.sort_values(["ticker", "date"], kind="mergesort").reset_index(drop=True)
     for raw, col in [
@@ -116,7 +133,10 @@ def _apply_lag_by_ticker(df: pd.DataFrame, *, lag_days: int) -> pd.DataFrame:
         if raw not in x.columns:
             raise KeyError(f"missing column: {raw}")
         x[col] = x.groupby("ticker", sort=False)[raw].shift(lag)
-    return x[["date", "ticker", "news_sentiment", "news_conviction", "news_volume"]].copy()
+    return x[
+        ["date", "ticker", "news_sentiment", "news_conviction", "news_volume"]
+    ].copy()
+
 
 def _add_ewm_features(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -137,14 +157,25 @@ def _add_ewm_features(df: pd.DataFrame) -> pd.DataFrame:
 
     x = x.sort_values(["ticker", "date"], kind="mergesort").reset_index(drop=True)
     s = pd.to_numeric(x["news_sentiment"], errors="coerce")
-    x["news_sentiment_ewm5"] = x.groupby("ticker", sort=False)["news_sentiment"].transform(
-        lambda v: pd.to_numeric(v, errors="coerce").ewm(span=5, adjust=False, min_periods=1).mean()
+    x["news_sentiment_ewm5"] = x.groupby("ticker", sort=False)[
+        "news_sentiment"
+    ].transform(
+        lambda v: pd.to_numeric(v, errors="coerce")
+        .ewm(span=5, adjust=False, min_periods=1)
+        .mean()
     )
-    x["news_sentiment_ewm20"] = x.groupby("ticker", sort=False)["news_sentiment"].transform(
-        lambda v: pd.to_numeric(v, errors="coerce").ewm(span=20, adjust=False, min_periods=1).mean()
+    x["news_sentiment_ewm20"] = x.groupby("ticker", sort=False)[
+        "news_sentiment"
+    ].transform(
+        lambda v: pd.to_numeric(v, errors="coerce")
+        .ewm(span=20, adjust=False, min_periods=1)
+        .mean()
     )
-    x["news_sentiment_surprise"] = s - pd.to_numeric(x["news_sentiment_ewm20"], errors="coerce")
+    x["news_sentiment_surprise"] = s - pd.to_numeric(
+        x["news_sentiment_ewm20"], errors="coerce"
+    )
     return x
+
 
 def build_news_sentiment_daily_features(
     *,
@@ -170,7 +201,9 @@ def build_news_sentiment_daily_features(
 
     # Case C: already feature columns exist -> just lag and return
     if {"news_sentiment", "news_conviction", "news_volume"}.issubset(set(df.columns)):
-        x = df[["date", "ticker", "news_sentiment", "news_conviction", "news_volume"]].copy()
+        x = df[
+            ["date", "ticker", "news_sentiment", "news_conviction", "news_volume"]
+        ].copy()
         # treat them as raw and lag
         x = x.rename(
             columns={
@@ -186,8 +219,14 @@ def build_news_sentiment_daily_features(
     if {"P", "N", "Z"}.issubset(set(df.columns)):
         x = df.copy()
         if "T" not in x.columns:
-            x["T"] = pd.to_numeric(x["P"], errors="coerce").fillna(0.0) + pd.to_numeric(x["N"], errors="coerce").fillna(0.0) + pd.to_numeric(x["Z"], errors="coerce").fillna(0.0)
-        feats_raw = _compute_features_from_counts(x[["date", "ticker", "P", "N", "Z", "T"]], shrink_k=shrink_k)
+            x["T"] = (
+                pd.to_numeric(x["P"], errors="coerce").fillna(0.0)
+                + pd.to_numeric(x["N"], errors="coerce").fillna(0.0)
+                + pd.to_numeric(x["Z"], errors="coerce").fillna(0.0)
+            )
+        feats_raw = _compute_features_from_counts(
+            x[["date", "ticker", "P", "N", "Z", "T"]], shrink_k=shrink_k
+        )
         feats = _apply_lag_by_ticker(feats_raw, lag_days=lag_days)
         return _add_ewm_features(feats)
 
@@ -203,12 +242,13 @@ def build_news_sentiment_daily_features(
         "(date,ticker,label) or (date,ticker,P,N,Z[,T]) or (date,ticker,news_sentiment,news_conviction,news_volume)"
     )
 
+
 def maybe_merge_news_sentiment(
     *,
     panel_merged_daily: pd.DataFrame,
     cfg: dict,
     project_root: Optional[Path] = None,
-) -> Tuple[pd.DataFrame, List[str]]:
+) -> tuple[pd.DataFrame, list[str]]:
     """
     [개선안 15번] (뼈대) 뉴스 감성 피처를 panel_merged_daily에 머지
 
@@ -217,14 +257,22 @@ def maybe_merge_news_sentiment(
     - 파일이 있으면 피처 3개를 생성/머지:
         news_sentiment, news_conviction, news_volume
     """
-    warns: List[str] = []
+    warns: list[str] = []
     if panel_merged_daily is None or panel_merged_daily.empty:
         raise ValueError("panel_merged_daily is empty")
 
-    news_cfg_raw = (cfg.get("news", {}) if isinstance(cfg, dict) else {}) or (cfg.get("params", {}).get("news", {}) if isinstance(cfg, dict) else {}) or {}
+    news_cfg_raw = (
+        (cfg.get("news", {}) if isinstance(cfg, dict) else {})
+        or (cfg.get("params", {}).get("news", {}) if isinstance(cfg, dict) else {})
+        or {}
+    )
     news_cfg = NewsSentimentConfig(
         enabled=bool(news_cfg_raw.get("enabled", False)),
-        source_path=str(news_cfg_raw.get("source_path", "data/external/news_sentiment_daily.parquet")),
+        source_path=str(
+            news_cfg_raw.get(
+                "source_path", "data/external/news_sentiment_daily.parquet"
+            )
+        ),
         lag_days=int(news_cfg_raw.get("lag_days", 1)),
         shrink_k=int(news_cfg_raw.get("shrink_k", 5)),
     )
@@ -232,12 +280,22 @@ def maybe_merge_news_sentiment(
     if not news_cfg.enabled:
         return panel_merged_daily, warns
 
-    root = project_root if project_root is not None else Path(cfg.get("paths", {}).get("base_dir", Path.cwd())) if isinstance(cfg, dict) else Path.cwd()
+    root = (
+        project_root
+        if project_root is not None
+        else (
+            Path(cfg.get("paths", {}).get("base_dir", Path.cwd()))
+            if isinstance(cfg, dict)
+            else Path.cwd()
+        )
+    )
     src = Path(news_cfg.source_path)
     src_path = src if src.is_absolute() else (root / src)
 
     if not src_path.exists():
-        warns.append(f"[L3N] news.enabled=True but file not found -> skipped: {src_path}")
+        warns.append(
+            f"[L3N] news.enabled=True but file not found -> skipped: {src_path}"
+        )
         return panel_merged_daily, warns
 
     try:
@@ -248,7 +306,9 @@ def maybe_merge_news_sentiment(
             lag_days=news_cfg.lag_days,
         )
     except Exception as e:
-        warns.append(f"[L3N] failed to load/build news sentiment features -> skipped: {type(e).__name__}: {e}")
+        warns.append(
+            f"[L3N] failed to load/build news sentiment features -> skipped: {type(e).__name__}: {e}"
+        )
         return panel_merged_daily, warns
 
     # merge
@@ -260,6 +320,8 @@ def maybe_merge_news_sentiment(
     before_cols = set(out.columns)
     out = out.merge(feats, on=["date", "ticker"], how="left", validate="many_to_one")
     added = sorted(list(set(out.columns) - before_cols))
-    warns.append(f"[L3N] merged news sentiment features: {added} (rows={len(feats):,}, file={src_path})")
+    warns.append(
+        f"[L3N] merged news sentiment features: {added} (rows={len(feats):,}, file={src_path})"
+    )
 
     return out, warns

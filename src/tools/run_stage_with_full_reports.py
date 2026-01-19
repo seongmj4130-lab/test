@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/run_stage_with_full_reports.py
 """
 [코드 매니저] Stage 실행 통합 스크립트 (규칙 준수 버전)
@@ -13,7 +12,7 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional
 
 import yaml
 
@@ -28,10 +27,12 @@ def get_file_hash(filepath: Path) -> str:
             sha256_hash.update(byte_block)
     return sha256_hash.hexdigest()
 
+
 def load_config(config_path: Path) -> dict:
     """YAML 설정 파일 로드"""
-    with open(config_path, 'r', encoding='utf-8') as f:
+    with open(config_path, encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
+
 
 def get_base_dir(cfg: dict) -> Path:
     """config에서 base_dir 추출"""
@@ -55,7 +56,8 @@ def get_base_dir(cfg: dict) -> Path:
 
     return base_dir
 
-def get_baseline_tag(cfg: dict, stage: int) -> Tuple[str, str]:
+
+def get_baseline_tag(cfg: dict, stage: int) -> tuple[str, str]:
     """
     Baseline 태그 결정
 
@@ -89,7 +91,10 @@ def get_baseline_tag(cfg: dict, stage: int) -> Tuple[str, str]:
             )
         return ranking_baseline, "ranking"
 
-def verify_l2_hash(base_interim_dir: Path, stage: int, run_tag: str) -> Tuple[bool, str, Optional[str]]:
+
+def verify_l2_hash(
+    base_interim_dir: Path, stage: int, run_tag: str
+) -> tuple[bool, str, Optional[str]]:
     """
     L2 파일 해시 검증 (Stage 실행 전/후)
 
@@ -111,13 +116,14 @@ def verify_l2_hash(base_interim_dir: Path, stage: int, run_tag: str) -> Tuple[bo
         # (실제로는 Stage2는 L2를 재사용하므로 변경되지 않아야 함)
         return True, f"L2 파일 해시 검증 완료 (해시: {hash_value[:16]}...)", hash_value
 
+
 def run_command(
     cmd: list,
     cwd: Path,
     description: str,
     log_file: Optional[Path] = None,
-    check_returncode: bool = True
-) -> Tuple[int, str, str]:
+    check_returncode: bool = True,
+) -> tuple[int, str, str]:
     """명령어 실행 및 결과 반환"""
     print(f"\n{'='*60}")
     print(f"[{description}]")
@@ -127,7 +133,7 @@ def run_command(
 
     try:
         if log_file:
-            with open(log_file, 'a', encoding='utf-8') as log:
+            with open(log_file, "a", encoding="utf-8") as log:
                 log.write(f"\n{'='*60}\n")
                 log.write(f"[{description}] {datetime.now().isoformat()}\n")
                 log.write(f"Command: {' '.join(cmd)}\n")
@@ -138,33 +144,33 @@ def run_command(
             cwd=str(cwd),
             capture_output=True,
             text=True,
-            encoding='utf-8',
-            errors='replace'
+            encoding="utf-8",
+            errors="replace",
         )
 
         if result.stdout:
             print(result.stdout)
             if log_file:
-                with open(log_file, 'a', encoding='utf-8') as log:
+                with open(log_file, "a", encoding="utf-8") as log:
                     log.write(result.stdout)
 
         if result.stderr:
             print(result.stderr, file=sys.stderr)
             if log_file:
-                with open(log_file, 'a', encoding='utf-8') as log:
+                with open(log_file, "a", encoding="utf-8") as log:
                     log.write("\n--- STDERR ---\n")
                     log.write(result.stderr)
 
         if check_returncode and result.returncode != 0:
             print(f"\n[FAIL] [{description}] Failed with exit code {result.returncode}")
             if log_file:
-                with open(log_file, 'a', encoding='utf-8') as log:
+                with open(log_file, "a", encoding="utf-8") as log:
                     log.write(f"\n[FAIL] Exit code: {result.returncode}\n")
         else:
             print(f"\n[OK] [{description}] Completed")
             if log_file:
-                with open(log_file, 'a', encoding='utf-8') as log:
-                    log.write(f"\n[OK] Completed\n")
+                with open(log_file, "a", encoding="utf-8") as log:
+                    log.write("\n[OK] Completed\n")
 
         return result.returncode, result.stdout, result.stderr
 
@@ -172,9 +178,10 @@ def run_command(
         error_msg = f"Exception: {e}"
         print(f"\n[ERROR] [{description}] {error_msg}")
         if log_file:
-            with open(log_file, 'a', encoding='utf-8') as log:
+            with open(log_file, "a", encoding="utf-8") as log:
                 log.write(f"\n[ERROR] {error_msg}\n")
         return 1, "", error_msg
+
 
 def verify_artifact_exists(file_path: Path, description: str) -> bool:
     """산출물 파일 존재 확인"""
@@ -183,9 +190,12 @@ def verify_artifact_exists(file_path: Path, description: str) -> bool:
         if file_path.suffix == ".parquet":
             try:
                 import pandas as pd
+
                 df = pd.read_parquet(file_path)
                 n_rows = len(df)
-                print(f"[OK] {description}: {file_path} ({file_size:,} bytes, {n_rows:,} rows)")
+                print(
+                    f"[OK] {description}: {file_path} ({file_size:,} bytes, {n_rows:,} rows)"
+                )
             except:
                 print(f"[OK] {description}: {file_path} ({file_size:,} bytes)")
         else:
@@ -195,34 +205,43 @@ def verify_artifact_exists(file_path: Path, description: str) -> bool:
         print(f"[MISSING] {description}: NOT FOUND - {file_path}")
         return False
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="[코드 매니저] Stage 실행 통합 스크립트 (규칙 준수 버전)"
     )
-    parser.add_argument("--config", type=str, default="configs/config.yaml",
-                       help="Config 파일 경로")
-    parser.add_argument("--stage", type=int, required=True,
-                       help="Stage 번호 (0-8)")
-    parser.add_argument("--run-tag", type=str, default=None,
-                       help="Run tag (없으면 자동 생성)")
-    parser.add_argument("--change-title", type=str, default=None,
-                       help="변경 제목 (History Manifest용)")
-    parser.add_argument("--change-summary", type=str, nargs="*", default=[],
-                       help="변경 요약 (최대 3개)")
-    parser.add_argument("--modified-files", type=str, default=None,
-                       help="수정된 파일 (쉼표 구분)")
-    parser.add_argument("--modified-functions", type=str, default=None,
-                       help="수정된 함수 (쉼표 구분)")
-    parser.add_argument("--skip-stage", action="store_true",
-                       help="Stage 실행 건너뛰기 (리포트만 생성)")
-    parser.add_argument("--skip-kpi", action="store_true",
-                       help="KPI 생성 건너뛰기")
-    parser.add_argument("--skip-delta", action="store_true",
-                       help="Delta 리포트 생성 건너뛰기")
-    parser.add_argument("--skip-check", action="store_true",
-                       help="체크리포트 생성 건너뛰기")
-    parser.add_argument("--skip-history", action="store_true",
-                       help="History Manifest 업데이트 건너뛰기")
+    parser.add_argument(
+        "--config", type=str, default="configs/config.yaml", help="Config 파일 경로"
+    )
+    parser.add_argument("--stage", type=int, required=True, help="Stage 번호 (0-8)")
+    parser.add_argument(
+        "--run-tag", type=str, default=None, help="Run tag (없으면 자동 생성)"
+    )
+    parser.add_argument(
+        "--change-title", type=str, default=None, help="변경 제목 (History Manifest용)"
+    )
+    parser.add_argument(
+        "--change-summary", type=str, nargs="*", default=[], help="변경 요약 (최대 3개)"
+    )
+    parser.add_argument(
+        "--modified-files", type=str, default=None, help="수정된 파일 (쉼표 구분)"
+    )
+    parser.add_argument(
+        "--modified-functions", type=str, default=None, help="수정된 함수 (쉼표 구분)"
+    )
+    parser.add_argument(
+        "--skip-stage", action="store_true", help="Stage 실행 건너뛰기 (리포트만 생성)"
+    )
+    parser.add_argument("--skip-kpi", action="store_true", help="KPI 생성 건너뛰기")
+    parser.add_argument(
+        "--skip-delta", action="store_true", help="Delta 리포트 생성 건너뛰기"
+    )
+    parser.add_argument(
+        "--skip-check", action="store_true", help="체크리포트 생성 건너뛰기"
+    )
+    parser.add_argument(
+        "--skip-history", action="store_true", help="History Manifest 업데이트 건너뛰기"
+    )
     args = parser.parse_args()
 
     # Config 로드
@@ -239,7 +258,10 @@ def main():
 
     # 바탕 화면 경로 문제 최종 체크
     if "바탕 화면" in str(base_dir):
-        print(f"ERROR: base_dir에 '바탕 화면'이 포함되어 있습니다: {base_dir}", file=sys.stderr)
+        print(
+            f"ERROR: base_dir에 '바탕 화면'이 포함되어 있습니다: {base_dir}",
+            file=sys.stderr,
+        )
         print("config.yaml의 paths.base_dir을 수정하세요.", file=sys.stderr)
         sys.exit(1)
 
@@ -266,18 +288,18 @@ def main():
     logs_dir.mkdir(parents=True, exist_ok=True)
 
     log_file = logs_dir / f"run__stage{args.stage}__{run_tag}.txt"
-    log_file.write_text(f"Stage {args.stage} 실행 로그\n{'='*60}\n", encoding='utf-8')
+    log_file.write_text(f"Stage {args.stage} 실행 로그\n{'='*60}\n", encoding="utf-8")
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("[코드 매니저] Stage 실행 통합 스크립트")
-    print("="*60)
+    print("=" * 60)
     print(f"프로젝트 루트: {base_dir}")
     print(f"Stage: {args.stage}")
     print(f"Run Tag: {run_tag}")
     print(f"Baseline Tag Used: {baseline_tag_used} ({baseline_type})")
     print(f"Track: {track}")
     print(f"Log File: {log_file}")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     # ============================================================
     # 0) L2 해시 검증 (Stage 실행 전)
@@ -289,7 +311,7 @@ def main():
     print(f"L2 검증 (실행 전): {l2_msg_before}")
 
     if not l2_valid_before and args.stage != 2:
-        print(f"WARNING: L2 파일이 없습니다. Stage2를 먼저 실행하세요.")
+        print("WARNING: L2 파일이 없습니다. Stage2를 먼저 실행하세요.")
 
     # ============================================================
     # 1) Stage 실행
@@ -305,8 +327,10 @@ def main():
             stage_cmd = [
                 sys.executable,
                 str(base_dir / "src" / "run_all.py"),
-                "--config", args.config,
-                "--run-tag", run_tag,
+                "--config",
+                args.config,
+                "--run-tag",
+                run_tag,
                 "--force-rebuild",  # skip_if_exists 무시
             ]
 
@@ -333,8 +357,10 @@ def main():
             stage_cmd = [
                 sys.executable,
                 str(stage_script),
-                "--config", args.config,
-                "--run-tag", run_tag,
+                "--config",
+                args.config,
+                "--run-tag",
+                run_tag,
             ]
 
         returncode, stdout, stderr = run_command(
@@ -342,7 +368,7 @@ def main():
             cwd=base_dir,
             description=f"Stage {args.stage} 실행",
             log_file=log_file,
-            check_returncode=True
+            check_returncode=True,
         )
 
         if returncode != 0:
@@ -363,7 +389,7 @@ def main():
     # L2 해시 비교 (Stage2가 아니면 변경되지 않아야 함)
     if args.stage != 2 and l2_hash_before and l2_hash_after:
         if l2_hash_before != l2_hash_after:
-            print(f"ERROR: L2 파일이 변경되었습니다!", file=sys.stderr)
+            print("ERROR: L2 파일이 변경되었습니다!", file=sys.stderr)
             print(f"  실행 전: {l2_hash_before[:16]}...", file=sys.stderr)
             print(f"  실행 후: {l2_hash_after[:16]}...", file=sys.stderr)
             sys.exit(1)
@@ -379,8 +405,10 @@ def main():
         kpi_cmd = [
             sys.executable,
             str(base_dir / "src" / "tools" / "export_kpi_table.py"),
-            "--config", args.config,
-            "--tag", run_tag,
+            "--config",
+            args.config,
+            "--tag",
+            run_tag,
         ]
 
         returncode, stdout, stderr = run_command(
@@ -388,7 +416,7 @@ def main():
             cwd=base_dir,
             description="KPI 테이블 생성",
             log_file=log_file,
-            check_returncode=True
+            check_returncode=True,
         )
 
         if returncode != 0:
@@ -410,7 +438,9 @@ def main():
         print("\n[4/6] Δ 리포트 생성 중...")
 
         # Baseline KPI 확인
-        baseline_kpi_csv = base_dir / "reports" / "kpi" / f"kpi_table__{baseline_tag_used}.csv"
+        baseline_kpi_csv = (
+            base_dir / "reports" / "kpi" / f"kpi_table__{baseline_tag_used}.csv"
+        )
 
         if not baseline_kpi_csv.exists():
             print(f"\n⚠️  Baseline KPI가 없습니다: {baseline_kpi_csv}")
@@ -419,8 +449,10 @@ def main():
             baseline_kpi_cmd = [
                 sys.executable,
                 str(base_dir / "src" / "tools" / "export_kpi_table.py"),
-                "--config", args.config,
-                "--tag", baseline_tag_used,
+                "--config",
+                args.config,
+                "--tag",
+                baseline_tag_used,
             ]
 
             returncode, _, _ = run_command(
@@ -428,20 +460,23 @@ def main():
                 cwd=base_dir,
                 description="Baseline KPI 생성",
                 log_file=log_file,
-                check_returncode=False
+                check_returncode=False,
             )
 
             if returncode != 0:
-                print(f"⚠️  Baseline KPI 생성 실패. Delta 리포트 생성을 건너뜁니다.")
+                print("⚠️  Baseline KPI 생성 실패. Delta 리포트 생성을 건너뜁니다.")
                 baseline_tag_used = None
 
         if baseline_tag_used:
             delta_cmd = [
                 sys.executable,
                 str(base_dir / "src" / "tools" / "export_delta_report.py"),
-                "--config", args.config,
-                "--baseline-tag", baseline_tag_used,
-                "--run-tag", run_tag,
+                "--config",
+                args.config,
+                "--baseline-tag",
+                baseline_tag_used,
+                "--run-tag",
+                run_tag,
             ]
 
             returncode, stdout, stderr = run_command(
@@ -449,7 +484,7 @@ def main():
                 cwd=base_dir,
                 description="Δ 리포트 생성",
                 log_file=log_file,
-                check_returncode=True
+                check_returncode=True,
             )
 
             if returncode != 0:
@@ -457,7 +492,12 @@ def main():
                 sys.exit(returncode)
 
             # Delta 파일 존재 확인
-            delta_csv = base_dir / "reports" / "delta" / f"delta_kpi__{baseline_tag_used}__vs__{run_tag}.csv"
+            delta_csv = (
+                base_dir
+                / "reports"
+                / "delta"
+                / f"delta_kpi__{baseline_tag_used}__vs__{run_tag}.csv"
+            )
             if not verify_artifact_exists(delta_csv, "Delta CSV"):
                 print("❌ Delta CSV 파일이 생성되지 않았습니다.")
                 sys.exit(1)
@@ -473,10 +513,14 @@ def main():
         check_cmd = [
             sys.executable,
             str(base_dir / "src" / "tools" / "check_stage_completion.py"),
-            "--config", args.config,
-            "--run-tag", run_tag,
-            "--stage", str(args.stage),
-            "--baseline-tag", baseline_tag_used,
+            "--config",
+            args.config,
+            "--run-tag",
+            run_tag,
+            "--stage",
+            str(args.stage),
+            "--baseline-tag",
+            baseline_tag_used,
         ]
 
         returncode, stdout, stderr = run_command(
@@ -484,14 +528,19 @@ def main():
             cwd=base_dir,
             description="Stage 체크리포트 생성",
             log_file=log_file,
-            check_returncode=False  # 실패해도 계속 진행
+            check_returncode=False,  # 실패해도 계속 진행
         )
 
         if returncode == 0:
-            check_report = base_dir / "reports" / "stages" / f"check__stage{args.stage}__{run_tag}.md"
+            check_report = (
+                base_dir
+                / "reports"
+                / "stages"
+                / f"check__stage{args.stage}__{run_tag}.md"
+            )
             verify_artifact_exists(check_report, "체크리포트")
         else:
-            print(f"⚠️  체크리포트 생성 실패 (계속 진행)")
+            print("⚠️  체크리포트 생성 실패 (계속 진행)")
     else:
         print("\n⏭️  체크리포트 생성 건너뛰기 (--skip-check)")
 
@@ -504,11 +553,16 @@ def main():
         history_cmd = [
             sys.executable,
             str(base_dir / "src" / "tools" / "update_history_manifest.py"),
-            "--config", args.config,
-            "--stage", str(args.stage),
-            "--track", track,
-            "--run-tag", run_tag,
-            "--baseline-tag", baseline_tag_used,
+            "--config",
+            args.config,
+            "--stage",
+            str(args.stage),
+            "--track",
+            track,
+            "--run-tag",
+            run_tag,
+            "--baseline-tag",
+            baseline_tag_used,
         ]
 
         if args.change_title:
@@ -528,23 +582,25 @@ def main():
             cwd=base_dir,
             description="History Manifest 업데이트",
             log_file=log_file,
-            check_returncode=False  # 실패해도 계속 진행
+            check_returncode=False,  # 실패해도 계속 진행
         )
 
         if returncode == 0:
-            history_manifest = base_dir / "reports" / "history" / "history_manifest.parquet"
+            history_manifest = (
+                base_dir / "reports" / "history" / "history_manifest.parquet"
+            )
             verify_artifact_exists(history_manifest, "History Manifest")
         else:
-            print(f"⚠️  History Manifest 업데이트 실패 (계속 진행)")
+            print("⚠️  History Manifest 업데이트 실패 (계속 진행)")
     else:
         print("\n⏭️  History Manifest 업데이트 건너뛰기 (--skip-history)")
 
     # ============================================================
     # 최종 요약 출력
     # ============================================================
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("[완료] 최종 요약")
-    print("="*60)
+    print("=" * 60)
 
     outputs = []
 
@@ -553,19 +609,18 @@ def main():
     if interim_dir.exists():
         parquet_files = list(interim_dir.glob("*.parquet"))
         csv_files = list(interim_dir.glob("*.csv"))
-        outputs.append((
-            "산출물 (interim)",
-            f"{interim_dir} ({len(parquet_files)} parquet, {len(csv_files)} csv)"
-        ))
+        outputs.append(
+            (
+                "산출물 (interim)",
+                f"{interim_dir} ({len(parquet_files)} parquet, {len(csv_files)} csv)",
+            )
+        )
 
     # L2 파일 (base_interim_dir에 있음)
     l2_file = base_interim_dir / "fundamentals_annual.parquet"
     if l2_file.exists():
         l2_hash_short = l2_hash_after[:16] if l2_hash_after else "N/A"
-        outputs.append((
-            "L2 파일 (재사용)",
-            f"{l2_file} (해시: {l2_hash_short}...)"
-        ))
+        outputs.append(("L2 파일 (재사용)", f"{l2_file} (해시: {l2_hash_short}...)"))
 
     # KPI 리포트
     kpi_csv = base_dir / "reports" / "kpi" / f"kpi_table__{run_tag}.csv"
@@ -577,15 +632,27 @@ def main():
 
     # Delta 리포트
     if baseline_tag_used:
-        delta_csv = base_dir / "reports" / "delta" / f"delta_kpi__{baseline_tag_used}__vs__{run_tag}.csv"
-        delta_md = base_dir / "reports" / "delta" / f"delta_report__{baseline_tag_used}__vs__{run_tag}.md"
+        delta_csv = (
+            base_dir
+            / "reports"
+            / "delta"
+            / f"delta_kpi__{baseline_tag_used}__vs__{run_tag}.csv"
+        )
+        delta_md = (
+            base_dir
+            / "reports"
+            / "delta"
+            / f"delta_report__{baseline_tag_used}__vs__{run_tag}.md"
+        )
         if delta_csv.exists():
             outputs.append(("Delta CSV", str(delta_csv)))
         if delta_md.exists():
             outputs.append(("Delta MD", str(delta_md)))
 
     # 체크리포트
-    check_report = base_dir / "reports" / "stages" / f"check__stage{args.stage}__{run_tag}.md"
+    check_report = (
+        base_dir / "reports" / "stages" / f"check__stage{args.stage}__{run_tag}.md"
+    )
     if check_report.exists():
         outputs.append(("체크리포트", str(check_report)))
 
@@ -599,9 +666,9 @@ def main():
         print(f"{i}) {desc}:")
         print(f"   {path}")
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("✅ 모든 단계 완료")
-    print("="*60)
+    print("=" * 60)
     print(f"\n[PASS] Stage {args.stage} 완료")
     print(f"Run Tag: {run_tag}")
     print(f"Baseline Tag Used: {baseline_tag_used} ({baseline_type})")
@@ -611,7 +678,8 @@ def main():
             print(f"Ranking Baseline Tag: {ranking_baseline}")
     print(f"생성된 파일 수: {len(outputs)}개")
     print(f"로그 파일: {log_file}")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
+
 
 if __name__ == "__main__":
     main()

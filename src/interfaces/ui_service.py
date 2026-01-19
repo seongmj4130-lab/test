@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 UI 서비스 인터페이스 모듈
 
@@ -11,7 +10,7 @@ Flask 등 UI 프레임워크에서 사용할 수 있는 함수들을 제공합�
 """
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, TypedDict
+from typing import Any, Literal, Optional, TypedDict
 
 import pandas as pd
 
@@ -23,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 class RankingItem(TypedDict):
     """랭킹 항목 타입 정의"""
+
     ticker: str
     score: float
     rank: int
@@ -87,7 +87,7 @@ def get_short_term_ranking(
     as_of: str,
     top_k: int = 20,
     config_path: str = "configs/config.yaml",
-) -> List[RankingItem]:
+) -> list[RankingItem]:
     """
     UI에서 '단기 랭킹' 요청 시 호출할 함수 (Track A 산출물 사용).
 
@@ -127,20 +127,26 @@ def get_short_term_ranking(
     rank_col = "rank_total"
 
     if score_col not in df_filtered.columns:
-        raise ValueError(f"랭킹 컬럼을 찾을 수 없습니다. 사용 가능한 컬럼: {list(df_filtered.columns)}")
+        raise ValueError(
+            f"랭킹 컬럼을 찾을 수 없습니다. 사용 가능한 컬럼: {list(df_filtered.columns)}"
+        )
 
     # 랭킹 정렬 (높은 점수 순, 낮은 rank_total 순)
-    df_sorted = df_filtered.sort_values([score_col, rank_col], ascending=[False, True]).head(top_k)
+    df_sorted = df_filtered.sort_values(
+        [score_col, rank_col], ascending=[False, True]
+    ).head(top_k)
 
     # 결과 생성
     result = []
     for _, row in df_sorted.iterrows():
-        result.append({
-            "ticker": str(row["ticker"]).zfill(6),
-            "score": float(row[score_col]) if pd.notna(row[score_col]) else 0.0,
-            "rank": int(row[rank_col]) if pd.notna(row[rank_col]) else 999,
-            "horizon": "short",
-        })
+        result.append(
+            {
+                "ticker": str(row["ticker"]).zfill(6),
+                "score": float(row[score_col]) if pd.notna(row[score_col]) else 0.0,
+                "rank": int(row[rank_col]) if pd.notna(row[rank_col]) else 999,
+                "horizon": "short",
+            }
+        )
 
     return result
 
@@ -149,7 +155,7 @@ def get_long_term_ranking(
     as_of: str,
     top_k: int = 20,
     config_path: str = "configs/config.yaml",
-) -> List[RankingItem]:
+) -> list[RankingItem]:
     """
     UI에서 '장기 랭킹' 요청 시 호출할 함수 (Track A 산출물 사용).
 
@@ -189,20 +195,26 @@ def get_long_term_ranking(
     rank_col = "rank_total"
 
     if score_col not in df_filtered.columns:
-        raise ValueError(f"랭킹 컬럼을 찾을 수 없습니다. 사용 가능한 컬럼: {list(df_filtered.columns)}")
+        raise ValueError(
+            f"랭킹 컬럼을 찾을 수 없습니다. 사용 가능한 컬럼: {list(df_filtered.columns)}"
+        )
 
     # 랭킹 정렬 (높은 점수 순, 낮은 rank_total 순)
-    df_sorted = df_filtered.sort_values([score_col, rank_col], ascending=[False, True]).head(top_k)
+    df_sorted = df_filtered.sort_values(
+        [score_col, rank_col], ascending=[False, True]
+    ).head(top_k)
 
     # 결과 생성
     result = []
     for _, row in df_sorted.iterrows():
-        result.append({
-            "ticker": str(row["ticker"]).zfill(6),
-            "score": float(row[score_col]) if pd.notna(row[score_col]) else 0.0,
-            "rank": int(row[rank_col]) if pd.notna(row[rank_col]) else 999,
-            "horizon": "long",
-        })
+        result.append(
+            {
+                "ticker": str(row["ticker"]).zfill(6),
+                "score": float(row[score_col]) if pd.notna(row[score_col]) else 0.0,
+                "rank": int(row[rank_col]) if pd.notna(row[rank_col]) else 999,
+                "horizon": "long",
+            }
+        )
 
     return result
 
@@ -211,7 +223,7 @@ def get_combined_ranking(
     as_of: str,
     top_k: int = 20,
     config_path: str = "configs/config.yaml",
-) -> List[RankingItem]:
+) -> list[RankingItem]:
     """
     UI에서 '통합 랭킹' 요청 시 호출할 함수 (Track B 산출물 사용).
 
@@ -255,7 +267,9 @@ def get_combined_ranking(
                 score_col = alt_col
                 break
         else:
-            raise ValueError(f"통합 랭킹 컬럼을 찾을 수 없습니다. 사용 가능한 컬럼: {list(df_filtered.columns)}")
+            raise ValueError(
+                f"통합 랭킹 컬럼을 찾을 수 없습니다. 사용 가능한 컬럼: {list(df_filtered.columns)}"
+            )
 
     # 랭킹 정렬 (높은 점수 순)
     df_sorted = df_filtered.sort_values(score_col, ascending=False).head(top_k)
@@ -263,12 +277,14 @@ def get_combined_ranking(
     # 결과 생성
     result = []
     for i, (_, row) in enumerate(df_sorted.iterrows(), start=1):
-        result.append({
-            "ticker": str(row["ticker"]).zfill(6),
-            "score": float(row[score_col]) if pd.notna(row[score_col]) else 0.0,
-            "rank": i,
-            "horizon": "combined",
-        })
+        result.append(
+            {
+                "ticker": str(row["ticker"]).zfill(6),
+                "score": float(row[score_col]) if pd.notna(row[score_col]) else 0.0,
+                "rank": i,
+                "horizon": "combined",
+            }
+        )
 
     return result
 
@@ -277,7 +293,7 @@ def get_backtest_metrics(
     strategy: str = "bt20_short",
     phase: Optional[Literal["dev", "holdout"]] = None,
     config_path: str = "configs/config.yaml",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     UI에서 백테스트 성과 지표 조회 시 호출할 함수 (Track B 산출물 사용).
 
@@ -324,7 +340,7 @@ def get_backtest_metrics(
 
 def check_data_availability(
     config_path: str = "configs/config.yaml",
-) -> Dict[str, bool]:
+) -> dict[str, bool]:
     """
     공통 데이터 준비 상태를 확인하는 함수.
 
@@ -354,7 +370,9 @@ def check_data_availability(
         "cv_folds_long": artifact_exists(interim_dir / "cv_folds_long"),
         "ranking_short": artifact_exists(interim_dir / "ranking_short_daily"),
         "ranking_long": artifact_exists(interim_dir / "ranking_long_daily"),
-        "rebalance_scores": artifact_exists(interim_dir / "rebalance_scores_from_ranking"),
+        "rebalance_scores": artifact_exists(
+            interim_dir / "rebalance_scores_from_ranking"
+        ),
     }
 
     return status

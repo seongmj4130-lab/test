@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 L8 단기/장기 랭킹 강제 재생성 스크립트
 """
@@ -9,13 +8,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.pipeline.track_a_pipeline import run_track_a_pipeline
-from src.utils.config import load_config
 
 
 def main():
-    print("="*80)
+    print("=" * 80)
     print("L8 단기/장기 랭킹 강제 재생성")
-    print("="*80)
+    print("=" * 80)
 
     # 캐시 파일 삭제
     interim_dir = PROJECT_ROOT / "data" / "interim"
@@ -24,11 +22,13 @@ def main():
 
     if ranking_short_path.exists():
         import shutil
+
         shutil.rmtree(ranking_short_path)
         print(f"✓ 기존 단기 랭킹 캐시 삭제: {ranking_short_path}")
 
     if ranking_long_path.exists():
         import shutil
+
         shutil.rmtree(ranking_long_path)
         print(f"✓ 기존 장기 랭킹 캐시 삭제: {ranking_long_path}")
 
@@ -42,6 +42,7 @@ def main():
     print("\n[재생성 완료]")
     print(f"  단기 랭킹: {len(result.get('ranking_short_daily', [])):,}행")
     print(f"  장기 랭킹: {len(result.get('ranking_long_daily', [])):,}행")
+
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 targets_and_folds.parquet 생성 및 L6 결측치 처리 효과 분석
 """

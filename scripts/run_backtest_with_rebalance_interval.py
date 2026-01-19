@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 rebalance_interval을 적용하여 백테스트 재실행
 - BT20 모델: rebalance_interval=20
@@ -16,11 +15,11 @@ import logging
 from src.pipeline.track_b_pipeline import run_track_b_pipeline
 
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 logger = logging.getLogger(__name__)
+
 
 def main():
     """4개 모델을 rebalance_interval 설정으로 재실행"""
@@ -52,7 +51,9 @@ def main():
             logger.info(f"✓ {strategy} 완료")
             logger.info(f"  - rebalance_scores: {len(result['rebalance_scores']):,}행")
             logger.info(f"  - bt_returns: {len(result['bt_returns']):,}행")
-            logger.info(f"  - 리밸런싱 날짜 수: {result['rebalance_scores']['date'].nunique():,}개")
+            logger.info(
+                f"  - 리밸런싱 날짜 수: {result['rebalance_scores']['date'].nunique():,}개"
+            )
 
         except Exception as e:
             logger.error(f"✗ {strategy} 실패: {e}", exc_info=True)
@@ -62,6 +63,7 @@ def main():
     logger.info("=" * 80)
     logger.info("모든 모델 실행 완료")
     logger.info("=" * 80)
+
 
 if __name__ == "__main__":
     main()

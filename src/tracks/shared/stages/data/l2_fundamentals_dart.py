@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/data/l2_fundamentals_dart.py
 from __future__ import annotations
 
@@ -9,19 +8,21 @@ import time
 from contextlib import redirect_stdout
 from typing import Any
 
-import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+
 def _require_opendart():
     try:
         import OpenDartReader
+
         return OpenDartReader
     except Exception as e:
         raise ImportError(
             "OpenDartReader가 필요합니다. `pip install OpenDartReader` 후 재실행하세요."
         ) from e
+
 
 def _to_float_safe(x: Any) -> float | None:
     if x is None:
@@ -33,6 +34,7 @@ def _to_float_safe(x: Any) -> float | None:
         return float(s)
     except Exception:
         return None
+
 
 def _pick_amount(df: pd.DataFrame, names: list[str]) -> float | None:
     """
@@ -61,6 +63,7 @@ def _pick_amount(df: pd.DataFrame, names: list[str]) -> float | None:
 
     return _to_float_safe(s.iloc[0])
 
+
 def _load_corp_map(dart) -> dict[str, str]:
     """
     stock_code(6) -> corp_code(8) 매핑 생성
@@ -80,7 +83,10 @@ def _load_corp_map(dart) -> dict[str, str]:
 
     return dict(zip(c["stock_code"], c["corp_code"]))
 
-def _call_finstate_safely(dart, corp_code: str, year: int, *, reprt_code: str, fs_div: str | None):
+
+def _call_finstate_safely(
+    dart, corp_code: str, year: int, *, reprt_code: str, fs_div: str | None
+):
     """
     - OpenDartReader가 '조회 없음'을 dict(status=013)로 반환/출력하는 케이스 방어
     - stdout(불필요 출력) 억제
@@ -92,7 +98,9 @@ def _call_finstate_safely(dart, corp_code: str, year: int, *, reprt_code: str, f
             # fs_div 지원 여부가 버전마다 다를 수 있으므로 TypeError 방어
             if fs_div is not None:
                 try:
-                    res = dart.finstate(corp_code, year, reprt_code=reprt_code, fs_div=fs_div)
+                    res = dart.finstate(
+                        corp_code, year, reprt_code=reprt_code, fs_div=fs_div
+                    )
                 except TypeError:
                     res = dart.finstate(corp_code, year, reprt_code=reprt_code)
             else:
@@ -115,6 +123,7 @@ def _call_finstate_safely(dart, corp_code: str, year: int, *, reprt_code: str, f
     # 그 외 타입
     return None, "UNKNOWN", f"unexpected type: {type(res)}"
 
+
 def download_annual_fundamentals(
     *,
     tickers: list[str],
@@ -124,13 +133,13 @@ def download_annual_fundamentals(
     api_keys: list[str] | None = None,  # [개선안] 여러 API 키 지원
     sleep_sec: float = 0.2,
     # --- 추가 옵션 (기본값 유지: 기존 호출 깨지지 않음) ---
-    reprt_code: str = "11011",           # 사업보고서
+    reprt_code: str = "11011",  # 사업보고서
     fs_div_order: tuple[str, ...] = ("CFS", "OFS"),  # 연결 우선 -> 개별 fallback
-    log_every: int = 100,                # 진행 로그 빈도
-    min_success_ratio: float = 0.03,     # 성공률이 너무 낮으면 버그로 판단
+    log_every: int = 100,  # 진행 로그 빈도
+    min_success_ratio: float = 0.03,  # 성공률이 너무 낮으면 버그로 판단
     # --- Stage 1 추가 옵션 ---
-    disclosure_lag_days: int = 1,        # 공시 접수일 이후 지연일수
-    fallback_lag_days: int = 90,         # 접수일 없을 때 fallback 지연일수
+    disclosure_lag_days: int = 1,  # 공시 접수일 이후 지연일수
+    fallback_lag_days: int = 90,  # 접수일 없을 때 fallback 지연일수
 ) -> pd.DataFrame:
     """
     [Stage 1 업데이트] [개선안] 여러 API 키 지원
@@ -176,7 +185,10 @@ def download_annual_fundamentals(
     if len(api_keys) == 0:
         raise RuntimeError("유효한 DART_API_KEY가 없습니다.")
 
-    logger.info(f"[L2] API 키 {len(api_keys)}개 사용: {api_keys[0][:10]}..." + (f", {api_keys[1][:10]}..." if len(api_keys) > 1 else ""))
+    logger.info(
+        f"[L2] API 키 {len(api_keys)}개 사용: {api_keys[0][:10]}..."
+        + (f", {api_keys[1][:10]}..." if len(api_keys) > 1 else "")
+    )
 
     OpenDartReader = _require_opendart()
     # 첫 번째 키로 corp_map 로드 (corp_map은 키와 무관)
@@ -187,12 +199,16 @@ def download_annual_fundamentals(
     api_key_idx = 0
 
     # ticker 정규화
-    norm_tickers = sorted({str(t).strip().zfill(6) for t in tickers if str(t).strip() != ""})
+    norm_tickers = sorted(
+        {str(t).strip().zfill(6) for t in tickers if str(t).strip() != ""}
+    )
 
     # 매핑 성공률 체크(초기 버그 탐지)
     mapped = [t for t in norm_tickers if t in corp_map]
-    map_ratio = (len(mapped) / max(len(norm_tickers), 1))
-    logger.info(f"[L2] corp_code mapping: {len(mapped)}/{len(norm_tickers)} ({map_ratio:.1%})")
+    map_ratio = len(mapped) / max(len(norm_tickers), 1)
+    logger.info(
+        f"[L2] corp_code mapping: {len(mapped)}/{len(norm_tickers)} ({map_ratio:.1%})"
+    )
 
     if len(mapped) == 0:
         raise RuntimeError(
@@ -262,7 +278,9 @@ def download_annual_fundamentals(
             lag_source = "year_end_fallback"
 
             # 방법 1: finstate DataFrame에서 접수일 컬럼 찾기
-            rcept_cols = [c for c in fs.columns if "rcept" in str(c).lower() or "접수" in str(c)]
+            rcept_cols = [
+                c for c in fs.columns if "rcept" in str(c).lower() or "접수" in str(c)
+            ]
             if rcept_cols:
                 try:
                     # 각 행에서 접수일 추출 시도 (첫 번째 유효한 값 사용)
@@ -272,9 +290,16 @@ def download_annual_fundamentals(
                             rcept_val = rcept_vals.iloc[0]
                             if pd.notna(rcept_val) and str(rcept_val).strip() != "":
                                 # YYYYMMDD 형식으로 파싱 시도
-                                rcept_str = str(rcept_val).strip().replace("-", "").replace("/", "")
+                                rcept_str = (
+                                    str(rcept_val)
+                                    .strip()
+                                    .replace("-", "")
+                                    .replace("/", "")
+                                )
                                 if len(rcept_str) == 8 and rcept_str.isdigit():
-                                    report_rcept_date = pd.to_datetime(rcept_str, format="%Y%m%d", errors="coerce")
+                                    report_rcept_date = pd.to_datetime(
+                                        rcept_str, format="%Y%m%d", errors="coerce"
+                                    )
                                     if pd.notna(report_rcept_date):
                                         lag_source = "rcept_date"
                                         break
@@ -288,20 +313,31 @@ def download_annual_fundamentals(
                     buf2 = io.StringIO()
                     with redirect_stdout(buf2):
                         # reprt_code에 해당하는 공시 목록 조회
-                        list_res = dart.list(corp_code, kind="A", start=f"{y}0101", end=f"{y}1231")
+                        list_res = dart.list(
+                            corp_code, kind="A", start=f"{y}0101", end=f"{y}1231"
+                        )
                         if isinstance(list_res, pd.DataFrame) and not list_res.empty:
                             # reprt_code와 일치하는 공시 찾기
                             if "reprt_code" in list_res.columns:
-                                matching = list_res[list_res["reprt_code"] == reprt_code]
+                                matching = list_res[
+                                    list_res["reprt_code"] == reprt_code
+                                ]
                             else:
                                 matching = list_res
 
                             if not matching.empty and "rcept_dt" in matching.columns:
                                 rcept_val = matching["rcept_dt"].iloc[0]
                                 if pd.notna(rcept_val) and str(rcept_val).strip() != "":
-                                    rcept_str = str(rcept_val).strip().replace("-", "").replace("/", "")
+                                    rcept_str = (
+                                        str(rcept_val)
+                                        .strip()
+                                        .replace("-", "")
+                                        .replace("/", "")
+                                    )
                                     if len(rcept_str) == 8 and rcept_str.isdigit():
-                                        report_rcept_date = pd.to_datetime(rcept_str, format="%Y%m%d", errors="coerce")
+                                        report_rcept_date = pd.to_datetime(
+                                            rcept_str, format="%Y%m%d", errors="coerce"
+                                        )
                                         if pd.notna(report_rcept_date):
                                             lag_source = "rcept_date"
                 except Exception:
@@ -312,7 +348,9 @@ def download_annual_fundamentals(
 
             # effective_date 계산
             if lag_source == "rcept_date" and report_rcept_date is not None:
-                effective_date = report_rcept_date + pd.Timedelta(days=disclosure_lag_days)
+                effective_date = report_rcept_date + pd.Timedelta(
+                    days=disclosure_lag_days
+                )
             else:
                 # fallback: year_end + fallback_lag_days
                 effective_date = year_end + pd.Timedelta(days=fallback_lag_days)
@@ -372,7 +410,9 @@ def download_annual_fundamentals(
 
     # 최종 품질 체크(너가 원한 '검증을 강제'하는 부분)
     if req_cnt == 0:
-        raise RuntimeError("[L2] 요청 건수가 0입니다. tickers/start_year/end_year 입력을 확인하세요.")
+        raise RuntimeError(
+            "[L2] 요청 건수가 0입니다. tickers/start_year/end_year 입력을 확인하세요."
+        )
 
     success_ratio = ok_cnt / max(req_cnt, 1)
     logger.info(
@@ -403,7 +443,9 @@ def download_annual_fundamentals(
     if "effective_date" in df.columns:
         df["effective_date"] = pd.to_datetime(df["effective_date"], errors="coerce")
     if "report_rcept_date" in df.columns:
-        df["report_rcept_date"] = pd.to_datetime(df["report_rcept_date"], errors="coerce")
+        df["report_rcept_date"] = pd.to_datetime(
+            df["report_rcept_date"], errors="coerce"
+        )
     if "lag_source" in df.columns:
         df["lag_source"] = df["lag_source"].astype(str)
 

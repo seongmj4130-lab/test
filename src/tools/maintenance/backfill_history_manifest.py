@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/tools/maintenance/backfill_history_manifest.py
 """
 History Manifest 백필 스크립트
@@ -13,9 +12,7 @@ history_manifest를 백필(backfill)합니다.
 import argparse
 import subprocess
 import sys
-from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -95,18 +92,16 @@ BACKFILL_TAGS = [
     },
 ]
 
-def check_file_exists(filepath: Path) -> Tuple[bool, str]:
+
+def check_file_exists(filepath: Path) -> tuple[bool, str]:
     """파일 존재 여부 확인 및 경로 반환"""
     exists = filepath.exists()
     return exists, str(filepath) if exists else None
 
+
 def collect_missing_files(
-    base_dir: Path,
-    run_tag: str,
-    stage_no: int,
-    track: str,
-    baseline_tag: str
-) -> List[str]:
+    base_dir: Path, run_tag: str, stage_no: int, track: str, baseline_tag: str
+) -> list[str]:
     """누락된 파일 목록 수집"""
     missing = []
 
@@ -117,21 +112,31 @@ def collect_missing_files(
 
     # Delta CSV (baseline은 자기 자신과 비교하지 않음)
     if stage_no >= 0 and baseline_tag:
-        delta_csv = base_dir / "reports" / "delta" / f"delta_kpi__{baseline_tag}__vs__{run_tag}.csv"
+        delta_csv = (
+            base_dir
+            / "reports"
+            / "delta"
+            / f"delta_kpi__{baseline_tag}__vs__{run_tag}.csv"
+        )
         if not delta_csv.exists():
             missing.append(f"MISSING: {delta_csv}")
 
     # 랭킹 파일 (Stage7+)
     if stage_no >= 7:
-        ranking_parquet = base_dir / "data" / "interim" / run_tag / "ranking_daily.parquet"
+        ranking_parquet = (
+            base_dir / "data" / "interim" / run_tag / "ranking_daily.parquet"
+        )
         if not ranking_parquet.exists():
             missing.append(f"MISSING: {ranking_parquet}")
 
-        sector_csv = base_dir / "reports" / "ranking" / f"sector_concentration__{run_tag}.csv"
+        sector_csv = (
+            base_dir / "reports" / "ranking" / f"sector_concentration__{run_tag}.csv"
+        )
         if not sector_csv.exists():
             missing.append(f"MISSING: {sector_csv}")
 
     return missing
+
 
 def run_update_history_manifest(
     base_dir: Path,
@@ -141,18 +146,22 @@ def run_update_history_manifest(
     track: str,
     baseline_tag: str,
     change_title: str = None,
-    change_summary: List[str] = None,
+    change_summary: list[str] = None,
     modified_files: str = None,
     modified_functions: str = None,
-) -> Tuple[bool, List[str]]:
+) -> tuple[bool, list[str]]:
     """update_history_manifest.py 실행"""
     cmd = [
         sys.executable,
         str(base_dir / "src" / "tools" / "update_history_manifest.py"),
-        "--config", str(config_path.relative_to(base_dir)),
-        "--stage", str(stage_no),
-        "--track", track,
-        "--run-tag", run_tag,
+        "--config",
+        str(config_path.relative_to(base_dir)),
+        "--stage",
+        str(stage_no),
+        "--track",
+        track,
+        "--run-tag",
+        run_tag,
     ]
 
     if baseline_tag:
@@ -180,7 +189,7 @@ def run_update_history_manifest(
         for m in missing:
             print(f"     - {m}")
     else:
-        print(f"  [OK] 모든 필수 파일 존재")
+        print("  [OK] 모든 필수 파일 존재")
 
     # 실행
     result = subprocess.run(
@@ -188,37 +197,35 @@ def run_update_history_manifest(
         cwd=str(base_dir),
         capture_output=True,
         text=True,
-        encoding='utf-8',
-        errors='replace'
+        encoding="utf-8",
+        errors="replace",
     )
 
     if result.returncode != 0:
         print(f"  [FAIL] 실패 (exit code: {result.returncode})")
         if result.stderr:
             try:
-                stderr_text = result.stderr[:500].encode('utf-8', errors='replace').decode('utf-8', errors='replace')
+                stderr_text = (
+                    result.stderr[:500]
+                    .encode("utf-8", errors="replace")
+                    .decode("utf-8", errors="replace")
+                )
                 print(f"  stderr: {stderr_text}")
             except:
-                print(f"  stderr: (인코딩 오류로 표시 불가)")
+                print("  stderr: (인코딩 오류로 표시 불가)")
         return False, missing
 
-    print(f"  [OK] 완료")
+    print("  [OK] 완료")
     return True, missing
 
+
 def main():
-    parser = argparse.ArgumentParser(
-        description="History Manifest 백필 스크립트"
+    parser = argparse.ArgumentParser(description="History Manifest 백필 스크립트")
+    parser.add_argument(
+        "--config", type=str, default="configs/config.yaml", help="Config 파일 경로"
     )
     parser.add_argument(
-        "--config",
-        type=str,
-        default="configs/config.yaml",
-        help="Config 파일 경로"
-    )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="실제 실행 없이 누락 파일만 확인"
+        "--dry-run", action="store_true", help="실제 실행 없이 누락 파일만 확인"
     )
     args = parser.parse_args()
 
@@ -231,17 +238,20 @@ def main():
 
     # base_dir 확인
     import yaml
-    with open(config_path, 'r', encoding='utf-8') as f:
+
+    with open(config_path, encoding="utf-8") as f:
         cfg = yaml.safe_load(f) or {}
 
     config_base_dir = Path(cfg.get("paths", {}).get("base_dir", ""))
     expected_base_dir = Path("C:/Users/seong/OneDrive/Desktop/bootcamp/03_code")
 
-    if str(config_base_dir).replace("\\", "/") != str(expected_base_dir).replace("\\", "/"):
-        print(f"WARNING: config.yaml의 base_dir이 예상과 다릅니다:")
+    if str(config_base_dir).replace("\\", "/") != str(expected_base_dir).replace(
+        "\\", "/"
+    ):
+        print("WARNING: config.yaml의 base_dir이 예상과 다릅니다:")
         print(f"  예상: {expected_base_dir}")
         print(f"  실제: {config_base_dir}")
-        print(f"  계속 진행합니다...")
+        print("  계속 진행합니다...")
 
     # reports/history/ 폴더 생성
     history_dir = base_dir / "reports" / "history"
@@ -252,13 +262,13 @@ def main():
     l2_file = base_dir / "data" / "interim" / "fundamentals_annual.parquet"
     if not l2_file.exists():
         print(f"WARNING: L2 파일이 없습니다: {l2_file}")
-        print(f"  L2 해시는 기록되지 않습니다.")
+        print("  L2 해시는 기록되지 않습니다.")
     else:
         print(f"[백필] L2 파일 확인: {l2_file}")
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print(f"[백필] 총 {len(BACKFILL_TAGS)}개 태그 처리 시작")
-    print("="*60)
+    print("=" * 60)
 
     success_count = 0
     fail_count = 0
@@ -276,12 +286,14 @@ def main():
 
         if args.dry_run:
             # Dry-run: 누락 파일만 확인
-            missing = collect_missing_files(base_dir, run_tag, stage_no, track, baseline_tag)
+            missing = collect_missing_files(
+                base_dir, run_tag, stage_no, track, baseline_tag
+            )
             if missing:
                 all_missing[run_tag] = missing
                 print(f"  [WARN] 누락 파일: {len(missing)}개")
             else:
-                print(f"  [OK] 모든 필수 파일 존재")
+                print("  [OK] 모든 필수 파일 존재")
         else:
             # 실제 실행
             success, missing = run_update_history_manifest(
@@ -304,9 +316,9 @@ def main():
                 all_missing[run_tag] = missing
 
     # 최종 요약
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("[백필] 완료 요약")
-    print("="*60)
+    print("=" * 60)
 
     if args.dry_run:
         print(f"처리한 run_tag 개수: {len(BACKFILL_TAGS)}")
@@ -356,13 +368,15 @@ def main():
         # 최종 row 수 확인
         if manifest_csv.exists():
             import pandas as pd
+
             try:
                 df = pd.read_csv(manifest_csv)
                 print(f"\n최종 row 수: {len(df)}")
             except Exception as e:
                 print(f"\n[WARN] CSV 읽기 실패: {e}")
 
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
+
 
 if __name__ == "__main__":
     main()

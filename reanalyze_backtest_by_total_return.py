@@ -1,6 +1,3 @@
-import os
-
-import numpy as np
 import pandas as pd
 
 
@@ -12,7 +9,9 @@ def reanalyze_backtest_by_total_return():
 
     # 기존 백테스트 결과 로드
     try:
-        old_results = pd.read_csv('C:\\Users\\seong\\OneDrive\\Desktop\\bootcamp\\03_code\\artifacts\\reports\\backtest_4models_comparison.csv')
+        old_results = pd.read_csv(
+            "C:\\Users\\seong\\OneDrive\\Desktop\\bootcamp\\03_code\\artifacts\\reports\\backtest_4models_comparison.csv"
+        )
         print("✅ 기존 백테스트 결과 로드됨")
     except FileNotFoundError:
         print("❌ 기존 백테스트 결과 파일을 찾을 수 없습니다.")
@@ -20,7 +19,7 @@ def reanalyze_backtest_by_total_return():
 
     # 신규 백테스트 결과 로드 (top_k=20)
     try:
-        new_results = pd.read_csv('results/topk20_performance_metrics.csv')
+        new_results = pd.read_csv("results/topk20_performance_metrics.csv")
         print("✅ 신규 백테스트 결과 로드됨")
     except FileNotFoundError:
         print("❌ 신규 백테스트 결과 파일을 찾을 수 없습니다.")
@@ -39,11 +38,17 @@ def reanalyze_backtest_by_total_return():
     print("-" * 40)
 
     for _, row in old_results.iterrows():
-        strategy_name = row['strategy'].replace('bt20_ens', 'BT20 앙상블').replace('bt20_short', 'BT20 단기').replace('bt120_ens', 'BT120 앙상블').replace('bt120_long', 'BT120 장기')
-        cagr = row['net_cagr']
-        sharpe = row['net_sharpe']
-        mdd = row['net_mdd']
-        calmar = row['net_calmar_ratio']
+        strategy_name = (
+            row["strategy"]
+            .replace("bt20_ens", "BT20 앙상블")
+            .replace("bt20_short", "BT20 단기")
+            .replace("bt120_ens", "BT120 앙상블")
+            .replace("bt120_long", "BT120 장기")
+        )
+        cagr = row["net_cagr"]
+        sharpe = row["net_sharpe"]
+        mdd = row["net_mdd"]
+        calmar = row["net_calmar_ratio"]
 
         # 긴 기간 CAGR을 총수익률로 환산 (약 5년 가정)
         years = 5  # 추정 기간
@@ -60,11 +65,11 @@ def reanalyze_backtest_by_total_return():
     print("-" * 40)
 
     for _, row in new_results.iterrows():
-        strategy_name = row['전략']
-        total_return = row['총수익률']
-        sharpe = row['Sharpe']
-        mdd = row['MDD']
-        calmar = row['Calmar']
+        strategy_name = row["전략"]
+        total_return = row["총수익률"]
+        sharpe = row["Sharpe"]
+        mdd = row["MDD"]
+        calmar = row["Calmar"]
 
         print(f"🏆 {strategy_name}")
         print(".2%")
@@ -80,15 +85,21 @@ def reanalyze_backtest_by_total_return():
     # 기존 결과 순위 (추정 총수익률 기준)
     old_rankings = []
     for _, row in old_results.iterrows():
-        strategy_name = row['strategy'].replace('bt20_ens', 'BT20 앙상블').replace('bt20_short', 'BT20 단기').replace('bt120_ens', 'BT120 앙상블').replace('bt120_long', 'BT120 장기')
-        cagr = row['net_cagr']
+        strategy_name = (
+            row["strategy"]
+            .replace("bt20_ens", "BT20 앙상블")
+            .replace("bt20_short", "BT20 단기")
+            .replace("bt120_ens", "BT120 앙상블")
+            .replace("bt120_long", "BT120 장기")
+        )
+        cagr = row["net_cagr"]
         total_return_est = (1 + cagr) ** 5 - 1  # 5년 추정
         old_rankings.append((strategy_name, total_return_est))
 
     old_rankings.sort(key=lambda x: x[1], reverse=True)
 
     # 신규 결과 순위
-    new_rankings = [(row['전략'], row['총수익률']) for _, row in new_results.iterrows()]
+    new_rankings = [(row["전략"], row["총수익률"]) for _, row in new_results.iterrows()]
     new_rankings.sort(key=lambda x: x[1], reverse=True)
 
     print("기존 설정 (개별 top_k):")
@@ -104,9 +115,9 @@ def reanalyze_backtest_by_total_return():
     print("=" * 40)
 
     for _, row in new_results.iterrows():
-        strategy_name = row['전략']
-        total_return = row['총수익률']
-        mdd = abs(row['MDD'])  # MDD는 음수이므로 절대값
+        strategy_name = row["전략"]
+        total_return = row["총수익률"]
+        mdd = abs(row["MDD"])  # MDD는 음수이므로 절대값
 
         if mdd > 0:
             return_per_risk = total_return / mdd
@@ -127,6 +138,7 @@ def reanalyze_backtest_by_total_return():
     print("3. BT20 단기는 top_k 증가에 취약")
     print("4. 리스크-adjusted로 보면 BT120 장기의 효율성 우수")
     print("\n💡 총수익률이 CAGR보다 신뢰할 수 있는 지표!")
+
 
 if __name__ == "__main__":
     reanalyze_backtest_by_total_return()

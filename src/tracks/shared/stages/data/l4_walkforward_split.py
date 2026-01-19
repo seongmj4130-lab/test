@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/data/l4_walkforward_split.py
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 
 
@@ -18,7 +16,12 @@ def _sanitize_panel(panel: pd.DataFrame, price_col: str | None = None):
 
     # date/ticker 타입 강제
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df["ticker"] = df["ticker"].astype(str).str.extract(r"(\d{6})", expand=False).fillna(df["ticker"].astype(str))
+    df["ticker"] = (
+        df["ticker"]
+        .astype(str)
+        .str.extract(r"(\d{6})", expand=False)
+        .fillna(df["ticker"].astype(str))
+    )
     df["ticker"] = df["ticker"].astype(str).str.zfill(6)
 
     # 가격 컬럼 결정
@@ -38,9 +41,12 @@ def _sanitize_panel(panel: pd.DataFrame, price_col: str | None = None):
 
     # 필수 결측 체크(너무 심하면 중단)
     if df["date"].isna().mean() > 0.01:
-        raise RuntimeError("Too many NaT in date after parsing. Check panel_merged_daily['date'].")
+        raise RuntimeError(
+            "Too many NaT in date after parsing. Check panel_merged_daily['date']."
+        )
 
     return df, px
+
 
 def build_inner_cv_folds(
     train_start: pd.Timestamp,
@@ -73,8 +79,15 @@ def build_inner_cv_folds(
     train_end_pos = int(dates.searchsorted(train_end, side="right")) - 1
 
     if train_end_pos <= train_start_pos:
-        return pd.DataFrame(columns=["inner_fold_id", "inner_train_start", "inner_train_end",
-                                     "inner_val_start", "inner_val_end"])
+        return pd.DataFrame(
+            columns=[
+                "inner_fold_id",
+                "inner_train_start",
+                "inner_train_end",
+                "inner_val_start",
+                "inner_val_end",
+            ]
+        )
 
     # 사용 가능한 날짜 범위 계산 (embargo + horizon 고려)
     # validation 구간이 train_end 이후에 있어야 하므로, 마지막 validation 시작일은
@@ -83,8 +96,15 @@ def build_inner_cv_folds(
 
     if available_end_pos <= train_start_pos:
         # 사용 가능한 구간이 없으면 빈 DataFrame 반환
-        return pd.DataFrame(columns=["inner_fold_id", "inner_train_start", "inner_train_end",
-                                     "inner_val_start", "inner_val_end"])
+        return pd.DataFrame(
+            columns=[
+                "inner_fold_id",
+                "inner_train_start",
+                "inner_train_end",
+                "inner_val_start",
+                "inner_val_end",
+            ]
+        )
 
     # k개 fold로 나누기 (time-series이므로 순차적으로)
     # 각 fold의 validation 구간이 겹치지 않도록 구성
@@ -115,15 +135,18 @@ def build_inner_cv_folds(
         inner_val_start = dates[val_start_pos]
         inner_val_end = dates[val_end_pos]
 
-        inner_folds.append({
-            "inner_fold_id": f"inner_{i+1:02d}",
-            "inner_train_start": inner_train_start,
-            "inner_train_end": inner_train_end,
-            "inner_val_start": inner_val_start,
-            "inner_val_end": inner_val_end,
-        })
+        inner_folds.append(
+            {
+                "inner_fold_id": f"inner_{i+1:02d}",
+                "inner_train_start": inner_train_start,
+                "inner_train_end": inner_train_end,
+                "inner_val_start": inner_val_start,
+                "inner_val_end": inner_val_end,
+            }
+        )
 
     return pd.DataFrame(inner_folds)
+
 
 def build_targets_and_folds(
     panel_merged_daily: pd.DataFrame,
@@ -162,18 +185,30 @@ def build_targets_and_folds(
     if "in_universe" in df.columns:
         # 유니버스 멤버만 사용하여 시장 수익률 계산
         universe_mask = df["in_universe"] == True
-        market_ret_short = df.loc[universe_mask].groupby("date")[f"ret_fwd_{horizon_short}d"].mean()
-        market_ret_long = df.loc[universe_mask].groupby("date")[f"ret_fwd_{horizon_long}d"].mean()
-        warnings.append("[Phase 5] Market-Neutral: 시장 수익률 계산 시 in_universe=True 종목만 사용")
+        market_ret_short = (
+            df.loc[universe_mask].groupby("date")[f"ret_fwd_{horizon_short}d"].mean()
+        )
+        market_ret_long = (
+            df.loc[universe_mask].groupby("date")[f"ret_fwd_{horizon_long}d"].mean()
+        )
+        warnings.append(
+            "[Phase 5] Market-Neutral: 시장 수익률 계산 시 in_universe=True 종목만 사용"
+        )
     else:
         # in_universe가 없으면 전체 종목 평균 사용
         market_ret_short = df.groupby("date")[f"ret_fwd_{horizon_short}d"].mean()
         market_ret_long = df.groupby("date")[f"ret_fwd_{horizon_long}d"].mean()
-        warnings.append("[Phase 5] Market-Neutral: 시장 수익률 계산 시 전체 종목 사용 (in_universe 없음)")
+        warnings.append(
+            "[Phase 5] Market-Neutral: 시장 수익률 계산 시 전체 종목 사용 (in_universe 없음)"
+        )
 
     # 초과 수익률 계산 (타겟 변수로 사용)
-    df[f"ret_fwd_{horizon_short}d_excess"] = df[f"ret_fwd_{horizon_short}d"] - df["date"].map(market_ret_short)
-    df[f"ret_fwd_{horizon_long}d_excess"] = df[f"ret_fwd_{horizon_long}d"] - df["date"].map(market_ret_long)
+    df[f"ret_fwd_{horizon_short}d_excess"] = df[f"ret_fwd_{horizon_short}d"] - df[
+        "date"
+    ].map(market_ret_short)
+    df[f"ret_fwd_{horizon_long}d_excess"] = df[f"ret_fwd_{horizon_long}d"] - df[
+        "date"
+    ].map(market_ret_long)
 
     # 시장 수익률 컬럼도 저장 (참고용)
     df["market_ret_20d"] = df["date"].map(market_ret_short)
@@ -182,12 +217,16 @@ def build_targets_and_folds(
     # 초과 수익률 결측률 확인
     miss_s_excess = df[f"ret_fwd_{horizon_short}d_excess"].isna().mean()
     miss_l_excess = df[f"ret_fwd_{horizon_long}d_excess"].isna().mean()
-    warnings.append(f"[Phase 5] Market-Neutral: 초과 수익률 결측률 ret_fwd_{horizon_short}d_excess={miss_s_excess:.2%}, ret_fwd_{horizon_long}d_excess={miss_l_excess:.2%}")
+    warnings.append(
+        f"[Phase 5] Market-Neutral: 초과 수익률 결측률 ret_fwd_{horizon_short}d_excess={miss_s_excess:.2%}, ret_fwd_{horizon_long}d_excess={miss_l_excess:.2%}"
+    )
 
     # 타깃 결측(마지막 horizon 구간)은 정상이나, 비율 로그용으로 경고만 남김
     miss_s = df[f"ret_fwd_{horizon_short}d"].isna().mean()
     miss_l = df[f"ret_fwd_{horizon_long}d"].isna().mean()
-    warnings.append(f"[L4] target_missing ret_fwd_{horizon_short}d={miss_s:.2%}, ret_fwd_{horizon_long}d={miss_l:.2%}")
+    warnings.append(
+        f"[L4] target_missing ret_fwd_{horizon_short}d={miss_s:.2%}, ret_fwd_{horizon_long}d={miss_l:.2%}"
+    )
 
     # trading dates
     dates = pd.DatetimeIndex(pd.unique(df["date"].dropna())).sort_values()
@@ -198,7 +237,13 @@ def build_targets_and_folds(
     holdout_threshold = overall_end - pd.DateOffset(years=holdout_years)
     holdout_start = dates[dates.searchsorted(holdout_threshold, side="left")]
 
-    def _build_folds(train_years: int, horizon_days: int, segment: str, seg_start: pd.Timestamp, seg_end: pd.Timestamp):
+    def _build_folds(
+        train_years: int,
+        horizon_days: int,
+        segment: str,
+        seg_start: pd.Timestamp,
+        seg_end: pd.Timestamp,
+    ):
         seg_start = dates[dates.searchsorted(seg_start, side="left")]
         seg_end = dates[dates.searchsorted(seg_end, side="right") - 1]
 
@@ -221,23 +266,27 @@ def build_targets_and_folds(
 
             train_end = dates[train_end_pos]
             train_start_threshold = train_end - pd.DateOffset(years=train_years)
-            train_start_pos = int(dates.searchsorted(train_start_threshold, side="left"))
+            train_start_pos = int(
+                dates.searchsorted(train_start_threshold, side="left")
+            )
             train_start = dates[train_start_pos]
 
             fold_i += 1
-            folds.append({
-                "fold_id": f"{segment}_{fold_i:04d}",
-                "segment": segment,
-                "train_start": train_start,
-                "train_end": train_end,
-                "test_start": dates[test_start_pos],
-                "test_end": dates[test_end_pos],
-                "train_years": train_years,
-                "horizon_days": horizon_days,
-                "embargo_days": embargo_days,
-                "step_days": step_days,
-                "test_window_days": test_window_days,
-            })
+            folds.append(
+                {
+                    "fold_id": f"{segment}_{fold_i:04d}",
+                    "segment": segment,
+                    "train_start": train_start,
+                    "train_end": train_end,
+                    "test_start": dates[test_start_pos],
+                    "test_end": dates[test_end_pos],
+                    "train_years": train_years,
+                    "horizon_days": horizon_days,
+                    "embargo_days": embargo_days,
+                    "step_days": step_days,
+                    "test_window_days": test_window_days,
+                }
+            )
             pos += step_days
 
         return pd.DataFrame(folds)
@@ -245,18 +294,42 @@ def build_targets_and_folds(
     dev_start = dates[0]
     dev_end = holdout_start - pd.Timedelta(days=1)
 
-    cv_short = pd.concat([
-        _build_folds(rolling_train_years_short, horizon_short, "dev", dev_start, dev_end),
-        _build_folds(rolling_train_years_short, horizon_short, "holdout", holdout_start, overall_end),
-    ], ignore_index=True)
+    cv_short = pd.concat(
+        [
+            _build_folds(
+                rolling_train_years_short, horizon_short, "dev", dev_start, dev_end
+            ),
+            _build_folds(
+                rolling_train_years_short,
+                horizon_short,
+                "holdout",
+                holdout_start,
+                overall_end,
+            ),
+        ],
+        ignore_index=True,
+    )
 
-    cv_long = pd.concat([
-        _build_folds(rolling_train_years_long, horizon_long, "dev", dev_start, dev_end),
-        _build_folds(rolling_train_years_long, horizon_long, "holdout", holdout_start, overall_end),
-    ], ignore_index=True)
+    cv_long = pd.concat(
+        [
+            _build_folds(
+                rolling_train_years_long, horizon_long, "dev", dev_start, dev_end
+            ),
+            _build_folds(
+                rolling_train_years_long,
+                horizon_long,
+                "holdout",
+                holdout_start,
+                overall_end,
+            ),
+        ],
+        ignore_index=True,
+    )
 
     # fold 개수 로그용 경고(메타에 남기기 좋음)
-    warnings.append(f"[L4] folds_short={len(cv_short):,}, folds_long={len(cv_long):,}, holdout_start={holdout_start.date()}")
+    warnings.append(
+        f"[L4] folds_short={len(cv_short):,}, folds_long={len(cv_long):,}, holdout_start={holdout_start.date()}"
+    )
 
     # [Stage 1] drop_non_universe_before_save 옵션
     if drop_non_universe_before_save:
@@ -264,8 +337,12 @@ def build_targets_and_folds(
             before = len(df)
             df = df[df["in_universe"] == True].copy()
             after = len(df)
-            warnings.append(f"[L4] drop_non_universe_before_save=True: {before} -> {after} rows (dropped {before - after})")
+            warnings.append(
+                f"[L4] drop_non_universe_before_save=True: {before} -> {after} rows (dropped {before - after})"
+            )
         else:
-            warnings.append("[L4] drop_non_universe_before_save=True but 'in_universe' column not found -> skipped")
+            warnings.append(
+                "[L4] drop_non_universe_before_save=True but 'in_universe' column not found -> skipped"
+            )
 
     return df, cv_short, cv_long, warnings

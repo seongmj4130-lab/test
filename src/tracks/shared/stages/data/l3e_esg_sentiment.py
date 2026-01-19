@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/data/l3e_esg_sentiment.py
 """
 [ESG 통합] ESG 감성 피처 통합 모듈
@@ -15,7 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -34,10 +33,12 @@ class ESGSentimentConfig:
       - lookahead 방지: 기본 lag_days=1 (t일 매매 신호에 t-1일까지의 ESG만 반영)
       - 입력 파일이 없으면: 절대 실패하지 않고 "스킵" + 경고만 남김 (placeholder 뼈대)
     """
+
     enabled: bool = False
     source_path: str = "data/external/esg_daily.parquet"
     lag_days: int = 1
     shrink_k: int = 5  # (P-N)/(T+k) 안정화 상수
+
 
 def _read_table(path: Path) -> pd.DataFrame:
     if path.suffix.lower() == ".parquet":
@@ -46,6 +47,7 @@ def _read_table(path: Path) -> pd.DataFrame:
         return pd.read_csv(path)
     raise ValueError(f"Unsupported file extension: {path.suffix}")
 
+
 def _ensure_date_ticker(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
     if "date" not in out.columns or "ticker" not in out.columns:
@@ -53,6 +55,7 @@ def _ensure_date_ticker(df: pd.DataFrame) -> pd.DataFrame:
     out["date"] = pd.to_datetime(out["date"], errors="raise")
     out["ticker"] = out["ticker"].astype(str).str.zfill(6)
     return out
+
 
 def _aggregate_esg_by_label(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -99,10 +102,18 @@ def _aggregate_esg_by_label(df: pd.DataFrame) -> pd.DataFrame:
                 else:
                     agg_label[f"{label.lower()}_{key}"] = agg_label[col]
                     agg_label = agg_label.drop(columns=[col], errors="ignore")
-            agg_label = agg_label[[f"{label.lower()}_P", f"{label.lower()}_N", f"{label.lower()}_Z"]].reset_index()
-            agg_label[f"{label.lower()}_T"] = agg_label[f"{label.lower()}_P"] + agg_label[f"{label.lower()}_N"] + agg_label[f"{label.lower()}_Z"]
+            agg_label = agg_label[
+                [f"{label.lower()}_P", f"{label.lower()}_N", f"{label.lower()}_Z"]
+            ].reset_index()
+            agg_label[f"{label.lower()}_T"] = (
+                agg_label[f"{label.lower()}_P"]
+                + agg_label[f"{label.lower()}_N"]
+                + agg_label[f"{label.lower()}_Z"]
+            )
 
-            result = result.merge(agg_label, on=["date", "ticker"], how="left", validate="one_to_one")
+            result = result.merge(
+                agg_label, on=["date", "ticker"], how="left", validate="one_to_one"
+            )
         else:
             # 해당 라벨이 없으면 0으로 채움
             for key in ["P", "N", "Z"]:
@@ -116,7 +127,10 @@ def _aggregate_esg_by_label(df: pd.DataFrame) -> pd.DataFrame:
 
     return result
 
-def _compute_esg_features_from_counts(counts: pd.DataFrame, *, shrink_k: int) -> pd.DataFrame:
+
+def _compute_esg_features_from_counts(
+    counts: pd.DataFrame, *, shrink_k: int
+) -> pd.DataFrame:
     """
     [ESG 통합] counts(P, N, Z, T, ...) -> ESG 점수 피처 생성
 
@@ -141,13 +155,29 @@ def _compute_esg_features_from_counts(counts: pd.DataFrame, *, shrink_k: int) ->
     esg_labels = ["Environmental", "Social", "Governance"]
     for label in esg_labels:
         label_lower = label.lower()
-        label_P = pd.to_numeric(x.get(f"{label_lower}_P", 0), errors="coerce").fillna(0.0)
-        label_N = pd.to_numeric(x.get(f"{label_lower}_N", 0), errors="coerce").fillna(0.0)
-        label_T = pd.to_numeric(x.get(f"{label_lower}_T", 0), errors="coerce").fillna(0.0)
+        label_P = pd.to_numeric(x.get(f"{label_lower}_P", 0), errors="coerce").fillna(
+            0.0
+        )
+        label_N = pd.to_numeric(x.get(f"{label_lower}_N", 0), errors="coerce").fillna(
+            0.0
+        )
+        label_T = pd.to_numeric(x.get(f"{label_lower}_T", 0), errors="coerce").fillna(
+            0.0
+        )
         denom_label = (label_T + k).replace(0.0, np.nan)
         x[f"{label_lower}_score"] = (label_P - label_N) / denom_label
 
-    return x[["date", "ticker", "esg_score", "environmental_score", "social_score", "governance_score"]].copy()
+    return x[
+        [
+            "date",
+            "ticker",
+            "esg_score",
+            "environmental_score",
+            "social_score",
+            "governance_score",
+        ]
+    ].copy()
+
 
 def _apply_lag_by_ticker(df: pd.DataFrame, *, lag_days: int) -> pd.DataFrame:
     """
@@ -158,7 +188,16 @@ def _apply_lag_by_ticker(df: pd.DataFrame, *, lag_days: int) -> pd.DataFrame:
 
     if lag <= 0:
         # no lag
-        return x[["date", "ticker", "esg_score", "environmental_score", "social_score", "governance_score"]].copy()
+        return x[
+            [
+                "date",
+                "ticker",
+                "esg_score",
+                "environmental_score",
+                "social_score",
+                "governance_score",
+            ]
+        ].copy()
 
     x = x.sort_values(["ticker", "date"], kind="mergesort").reset_index(drop=True)
     for col in ["esg_score", "environmental_score", "social_score", "governance_score"]:
@@ -166,7 +205,17 @@ def _apply_lag_by_ticker(df: pd.DataFrame, *, lag_days: int) -> pd.DataFrame:
             raise KeyError(f"missing column: {col}")
         x[col] = x.groupby("ticker", sort=False)[col].shift(lag)
 
-    return x[["date", "ticker", "esg_score", "environmental_score", "social_score", "governance_score"]].copy()
+    return x[
+        [
+            "date",
+            "ticker",
+            "esg_score",
+            "environmental_score",
+            "social_score",
+            "governance_score",
+        ]
+    ].copy()
+
 
 def build_esg_sentiment_daily_features(
     *,
@@ -199,12 +248,13 @@ def build_esg_sentiment_daily_features(
 
     return feats
 
+
 def maybe_merge_esg_sentiment(
     *,
     panel_merged_daily: pd.DataFrame,
     cfg: dict,
     project_root: Optional[Path] = None,
-) -> Tuple[pd.DataFrame, List[str]]:
+) -> tuple[pd.DataFrame, list[str]]:
     """
     [ESG 통합] ESG 감성 피처를 panel_merged_daily에 머지
 
@@ -213,14 +263,20 @@ def maybe_merge_esg_sentiment(
     - 파일이 있으면 피처 4개를 생성/머지:
         esg_score, environmental_score, social_score, governance_score
     """
-    warns: List[str] = []
+    warns: list[str] = []
     if panel_merged_daily is None or panel_merged_daily.empty:
         raise ValueError("panel_merged_daily is empty")
 
-    esg_cfg_raw = (cfg.get("esg", {}) if isinstance(cfg, dict) else {}) or (cfg.get("params", {}).get("esg", {}) if isinstance(cfg, dict) else {}) or {}
+    esg_cfg_raw = (
+        (cfg.get("esg", {}) if isinstance(cfg, dict) else {})
+        or (cfg.get("params", {}).get("esg", {}) if isinstance(cfg, dict) else {})
+        or {}
+    )
     esg_cfg = ESGSentimentConfig(
         enabled=bool(esg_cfg_raw.get("enabled", False)),
-        source_path=str(esg_cfg_raw.get("source_path", "data/external/esg_daily.parquet")),
+        source_path=str(
+            esg_cfg_raw.get("source_path", "data/external/esg_daily.parquet")
+        ),
         lag_days=int(esg_cfg_raw.get("lag_days", 1)),
         shrink_k=int(esg_cfg_raw.get("shrink_k", 5)),
     )
@@ -228,12 +284,22 @@ def maybe_merge_esg_sentiment(
     if not esg_cfg.enabled:
         return panel_merged_daily, warns
 
-    root = project_root if project_root is not None else Path(cfg.get("paths", {}).get("base_dir", Path.cwd())) if isinstance(cfg, dict) else Path.cwd()
+    root = (
+        project_root
+        if project_root is not None
+        else (
+            Path(cfg.get("paths", {}).get("base_dir", Path.cwd()))
+            if isinstance(cfg, dict)
+            else Path.cwd()
+        )
+    )
     src = Path(esg_cfg.source_path)
     src_path = src if src.is_absolute() else (root / src)
 
     if not src_path.exists():
-        warns.append(f"[L3E] esg.enabled=True but file not found -> skipped: {src_path}")
+        warns.append(
+            f"[L3E] esg.enabled=True but file not found -> skipped: {src_path}"
+        )
         return panel_merged_daily, warns
 
     try:
@@ -244,7 +310,9 @@ def maybe_merge_esg_sentiment(
             lag_days=esg_cfg.lag_days,
         )
     except Exception as e:
-        warns.append(f"[L3E] failed to load/build ESG sentiment features -> skipped: {type(e).__name__}: {e}")
+        warns.append(
+            f"[L3E] failed to load/build ESG sentiment features -> skipped: {type(e).__name__}: {e}"
+        )
         return panel_merged_daily, warns
 
     # merge
@@ -256,6 +324,8 @@ def maybe_merge_esg_sentiment(
     before_cols = set(out.columns)
     out = out.merge(feats, on=["date", "ticker"], how="left", validate="many_to_one")
     added = sorted(list(set(out.columns) - before_cols))
-    warns.append(f"[L3E] merged ESG sentiment features: {added} (rows={len(feats):,}, file={src_path})")
+    warns.append(
+        f"[L3E] merged ESG sentiment features: {added} (rows={len(feats):,}, file={src_path})"
+    )
 
     return out, warns

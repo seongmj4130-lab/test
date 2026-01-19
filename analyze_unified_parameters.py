@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 
 
@@ -7,12 +6,16 @@ def analyze_unified_parameters():
 
     print("🔧 통일된 파라미터 백테스트 결과 분석")
     print("=" * 70)
-    print("변경사항: top_k=15, buffer_k=10, slippage=5bps, risk_scaling_bear_multiplier=0.7")
+    print(
+        "변경사항: top_k=15, buffer_k=10, slippage=5bps, risk_scaling_bear_multiplier=0.7"
+    )
     print()
 
     # 신규 백테스트 결과 로드
     try:
-        new_results = pd.read_csv('C:\\Users\\seong\\OneDrive\\Desktop\\bootcamp\\03_code\\artifacts\\reports\\backtest_4models_comparison.csv')
+        new_results = pd.read_csv(
+            "C:\\Users\\seong\\OneDrive\\Desktop\\bootcamp\\03_code\\artifacts\\reports\\backtest_4models_comparison.csv"
+        )
         print("✅ 신규 백테스트 결과 로드됨")
     except FileNotFoundError:
         print("❌ 신규 백테스트 결과 파일을 찾을 수 없습니다.")
@@ -20,7 +23,7 @@ def analyze_unified_parameters():
 
     # 이전 결과 (참고용)
     try:
-        prev_results = pd.read_csv('results/topk20_performance_metrics.csv')
+        prev_results = pd.read_csv("results/topk20_performance_metrics.csv")
         print("✅ 이전 결과 (top_k=20) 로드됨")
         print()
     except FileNotFoundError:
@@ -32,11 +35,17 @@ def analyze_unified_parameters():
     print("-" * 50)
 
     for _, row in new_results.iterrows():
-        strategy_name = row['strategy'].replace('bt20_ens', 'BT20 앙상블').replace('bt20_short', 'BT20 단기').replace('bt120_ens', 'BT120 앙상블').replace('bt120_long', 'BT120 장기')
-        cagr = row['net_cagr']
-        sharpe = row['net_sharpe']
-        mdd = row['net_mdd']
-        calmar = row['net_calmar_ratio']
+        strategy_name = (
+            row["strategy"]
+            .replace("bt20_ens", "BT20 앙상블")
+            .replace("bt20_short", "BT20 단기")
+            .replace("bt120_ens", "BT120 앙상블")
+            .replace("bt120_long", "BT120 장기")
+        )
+        cagr = row["net_cagr"]
+        sharpe = row["net_sharpe"]
+        mdd = row["net_mdd"]
+        calmar = row["net_calmar_ratio"]
 
         print(f"🏆 {strategy_name}")
         print(".2%")
@@ -96,18 +105,26 @@ def analyze_unified_parameters():
 
     rankings = []
     for _, row in new_results.iterrows():
-        strategy_name = row['strategy'].replace('bt20_ens', 'BT20 앙상블').replace('bt20_short', 'BT20 단기').replace('bt120_ens', 'BT120 앙상블').replace('bt120_long', 'BT120 장기')
-        rankings.append({
-            '전략': strategy_name,
-            'CAGR': row['net_cagr'],
-            'Sharpe': row['net_sharpe'],
-            'MDD': row['net_mdd'],
-            'Calmar': row['net_calmar_ratio']
-        })
+        strategy_name = (
+            row["strategy"]
+            .replace("bt20_ens", "BT20 앙상블")
+            .replace("bt20_short", "BT20 단기")
+            .replace("bt120_ens", "BT120 앙상블")
+            .replace("bt120_long", "BT120 장기")
+        )
+        rankings.append(
+            {
+                "전략": strategy_name,
+                "CAGR": row["net_cagr"],
+                "Sharpe": row["net_sharpe"],
+                "MDD": row["net_mdd"],
+                "Calmar": row["net_calmar_ratio"],
+            }
+        )
 
-    rankings.sort(key=lambda x: x['Sharpe'], reverse=True)
+    rankings.sort(key=lambda x: x["Sharpe"], reverse=True)
 
-    medal_emojis = ['🥇', '🥈', '🥉', '4️⃣']
+    medal_emojis = ["🥇", "🥈", "🥉", "4️⃣"]
 
     for i, strategy in enumerate(rankings):
         medal = medal_emojis[i] if i < len(medal_emojis) else f"{i+1}️⃣"
@@ -138,6 +155,7 @@ def analyze_unified_parameters():
 
     print("💡 파라미터 통일의 의의:")
     print("   전략 성능의 본질적 차이를 명확히 파악할 수 있게 되었음!")
+
 
 if __name__ == "__main__":
     analyze_unified_parameters()

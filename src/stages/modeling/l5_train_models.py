@@ -1,22 +1,21 @@
-# -*- coding: utf-8 -*-
 # C:/Users/seong/OneDrive/Desktop/bootcamp/03_code/src/stages/modeling/l5_train_models.py
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Optional
 
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import Ridge
-from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 try:
     from xgboost import XGBRegressor
+
     XGBOOST_AVAILABLE = True
 except ImportError:
     XGBOOST_AVAILABLE = False
@@ -39,8 +38,10 @@ class FoldSpec:
     test_start: pd.Timestamp
     test_end: pd.Timestamp
 
+
 def _to_datetime(s: pd.Series) -> pd.Series:
     return pd.to_datetime(s, errors="raise")
+
 
 def _infer_phase(phase_raw: str, fold_id: str) -> str:
     """
@@ -59,17 +60,24 @@ def _infer_phase(phase_raw: str, fold_id: str) -> str:
     # phase가 없거나 예상 외면 dev로 통일 (기본값)
     return "dev"
 
-def _standardize_folds(folds: pd.DataFrame) -> List[FoldSpec]:
+
+def _standardize_folds(folds: pd.DataFrame) -> list[FoldSpec]:
     if folds is None or not isinstance(folds, pd.DataFrame) or folds.empty:
         raise ValueError("cv_folds is empty or not a DataFrame.")
 
-    phase_col = "phase" if "phase" in folds.columns else ("segment" if "segment" in folds.columns else None)
+    phase_col = (
+        "phase"
+        if "phase" in folds.columns
+        else ("segment" if "segment" in folds.columns else None)
+    )
     required = ["fold_id", "train_start", "train_end", "test_start", "test_end"]
     missing = [c for c in required if c not in folds.columns]
     if phase_col is None:
         missing.append("phase(or segment)")
     if missing:
-        raise ValueError(f"cv_folds schema missing columns: {missing}. got={list(folds.columns)}")
+        raise ValueError(
+            f"cv_folds schema missing columns: {missing}. got={list(folds.columns)}"
+        )
 
     f = folds.copy()
     f["train_start"] = _to_datetime(f["train_start"])
@@ -83,7 +91,7 @@ def _standardize_folds(folds: pd.DataFrame) -> List[FoldSpec]:
         ex = bad.head(5)
         raise ValueError(f"cv_folds has invalid date ranges. examples:\n{ex}")
 
-    specs: List[FoldSpec] = []
+    specs: list[FoldSpec] = []
     for _, r in f.iterrows():
         fid = str(r["fold_id"]).strip()
         ph = _infer_phase(str(r[phase_col]), fid)
@@ -99,7 +107,10 @@ def _standardize_folds(folds: pd.DataFrame) -> List[FoldSpec]:
         )
     return specs
 
-def _pick_feature_cols(df: pd.DataFrame, *, target_col: str, cfg: dict = None, horizon: int = None) -> List[str]:
+
+def _pick_feature_cols(
+    df: pd.DataFrame, *, target_col: str, cfg: dict = None, horizon: int = None
+) -> list[str]:
     # [Phase 6] 피처 고정 모드 우선 적용
     if cfg is not None:
         l5 = (cfg.get("l5", {}) if isinstance(cfg, dict) else {}) or {}
@@ -124,6 +135,7 @@ def _pick_feature_cols(df: pd.DataFrame, *, target_col: str, cfg: dict = None, h
             import logging
 
             import yaml
+
             logger = logging.getLogger(__name__)
 
             try:
@@ -131,39 +143,57 @@ def _pick_feature_cols(df: pd.DataFrame, *, target_col: str, cfg: dict = None, h
                 feature_path = base_dir / feature_list_path
 
                 if feature_path.exists():
-                    with open(feature_path, 'r', encoding='utf-8') as f:
+                    with open(feature_path, encoding="utf-8") as f:
                         feature_config = yaml.safe_load(f) or {}
                         fixed_features = feature_config.get("features", [])
 
                         if not isinstance(fixed_features, list):
-                            logger.warning(f"[Phase 6] feature_list format error: expected list, got {type(fixed_features)}")
+                            logger.warning(
+                                f"[Phase 6] feature_list format error: expected list, got {type(fixed_features)}"
+                            )
                         else:
                             # df에 존재하는 피처만 필터링
                             available = [f for f in fixed_features if f in df.columns]
                             missing = [f for f in fixed_features if f not in df.columns]
 
                             if len(available) > 0:
-                                logger.info(f"[Phase 6] 피처 고정 모드: {len(available)}/{len(fixed_features)}개 피처 사용 (horizon={horizon})")
+                                logger.info(
+                                    f"[Phase 6] 피처 고정 모드: {len(available)}/{len(fixed_features)}개 피처 사용 (horizon={horizon})"
+                                )
                                 if missing:
-                                    logger.warning(f"[Phase 6] 누락된 피처 ({len(missing)}개): {missing[:10]}{'...' if len(missing) > 10 else ''}")
+                                    logger.warning(
+                                        f"[Phase 6] 누락된 피처 ({len(missing)}개): {missing[:10]}{'...' if len(missing) > 10 else ''}"
+                                    )
                                 return available
                             else:
-                                logger.warning(f"[Phase 6] 피처 고정 모드: 사용 가능한 피처가 없음. 기존 로직으로 fallback")
+                                logger.warning(
+                                    "[Phase 6] 피처 고정 모드: 사용 가능한 피처가 없음. 기존 로직으로 fallback"
+                                )
             except Exception as e:
                 import logging
+
                 logger = logging.getLogger(__name__)
-                logger.warning(f"[Phase 6] 피처 고정 모드 로드 실패: {e}. 기존 로직으로 fallback")
+                logger.warning(
+                    f"[Phase 6] 피처 고정 모드 로드 실패: {e}. 기존 로직으로 fallback"
+                )
 
     # [Phase 5 개선안] Market-Neutral: 초과 수익률 컬럼도 피처에서 제외
     exclude = {
-        "date", "ticker",
+        "date",
+        "ticker",
         target_col,
-        "ret_fwd_20d", "ret_fwd_120d",  # 절대 수익률
-        "ret_fwd_20d_excess", "ret_fwd_120d_excess",  # 초과 수익률
-        "market_ret_20d", "market_ret_120d",  # 시장 수익률 (참고용)
-        "split", "phase", "segment", "fold_id"
+        "ret_fwd_20d",
+        "ret_fwd_120d",  # 절대 수익률
+        "ret_fwd_20d_excess",
+        "ret_fwd_120d_excess",  # 초과 수익률
+        "market_ret_20d",
+        "market_ret_120d",  # 시장 수익률 (참고용)
+        "split",
+        "phase",
+        "segment",
+        "fold_id",
     }
-    cols: List[str] = []
+    cols: list[str] = []
     for c in df.columns:
         if c in exclude:
             continue
@@ -171,19 +201,26 @@ def _pick_feature_cols(df: pd.DataFrame, *, target_col: str, cfg: dict = None, h
             cols.append(c)
 
     if not cols:
-        raise ValueError("No numeric feature columns found after excluding identifiers/targets.")
+        raise ValueError(
+            "No numeric feature columns found after excluding identifiers/targets."
+        )
 
     # [Phase 5 개선안] 피처 IC 필터링: IC 또는 Rank IC < min_feature_ic인 피처 제외
     # [Phase 6] IC 필터링은 피처 고정 모드가 없을 때만 적용
     if cfg is not None:
         l5 = (cfg.get("l5", {}) if isinstance(cfg, dict) else {}) or {}
         filter_by_ic = l5.get("filter_features_by_ic", False)
-        use_rank_ic = l5.get("use_rank_ic", False)  # [Phase 5 개선안] Rank IC 기준 필터링
+        use_rank_ic = l5.get(
+            "use_rank_ic", False
+        )  # [Phase 5 개선안] Rank IC 기준 필터링
         min_feature_ic = float(l5.get("min_feature_ic", 0.01))
-        feature_ic_file = l5.get("feature_ic_file", "artifacts/reports/feature_ic_dev.csv")
+        feature_ic_file = l5.get(
+            "feature_ic_file", "artifacts/reports/feature_ic_dev.csv"
+        )
 
         if filter_by_ic:
             import logging
+
             logger = logging.getLogger(__name__)
 
             # IC 파일 경로 계산
@@ -199,31 +236,48 @@ def _pick_feature_cols(df: pd.DataFrame, *, target_col: str, cfg: dict = None, h
                     # [Phase 5 개선안] Rank IC 기준 필터링
                     if use_rank_ic:
                         ic_col = "rank_ic"
-                        logger.info(f"[Phase 5] Using Rank IC for filtering (Rank IC < {min_feature_ic})")
+                        logger.info(
+                            f"[Phase 5] Using Rank IC for filtering (Rank IC < {min_feature_ic})"
+                        )
                     else:
                         ic_col = "ic"
-                        logger.info(f"[Phase 5] Using IC for filtering (IC < {min_feature_ic})")
+                        logger.info(
+                            f"[Phase 5] Using IC for filtering (IC < {min_feature_ic})"
+                        )
 
                     # IC 또는 Rank IC < min_feature_ic인 피처 제외
                     if ic_col not in ic_df.columns:
-                        logger.warning(f"[Phase 5] Column '{ic_col}' not found in IC file. Using 'ic' instead.")
+                        logger.warning(
+                            f"[Phase 5] Column '{ic_col}' not found in IC file. Using 'ic' instead."
+                        )
                         ic_col = "ic"
 
-                    bad_features = set(ic_df[ic_df[ic_col] < min_feature_ic]["feature"].tolist())
+                    bad_features = set(
+                        ic_df[ic_df[ic_col] < min_feature_ic]["feature"].tolist()
+                    )
                     original_count = len(cols)
                     cols = [c for c in cols if c not in bad_features]
                     filtered_count = len(cols)
 
-                    logger.info(f"[Phase 5] Feature filtering ({ic_col}): {original_count} -> {filtered_count} (removed {original_count - filtered_count} features with {ic_col} < {min_feature_ic})")
+                    logger.info(
+                        f"[Phase 5] Feature filtering ({ic_col}): {original_count} -> {filtered_count} (removed {original_count - filtered_count} features with {ic_col} < {min_feature_ic})"
+                    )
 
                     if filtered_count == 0:
-                        raise ValueError(f"All features were filtered out! Check min_feature_ic={min_feature_ic} and feature_ic_file={feature_ic_file}")
+                        raise ValueError(
+                            f"All features were filtered out! Check min_feature_ic={min_feature_ic} and feature_ic_file={feature_ic_file}"
+                        )
                 except Exception as e:
-                    logger.warning(f"[Phase 5] Failed to load/apply feature IC filter: {e}. Using all features.")
+                    logger.warning(
+                        f"[Phase 5] Failed to load/apply feature IC filter: {e}. Using all features."
+                    )
             else:
-                logger.warning(f"[Phase 5] Feature IC file not found: {ic_path}. IC filtering disabled. Run scripts/calculate_feature_ic.py first.")
+                logger.warning(
+                    f"[Phase 5] Feature IC file not found: {ic_path}. IC filtering disabled. Run scripts/calculate_feature_ic.py first."
+                )
 
     return cols
+
 
 def _rank_ic(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     s1 = pd.Series(y_true).rank(pct=True)
@@ -231,8 +285,10 @@ def _rank_ic(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     v = float(s1.corr(s2))
     return 0.0 if np.isnan(v) else v
 
+
 def _get_l5_cfg(cfg: dict) -> dict:
     return (cfg.get("l5", {}) if isinstance(cfg, dict) else {}) or {}
+
 
 def _cs_rank_by_date(d: pd.DataFrame, col: str, *, center: bool = True) -> np.ndarray:
     """
@@ -245,9 +301,10 @@ def _cs_rank_by_date(d: pd.DataFrame, col: str, *, center: bool = True) -> np.nd
         r = r - 0.5
     return r.to_numpy(dtype=np.float32, copy=False)
 
-def _metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
+
+def _metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
     err = y_pred - y_true
-    rmse = float(np.sqrt(np.mean(err ** 2)))
+    rmse = float(np.sqrt(np.mean(err**2)))
     mae = float(np.mean(np.abs(err)))
     ic = _rank_ic(y_true, y_pred)
     hit = float(np.mean(np.sign(y_true) == np.sign(y_pred)))
@@ -255,7 +312,8 @@ def _metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
     r2 = float(r2_score(y_true, y_pred))
     return {"rmse": rmse, "mae": mae, "ic_rank": ic, "hit_ratio": hit, "r2_oos": r2}
 
-def _build_model(cfg: dict, alpha: float = None) -> Tuple[Pipeline, str]:
+
+def _build_model(cfg: dict, alpha: float = None) -> tuple[Pipeline, str]:
     l5 = _get_l5_cfg(cfg)
 
     model_type = str(l5.get("model_type", "ridge")).lower()
@@ -271,11 +329,13 @@ def _build_model(cfg: dict, alpha: float = None) -> Tuple[Pipeline, str]:
 
     # [개선안 23번] 모델 확장: ridge + random_forest + xgboost (옵션)
     if model_type == "ridge":
-        pipe = Pipeline([
-            ("imputer", SimpleImputer(strategy="median")),
-            ("scaler", StandardScaler(with_mean=True)),
-            ("model", Ridge(alpha=ridge_alpha)),
-        ])
+        pipe = Pipeline(
+            [
+                ("imputer", SimpleImputer(strategy="median")),
+                ("scaler", StandardScaler(with_mean=True)),
+                ("model", Ridge(alpha=ridge_alpha)),
+            ]
+        )
     return pipe, f"ridge(alpha={ridge_alpha}, target_transform={tf})"
 
     if model_type == "ensemble":
@@ -283,43 +343,67 @@ def _build_model(cfg: dict, alpha: float = None) -> Tuple[Pipeline, str]:
         models = {}
 
         # Ridge 모델
-        ridge_model = Pipeline([
-            ("imputer", SimpleImputer(strategy="median")),
-            ("scaler", StandardScaler(with_mean=True)),
-            ("model", Ridge(alpha=ridge_alpha)),
-        ])
-        models['ridge'] = ridge_model
+        ridge_model = Pipeline(
+            [
+                ("imputer", SimpleImputer(strategy="median")),
+                ("scaler", StandardScaler(with_mean=True)),
+                ("model", Ridge(alpha=ridge_alpha)),
+            ]
+        )
+        models["ridge"] = ridge_model
 
         # XGBoost 모델 (사용 가능한 경우)
         if XGBOOST_AVAILABLE:
-            xgboost_model = Pipeline([
-                ("imputer", SimpleImputer(strategy="median")),
-                ("scaler", StandardScaler(with_mean=True)),
-                ("model", XGBRegressor(n_estimators=300, max_depth=5, learning_rate=0.03, random_state=42, subsample=0.9, colsample_bytree=0.9, gamma=0.1)),
-            ])
-            models['xgboost'] = xgboost_model
+            xgboost_model = Pipeline(
+                [
+                    ("imputer", SimpleImputer(strategy="median")),
+                    ("scaler", StandardScaler(with_mean=True)),
+                    (
+                        "model",
+                        XGBRegressor(
+                            n_estimators=300,
+                            max_depth=5,
+                            learning_rate=0.03,
+                            random_state=42,
+                            subsample=0.9,
+                            colsample_bytree=0.9,
+                            gamma=0.1,
+                        ),
+                    ),
+                ]
+            )
+            models["xgboost"] = xgboost_model
 
         # Grid Search 모델 (간단한 버전)
-        grid_model = Pipeline([
-            ("imputer", SimpleImputer(strategy="median")),
-            ("scaler", StandardScaler(with_mean=True)),
-            ("model", Ridge(alpha=ridge_alpha)),  # 일단 Ridge로 구현
-        ])
-        models['grid'] = grid_model
+        grid_model = Pipeline(
+            [
+                ("imputer", SimpleImputer(strategy="median")),
+                ("scaler", StandardScaler(with_mean=True)),
+                ("model", Ridge(alpha=ridge_alpha)),  # 일단 Ridge로 구현
+            ]
+        )
+        models["grid"] = grid_model
 
         # Random Forest 모델
-        rf_model = Pipeline([
-            ("imputer", SimpleImputer(strategy="median")),
-            ("model", RandomForestRegressor(n_estimators=100, max_depth=5, random_state=42)),
-        ])
-        models['rf'] = rf_model
+        rf_model = Pipeline(
+            [
+                ("imputer", SimpleImputer(strategy="median")),
+                (
+                    "model",
+                    RandomForestRegressor(
+                        n_estimators=100, max_depth=5, random_state=42
+                    ),
+                ),
+            ]
+        )
+        models["rf"] = rf_model
 
         return models, f"ensemble(models={list(models.keys())}, target_transform={tf})"
 
     if model_type in ("rf", "random_forest", "randomforest"):
         n_estimators = int(l5.get("rf_n_estimators", 400))
         max_depth = l5.get("rf_max_depth", None)
-        max_depth = (None if max_depth in (None, "none", "null") else int(max_depth))
+        max_depth = None if max_depth in (None, "none", "null") else int(max_depth)
         min_samples_leaf = int(l5.get("rf_min_samples_leaf", 5))
         random_state = int(l5.get("random_state", 42))
 
@@ -330,17 +414,24 @@ def _build_model(cfg: dict, alpha: float = None) -> Tuple[Pipeline, str]:
             n_jobs=-1,
             random_state=random_state,
         )
-        pipe = Pipeline([
-            ("imputer", SimpleImputer(strategy="median")),
-            ("model", model),
-        ])
-        return pipe, f"random_forest(n_estimators={n_estimators}, max_depth={max_depth}, leaf={min_samples_leaf}, target_transform={tf})"
+        pipe = Pipeline(
+            [
+                ("imputer", SimpleImputer(strategy="median")),
+                ("model", model),
+            ]
+        )
+        return (
+            pipe,
+            f"random_forest(n_estimators={n_estimators}, max_depth={max_depth}, leaf={min_samples_leaf}, target_transform={tf})",
+        )
 
     if model_type in ("xgb", "xgboost"):
         try:
             from xgboost import XGBRegressor
         except Exception as e:
-            raise ImportError("xgboost가 필요합니다. `pip install xgboost` 후 재실행하세요.") from e
+            raise ImportError(
+                "xgboost가 필요합니다. `pip install xgboost` 후 재실행하세요."
+            ) from e
 
         # 안전한 기본값(과적합 완화 방향)
         n_estimators = int(l5.get("xgb_n_estimators", 600))
@@ -364,22 +455,30 @@ def _build_model(cfg: dict, alpha: float = None) -> Tuple[Pipeline, str]:
             n_jobs=-1,
             random_state=random_state,
         )
-        pipe = Pipeline([
-            ("imputer", SimpleImputer(strategy="median")),
-            ("model", model),
-        ])
-        return pipe, f"xgboost(n_estimators={n_estimators}, depth={max_depth}, lr={learning_rate}, target_transform={tf})"
+        pipe = Pipeline(
+            [
+                ("imputer", SimpleImputer(strategy="median")),
+                ("model", model),
+            ]
+        )
+        return (
+            pipe,
+            f"xgboost(n_estimators={n_estimators}, depth={max_depth}, lr={learning_rate}, target_transform={tf})",
+        )
 
-    raise ValueError(f"Unsupported model_type={model_type}. (supported: ridge, random_forest, xgboost)")
+    raise ValueError(
+        f"Unsupported model_type={model_type}. (supported: ridge, random_forest, xgboost)"
+    )
+
 
 def _select_ridge_alpha_by_time_split(
     *,
     dtrain: pd.DataFrame,
-    use_cols: List[str],
+    use_cols: list[str],
     target_col: str,
     cfg: dict,
     horizon: int,
-) -> Tuple[Optional[float], Optional[float], List[str]]:
+) -> tuple[Optional[float], Optional[float], list[str]]:
     """
     [개선안 19번] alpha 튜닝(옵션) - 단순 Time-split 검증(lookahead 방지)
 
@@ -392,7 +491,7 @@ def _select_ridge_alpha_by_time_split(
       (best_alpha, best_val_ic, warns)
       - best_alpha가 None이면 튜닝 스킵(데이터 부족/설정 없음)
     """
-    warns: List[str] = []
+    warns: list[str] = []
     l5 = _get_l5_cfg(cfg)
     if not bool(l5.get("tune_alpha", False)):
         return None, None, warns
@@ -402,7 +501,11 @@ def _select_ridge_alpha_by_time_split(
         warns.append("[L5 alpha_tune] tune_alpha=True but alpha_grid is empty -> skip")
         return None, None, warns
 
-    l4 = (cfg.get("l4", {}) if isinstance(cfg, dict) else {}) or (cfg.get("params", {}).get("l4", {}) if isinstance(cfg, dict) else {}) or {}
+    l4 = (
+        (cfg.get("l4", {}) if isinstance(cfg, dict) else {})
+        or (cfg.get("params", {}).get("l4", {}) if isinstance(cfg, dict) else {})
+        or {}
+    )
     val_window_days = int(l4.get("test_window_days", 20))
     if val_window_days <= 0:
         warns.append("[L5 alpha_tune] test_window_days<=0 -> skip")
@@ -416,7 +519,9 @@ def _select_ridge_alpha_by_time_split(
     dates = pd.to_datetime(dtrain["date"], errors="coerce").dropna().unique()
     dates = pd.DatetimeIndex(dates).sort_values()
     if len(dates) < (val_window_days + 2):
-        warns.append(f"[L5 alpha_tune] too few train dates={len(dates)} for val_window_days={val_window_days} -> skip")
+        warns.append(
+            f"[L5 alpha_tune] too few train dates={len(dates)} for val_window_days={val_window_days} -> skip"
+        )
         return None, None, warns
 
     cutoff = dates[-(val_window_days + 1)]
@@ -424,7 +529,9 @@ def _select_ridge_alpha_by_time_split(
     val = dtrain.loc[pd.to_datetime(dtrain["date"]) > cutoff].copy()
 
     if len(subtrain) < 500 or len(val) < 200:
-        warns.append(f"[L5 alpha_tune] too few rows subtrain={len(subtrain)}, val={len(val)} -> skip")
+        warns.append(
+            f"[L5 alpha_tune] too few rows subtrain={len(subtrain)}, val={len(val)} -> skip"
+        )
         return None, None, warns
 
     target_transform = str(l5.get("target_transform", "none")).lower()
@@ -489,7 +596,9 @@ def _select_ridge_alpha_by_time_split(
                 # 기존 방식: IC만 사용
                 score = ic
 
-            alpha_scores.append({"alpha": alpha, "ic": ic, "hit_ratio": hit_ratio, "score": score})
+            alpha_scores.append(
+                {"alpha": alpha, "ic": ic, "hit_ratio": hit_ratio, "score": score}
+            )
 
         except Exception as e:
             warns.append(f"[L5 alpha_tune] alpha={a} failed: {type(e).__name__}: {e}")
@@ -506,23 +615,31 @@ def _select_ridge_alpha_by_time_split(
     # 선택된 alpha의 IC (로깅용)
     best_ic = next((s["ic"] for s in alpha_scores if s["alpha"] == best_alpha), None)
     metric_name = tune_metric if use_composite_metric else "ic_rank"
-    warns.append(f"[L5 alpha_tune] selected alpha={best_alpha} (val_{metric_name}={best_score:.4f}, val_ic_rank={best_ic:.4f}, horizon={horizon})")
+    warns.append(
+        f"[L5 alpha_tune] selected alpha={best_alpha} (val_{metric_name}={best_score:.4f}, val_ic_rank={best_ic:.4f}, horizon={horizon})"
+    )
 
     # 상위 3개 alpha 로깅 (디버깅용)
     if len(alpha_scores) > 0:
         top3 = sorted(alpha_scores, key=lambda x: x["score"], reverse=True)[:3]
-        top3_str = ", ".join([f"α={s['alpha']:.1f}(score={s['score']:.4f})" for s in top3])
+        top3_str = ", ".join(
+            [f"α={s['alpha']:.1f}(score={s['score']:.4f})" for s in top3]
+        )
         warns.append(f"[L5 alpha_tune] top 3 alphas: {top3_str}")
 
     return best_alpha, best_ic, warns
 
-def _slice_by_date_sorted(df: pd.DataFrame, date_arr: np.ndarray, start: pd.Timestamp, end: pd.Timestamp) -> pd.DataFrame:
+
+def _slice_by_date_sorted(
+    df: pd.DataFrame, date_arr: np.ndarray, start: pd.Timestamp, end: pd.Timestamp
+) -> pd.DataFrame:
     # df는 date 기준 오름차순 정렬되어 있어야 함
     left = np.searchsorted(date_arr, np.datetime64(start), side="left")
     right = np.searchsorted(date_arr, np.datetime64(end), side="right")
     if right <= left:
         return df.iloc[0:0]
     return df.iloc[left:right]
+
 
 def train_oos_predictions(
     *,
@@ -532,8 +649,8 @@ def train_oos_predictions(
     target_col: str,
     horizon: int,
     interim_dir: Optional[Path] = None,
-) -> Tuple[pd.DataFrame, pd.DataFrame, Dict, List[str]]:
-    warns: List[str] = []
+) -> tuple[pd.DataFrame, pd.DataFrame, dict, list[str]]:
+    warns: list[str] = []
 
     df = dataset_daily.copy()
 
@@ -552,7 +669,9 @@ def train_oos_predictions(
     date_arr = df["date"].to_numpy(dtype="datetime64[ns]", copy=False)
 
     # [Phase 6] horizon 정보를 _pick_feature_cols에 전달
-    feature_cols = _pick_feature_cols(df, target_col=target_col, cfg=cfg, horizon=horizon)
+    feature_cols = _pick_feature_cols(
+        df, target_col=target_col, cfg=cfg, horizon=horizon
+    )
     fold_specs_all = _standardize_folds(cv_folds)
 
     # [피쳐 가중치 적용] 피쳐별 가중치 로드 (horizon별)
@@ -573,10 +692,12 @@ def train_oos_predictions(
             weights_path = base_dir / feature_weights_config
 
             if weights_path.exists():
-                with open(weights_path, 'r', encoding='utf-8') as f:
+                with open(weights_path, encoding="utf-8") as f:
                     weights_data = yaml.safe_load(f) or {}
                     feature_weights = weights_data.get("feature_weights", {})
-                    warns.append(f"[L5 피쳐 가중치] 로드 완료: {len(feature_weights)}개 피쳐, horizon={horizon} ({weights_path})")
+                    warns.append(
+                        f"[L5 피쳐 가중치] 로드 완료: {len(feature_weights)}개 피쳐, horizon={horizon} ({weights_path})"
+                    )
             else:
                 warns.append(f"[L5 피쳐 가중치] 파일 없음: {weights_path}")
         except Exception as e:
@@ -588,13 +709,13 @@ def train_oos_predictions(
     # [원래 상태로 복원] dev/holdout 구분 없이 모든 fold에서 동일하게 학습
     fold_specs = fold_specs_all  # dev/holdout 구분 없이 원래 순서대로 처리
 
-    pred_rows: List[pd.DataFrame] = []
-    metric_rows: List[dict] = []
-    coef_rows: List[dict] = []  # [Stage 2] 계수 저장용
+    pred_rows: list[pd.DataFrame] = []
+    metric_rows: list[dict] = []
+    coef_rows: list[dict] = []  # [Stage 2] 계수 저장용
 
     possible_test_rows = 0
     predicted_rows = 0
-    dropped_all_nan_union: Set[str] = set()
+    dropped_all_nan_union: set[str] = set()
 
     for fs in fold_specs:
         dtrain_all = _slice_by_date_sorted(df, date_arr, fs.train_start, fs.train_end)
@@ -604,7 +725,9 @@ def train_oos_predictions(
         gap_days = (fs.test_start - fs.train_end).days
         expected_purge = 20 if horizon == 20 else 120
         if gap_days < expected_purge:
-            warns.append(f"[L5 PURGE] fold={fs.fold_id}: gap={gap_days} < purge={expected_purge} (horizon={horizon})")
+            warns.append(
+                f"[L5 PURGE] fold={fs.fold_id}: gap={gap_days} < purge={expected_purge} (horizon={horizon})"
+            )
 
         # target NaN 제거
         dtrain = dtrain_all.dropna(subset=[target_col])
@@ -613,10 +736,14 @@ def train_oos_predictions(
         possible_test_rows += int(dtest.shape[0])
 
         if dtrain.shape[0] < 2000:
-            warns.append(f"[L5] fold={fs.fold_id} horizon={horizon}: too few train rows={dtrain.shape[0]}")
+            warns.append(
+                f"[L5] fold={fs.fold_id} horizon={horizon}: too few train rows={dtrain.shape[0]}"
+            )
             continue
         if dtest.shape[0] < 200:
-            warns.append(f"[L5] fold={fs.fold_id} horizon={horizon}: too few test rows={dtest.shape[0]}")
+            warns.append(
+                f"[L5] fold={fs.fold_id} horizon={horizon}: too few test rows={dtest.shape[0]}"
+            )
             continue
 
         # ALL-NaN 피처 제거(폴드별)
@@ -626,7 +753,9 @@ def train_oos_predictions(
             dropped_all_nan_union.update(dropped)
 
         if len(use_cols) < 5:
-            warns.append(f"[L5] fold={fs.fold_id} horizon={horizon}: too few usable features={len(use_cols)}")
+            warns.append(
+                f"[L5] fold={fs.fold_id} horizon={horizon}: too few usable features={len(use_cols)}"
+            )
             continue
 
         l5_cfg = _get_l5_cfg(cfg)
@@ -638,11 +767,15 @@ def train_oos_predictions(
 
         # [피쳐 가중치 적용] 피쳐 값에 가중치 곱하기
         if feature_weights:
-            weight_array = np.array([feature_weights.get(col, 1.0) for col in use_cols], dtype=np.float32)
+            weight_array = np.array(
+                [feature_weights.get(col, 1.0) for col in use_cols], dtype=np.float32
+            )
             # 가중치 정규화 (합=1.0)
             weight_sum = weight_array.sum()
             if weight_sum > 0:
-                weight_array = weight_array / weight_sum * len(use_cols)  # 평균 가중치를 1.0으로 유지
+                weight_array = (
+                    weight_array / weight_sum * len(use_cols)
+                )  # 평균 가중치를 1.0으로 유지
             X_train = X_train * weight_array[np.newaxis, :]
             X_test = X_test * weight_array[np.newaxis, :]
 
@@ -683,20 +816,27 @@ def train_oos_predictions(
                 ensemble_weights = ensemble_weights_cfg.get("long", {})
 
             # 디버그 로그
-            warns.append(f"[L5 앙상블 디버그] horizon={horizon}, ensemble_weights_cfg 키: {list(ensemble_weights_cfg.keys()) if ensemble_weights_cfg else 'None'}")
+            warns.append(
+                f"[L5 앙상블 디버그] horizon={horizon}, ensemble_weights_cfg 키: {list(ensemble_weights_cfg.keys()) if ensemble_weights_cfg else 'None'}"
+            )
             warns.append(f"[L5 앙상블 디버그] 선택된 가중치: {ensemble_weights}")
 
             # 각 모델 학습 및 예측
             ensemble_predictions = {}
             for model_name_key, model_obj in model.items():
-                if model_name_key in ensemble_weights and ensemble_weights[model_name_key] > 0:
+                if (
+                    model_name_key in ensemble_weights
+                    and ensemble_weights[model_name_key] > 0
+                ):
                     try:
                         model_obj.fit(X_train, y_train)
                         pred = model_obj.predict(X_test).astype(np.float32)
                         ensemble_predictions[model_name_key] = pred
                         warns.append(f"[L5 앙상블] {model_name_key} 모델 학습 완료")
                     except Exception as e:
-                        warns.append(f"[L5 앙상블] {model_name_key} 모델 학습 실패: {e}")
+                        warns.append(
+                            f"[L5 앙상블] {model_name_key} 모델 학습 실패: {e}"
+                        )
 
             # 가중치 기반 예측 결합
             if ensemble_predictions:
@@ -715,25 +855,40 @@ def train_oos_predictions(
                     # 가중치 합이 0이면 평균 사용
                     y_pred = np.mean(list(ensemble_predictions.values()), axis=0)
 
-                warns.append(f"[L5 앙상블] {len(ensemble_predictions)}개 모델 예측 결합 완료")
-                warns.append(f"[L5 앙상블] 가중치 상세: {' + '.join(weight_details)} = {total_weight:.2f}")
-                warns.append(f"[L5 앙상블] horizon={horizon}, total_weight={total_weight:.3f}")
+                warns.append(
+                    f"[L5 앙상블] {len(ensemble_predictions)}개 모델 예측 결합 완료"
+                )
+                warns.append(
+                    f"[L5 앙상블] 가중치 상세: {' + '.join(weight_details)} = {total_weight:.2f}"
+                )
+                warns.append(
+                    f"[L5 앙상블] horizon={horizon}, total_weight={total_weight:.3f}"
+                )
             else:
                 # 앙상블 예측 실패 시 기본 모델 사용
-                default_model = model.get('ridge', list(model.values())[0])
+                default_model = model.get("ridge", list(model.values())[0])
                 default_model.fit(X_train, y_train)
                 y_pred = default_model.predict(X_test).astype(np.float32)
-                warns.append(f"[L5 앙상블] 앙상블 실패로 기본 Ridge 모델 사용 (horizon={horizon})")
+                warns.append(
+                    f"[L5 앙상블] 앙상블 실패로 기본 Ridge 모델 사용 (horizon={horizon})"
+                )
 
-            model_for_coef = model.get('ridge', list(model.values())[0])  # 계수 추출용
+            model_for_coef = model.get("ridge", list(model.values())[0])  # 계수 추출용
         else:
             # 기존 단일 모델 로직
             # [Phase 6] 전처리 fit 범위 확인: train만 fit, test는 transform만
-            train_date_range = f"{dtrain['date'].min().date()} ~ {dtrain['date'].max().date()}"
-            test_date_range = f"{dtest['date'].min().date()} ~ {dtest['date'].max().date()}"
+            train_date_range = (
+                f"{dtrain['date'].min().date()} ~ {dtrain['date'].max().date()}"
+            )
+            test_date_range = (
+                f"{dtest['date'].min().date()} ~ {dtest['date'].max().date()}"
+            )
             import logging
+
             logger = logging.getLogger(__name__)
-            logger.debug(f"[L5 Phase 6] fold={fs.fold_id}: train={train_date_range}, test={test_date_range}")
+            logger.debug(
+                f"[L5 Phase 6] fold={fs.fold_id}: train={train_date_range}, test={test_date_range}"
+            )
 
             model.fit(X_train, y_train)
             y_pred = model.predict(X_test).astype(np.float32)
@@ -749,33 +904,43 @@ def train_oos_predictions(
 
             # [개선안 24번] Ridge 외 모델(RandomForest/XGBoost)은 coef_가 없을 수 있음 -> 안전 분기
             if base_model is None:
-                warns.append("[L5 Stage2] model.named_steps['model'] not found -> skip importance export")
+                warns.append(
+                    "[L5 Stage2] model.named_steps['model'] not found -> skip importance export"
+                )
             elif hasattr(base_model, "coef_"):
                 coef_array = np.asarray(base_model.coef_, dtype=np.float32)
                 for idx, feature_name in enumerate(use_cols):
-                    coef_rows.append({
-                        "fold_id": fs.fold_id,
-                        "phase": fs.phase,
-                        "horizon": int(horizon),
-                        "feature": feature_name,
-                        "coef": float(coef_array[idx]),
-                        "abs_coef": float(np.abs(coef_array[idx])),
-                    })
+                    coef_rows.append(
+                        {
+                            "fold_id": fs.fold_id,
+                            "phase": fs.phase,
+                            "horizon": int(horizon),
+                            "feature": feature_name,
+                            "coef": float(coef_array[idx]),
+                            "abs_coef": float(np.abs(coef_array[idx])),
+                        }
+                    )
             elif hasattr(base_model, "feature_importances_"):
                 # 트리 계열: feature_importances_를 coef로 저장(호환), coef_sign_stability는 의미가 약함
                 imp = np.asarray(base_model.feature_importances_, dtype=np.float32)
                 for idx, feature_name in enumerate(use_cols):
-                    coef_rows.append({
-                        "fold_id": fs.fold_id,
-                        "phase": fs.phase,
-                        "horizon": int(horizon),
-                        "feature": feature_name,
-                        "coef": float(imp[idx]),
-                        "abs_coef": float(np.abs(imp[idx])),
-                    })
-                warns.append("[L5 Stage2] tree feature_importances_ exported (stored in coef/abs_coef for compatibility)")
+                    coef_rows.append(
+                        {
+                            "fold_id": fs.fold_id,
+                            "phase": fs.phase,
+                            "horizon": int(horizon),
+                            "feature": feature_name,
+                            "coef": float(imp[idx]),
+                            "abs_coef": float(np.abs(imp[idx])),
+                        }
+                    )
+                warns.append(
+                    "[L5 Stage2] tree feature_importances_ exported (stored in coef/abs_coef for compatibility)"
+                )
             else:
-                warns.append(f"[L5 Stage2] importance export not supported for model={type(base_model).__name__} -> skipped")
+                warns.append(
+                    f"[L5 Stage2] importance export not supported for model={type(base_model).__name__} -> skipped"
+                )
 
         # 지표는 "학습 타깃과 동일 스케일"로 평가
         m = _metrics(y_test_metric, y_pred)
@@ -807,7 +972,9 @@ def train_oos_predictions(
             # [개선안 19번] alpha 튜닝 진단
             "ridge_alpha_used": float(ridge_alpha),
             "alpha_tuned": bool(tuned_alpha is not None),
-            "alpha_val_ic_rank": (None if tuned_val_ic is None else float(tuned_val_ic)),
+            "alpha_val_ic_rank": (
+                None if tuned_val_ic is None else float(tuned_val_ic)
+            ),
         }
         metric_rows.append(metric_row)
 
@@ -824,9 +991,11 @@ def train_oos_predictions(
     if dup > 0:
         raise RuntimeError(f"OOS predictions have duplicate (date,ticker) rows: {dup}")
 
-    coverage = (predicted_rows / possible_test_rows * 100.0) if possible_test_rows > 0 else 0.0
+    coverage = (
+        (predicted_rows / possible_test_rows * 100.0) if possible_test_rows > 0 else 0.0
+    )
 
-    report: Dict = {
+    report: dict = {
         "horizon": int(horizon),
         "target_col": target_col,
         "model": model_name,
@@ -834,9 +1003,15 @@ def train_oos_predictions(
         "predicted_rows": int(predicted_rows),
         "oos_coverage_pct": round(float(coverage), 4),
         "folds_total": int(len(fold_specs)),
-        "folds_used": int(metrics_df["fold_id"].nunique()) if not metrics_df.empty else 0,
-        "dev_folds": int((metrics_df["phase"] == "dev").sum()) if not metrics_df.empty else 0,
-        "holdout_folds": int((metrics_df["phase"] == "holdout").sum()) if not metrics_df.empty else 0,
+        "folds_used": (
+            int(metrics_df["fold_id"].nunique()) if not metrics_df.empty else 0
+        ),
+        "dev_folds": (
+            int((metrics_df["phase"] == "dev").sum()) if not metrics_df.empty else 0
+        ),
+        "holdout_folds": (
+            int((metrics_df["phase"] == "holdout").sum()) if not metrics_df.empty else 0
+        ),
         "dropped_all_nan_features": sorted(list(dropped_all_nan_union)),
     }
 
@@ -846,7 +1021,9 @@ def train_oos_predictions(
             if len(sub) > 0:
                 report[f"{ph}_rmse_mean"] = round(float(sub["rmse"].mean()), 8)
                 report[f"{ph}_ic_rank_mean"] = round(float(sub["ic_rank"].mean()), 8)
-                report[f"{ph}_hit_ratio_mean"] = round(float(sub["hit_ratio"].mean()), 8)
+                report[f"{ph}_hit_ratio_mean"] = round(
+                    float(sub["hit_ratio"].mean()), 8
+                )
                 # [Stage 2] r2_oos_mean 추가
                 if "r2_oos" in sub.columns:
                     report[f"{ph}_r2_oos_mean"] = round(float(sub["r2_oos"].mean()), 8)
@@ -861,9 +1038,11 @@ def train_oos_predictions(
             existing_coef = pd.read_parquet(coef_path)
             # 동일 fold_id, phase, horizon, feature 조합이 있으면 업데이트, 없으면 추가
             merge_keys = ["fold_id", "phase", "horizon", "feature"]
-            coef_df = pd.concat([existing_coef, coef_df]).drop_duplicates(
-                subset=merge_keys, keep="last"
-            ).reset_index(drop=True)
+            coef_df = (
+                pd.concat([existing_coef, coef_df])
+                .drop_duplicates(subset=merge_keys, keep="last")
+                .reset_index(drop=True)
+            )
 
         coef_df.to_parquet(coef_path, index=False)
         warns.append(f"[L5 Stage2] Model coefficients saved: {coef_path}")
@@ -880,26 +1059,40 @@ def train_oos_predictions(
                 positive_count = (coef_values > 0).sum()
                 negative_count = (coef_values < 0).sum()
                 total_count = len(coef_values)
-                sign_stability = max(positive_count, negative_count) / total_count if total_count > 0 else np.nan
+                sign_stability = (
+                    max(positive_count, negative_count) / total_count
+                    if total_count > 0
+                    else np.nan
+                )
 
-                summary_rows.append({
-                    "horizon": int(h),
-                    "phase": ph,
-                    "feature": feature,
-                    "abs_coef_mean": float(abs_coef_values.mean()),
-                    "abs_coef_median": float(np.median(abs_coef_values)),
-                    "abs_coef_std": float(abs_coef_values.std()) if len(abs_coef_values) > 1 else 0.0,
-                    "coef_mean": float(coef_values.mean()),
-                    "coef_std": float(coef_values.std()) if len(coef_values) > 1 else 0.0,
-                    "coef_sign_stability": float(sign_stability),
-                    "n_folds": int(total_count),
-                })
+                summary_rows.append(
+                    {
+                        "horizon": int(h),
+                        "phase": ph,
+                        "feature": feature,
+                        "abs_coef_mean": float(abs_coef_values.mean()),
+                        "abs_coef_median": float(np.median(abs_coef_values)),
+                        "abs_coef_std": (
+                            float(abs_coef_values.std())
+                            if len(abs_coef_values) > 1
+                            else 0.0
+                        ),
+                        "coef_mean": float(coef_values.mean()),
+                        "coef_std": (
+                            float(coef_values.std()) if len(coef_values) > 1 else 0.0
+                        ),
+                        "coef_sign_stability": float(sign_stability),
+                        "n_folds": int(total_count),
+                    }
+                )
 
         if summary_rows:
             summary_df = pd.DataFrame(summary_rows)
             summary_path = interim_dir / "feature_importance_summary.parquet"
             summary_df.to_parquet(summary_path, index=False)
-            warns.append(f"[L5 Stage2] Feature importance summary saved: {summary_path}")
+            warns.append(
+                f"[L5 Stage2] Feature importance summary saved: {summary_path}"
+            )
 
     # [원래 상태로 복원] Alpha 튜닝 비활성화로 인해 검증 로직 제거
 
@@ -913,8 +1106,12 @@ def train_oos_predictions(
             # 각 피처별 평균 절대 계수 사용
             coef_df_temp = pd.DataFrame(coef_rows)
             for feature in coef_df_temp["feature"].unique():
-                feat_coefs = coef_df_temp[coef_df_temp["feature"] == feature]["abs_coef"].values
-                feature_importance[feature] = float(np.mean(feat_coefs)) if len(feat_coefs) > 0 else 0.0
+                feat_coefs = coef_df_temp[coef_df_temp["feature"] == feature][
+                    "abs_coef"
+                ].values
+                feature_importance[feature] = (
+                    float(np.mean(feat_coefs)) if len(feat_coefs) > 0 else 0.0
+                )
 
         # 그룹 밸런싱 계산
         balance_df = calculate_feature_group_balance(
@@ -927,17 +1124,26 @@ def train_oos_predictions(
         if interim_dir is not None:
             balance_path = interim_dir / "feature_group_balance.parquet"
             balance_df.to_parquet(balance_path, index=False)
-            warns.append(f"[Stage6] 피처 그룹 밸런싱 저장: {balance_path} ({len(balance_df)} groups)")
+            warns.append(
+                f"[Stage6] 피처 그룹 밸런싱 저장: {balance_path} ({len(balance_df)} groups)"
+            )
 
             # 리포트에 그룹 밸런싱 정보 추가
             report["feature_groups_total"] = len(balance_df)
-            report["feature_groups_balanced"] = int((balance_df["balance_ratio"] > 0.5).sum())
-            report["feature_groups_ungrouped"] = int((balance_df["group_name"] == "ungrouped").sum())
+            report["feature_groups_balanced"] = int(
+                (balance_df["balance_ratio"] > 0.5).sum()
+            )
+            report["feature_groups_ungrouped"] = int(
+                (balance_df["group_name"] == "ungrouped").sum()
+            )
         else:
-            warns.append("[Stage6] interim_dir이 None이어서 feature_group_balance.parquet를 저장하지 않습니다.")
+            warns.append(
+                "[Stage6] interim_dir이 None이어서 feature_group_balance.parquet를 저장하지 않습니다."
+            )
     except Exception as e:
         warns.append(f"[Stage6] 피처 그룹 밸런싱 계산/저장 실패: {e}")
         import traceback
+
         warns.append(f"[Stage6] 트레이스백: {traceback.format_exc()}")
 
     return pred_oos, metrics_df, report, warns

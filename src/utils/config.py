@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, Optional, Union
 
 import yaml
 
@@ -100,3 +100,135 @@ def get_path(cfg: dict[str, Any], key: str) -> Path:
         raise KeyError(f"Missing paths.{key} in config")
     v = paths[key]
     return v if isinstance(v, Path) else Path(str(v))
+
+
+# 기본값 정의
+DEFAULT_CONFIG = {
+    "params": {
+        "start_date": "2016-01-01",
+        "end_date": "2024-12-31"
+    },
+    "run": {
+        "fail_on_validation_error": True,
+        "save_formats": ["parquet", "csv"],
+        "skip_if_exists": False,
+        "timezone": "Asia/Seoul",
+        "write_meta": True
+    },
+    "l7": {
+        "cost_bps": 10.0,
+        "holding_days": 20,
+        "top_k": 12,
+        "rebalance_interval": 1,
+        "target_volatility": 0.15
+    }
+}
+
+
+def load_yaml(path: Union[str, Path], defaults: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    YAML 파일을 로드하고 기본값을 병합합니다.
+
+    Args:
+        path: YAML 파일 경로
+        defaults: 기본값 딕셔너리 (옵션)
+
+    Returns:
+        병합된 설정 딕셔너리
+
+    Raises:
+        FileNotFoundError: 파일이 존재하지 않을 때
+        yaml.YAMLError: YAML 파싱 오류
+        ValueError: 유효하지 않은 기본값 키
+    """
+    path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(f"설정 파일을 찾을 수 없습니다: {path}")
+
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            config = yaml.safe_load(f) or {}
+    except yaml.YAMLError as e:
+        raise yaml.YAMLError(f"YAML 파싱 오류 ({path}): {e}")
+
+    # 기본값 병합
+    if defaults:
+        config = merge_defaults(config, defaults)
+
+    # 환경변수 치환
+    config = substitute_env_vars(config)
+
+    return config
+
+
+def merge_defaults(config: Dict[str, Any], defaults: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    설정에 기본값을 재귀적으로 병합합니다.
+
+    Args:
+        config: 사용자 설정
+        defaults: 기본값
+
+    Returns:
+        병합된 설정
+    """
+    merged = defaults.copy()
+
+    def _merge_dict(target: Dict[str, Any], source: Dict[str, Any]) -> Dict[str, Any]:
+        for key, value in source.items():
+            if key in target:
+                if isinstance(target[key], dict) and isinstance(value, dict):
+                    target[key] = _merge_dict(target[key], value)
+                else:
+                    target[key] = value
+            else:
+                target[key] = value
+        return target
+
+    return _merge_dict(merged, config)
+
+
+def substitute_env_vars(config: Any) -> Any:
+    """
+    설정에서 환경변수 플레이스홀더를 치환합니다.
+    ${VAR_NAME} 또는 $VAR_NAME 형식을 지원합니다.
+
+    Args:
+        config: 설정 딕셔너리 (재귀적 처리)
+
+    Returns:
+        환경변수가 치환된 설정
+    """
+    if isinstance(config, str):
+        import re
+        # ${VAR} 또는 $VAR 패턴 찾기
+        pattern = re.compile(r'\$\{([^}]+)\}|\$([A-Za-z_][A-Za-z0-9_]*)')
+
+        def replace_var(match):
+            var_name = match.group(1) or match.group(2)
+            value = os.getenv(var_name)
+            if value is None:
+                raise ValueError(f"환경변수가 설정되지 않음: {var_name}")
+            return value
+
+        return pattern.sub(replace_var, config)
+
+    elif isinstance(config, dict):
+        return {k: substitute_env_vars(v) for k, v in config.items()}
+    elif isinstance(config, list):
+        return [substitute_env_vars(item) for item in config]
+    else:
+        return config
+
+
+def load_yaml_with_defaults(path: Union[str, Path]) -> Dict[str, Any]:
+    """
+    YAML 파일을 로드하고 글로벌 기본값을 병합합니다.
+
+    Args:
+        path: YAML 파일 경로
+
+    Returns:
+        기본값이 병합된 설정
+    """
+    return load_yaml(path, DEFAULT_CONFIG)

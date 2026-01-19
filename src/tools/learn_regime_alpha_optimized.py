@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 [Phase 2] 국면별 α 자동 학습 스크립트 (최적화 버전)
 
@@ -14,14 +13,12 @@
 """
 from __future__ import annotations
 
-import copy
 import json
 import logging
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
-import numpy as np
 import pandas as pd
 
 # 프로젝트 루트 경로 추가
@@ -30,11 +27,10 @@ sys.path.insert(0, str(project_root))
 
 from src.stages.backtest.regime_utils import map_regime_to_3level
 from src.utils.config import get_path, load_config
-from src.utils.io import artifact_exists, load_artifact, save_artifact
+from src.utils.io import artifact_exists, load_artifact
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -98,7 +94,10 @@ def load_market_regime(cfg: dict, rebalance_dates: pd.Series) -> pd.DataFrame:
     # 3단계 국면 컬럼 추가
     if "regime_3" not in regime_df.columns:
         from src.stages.backtest.regime_utils import apply_3level_regime
-        regime_df = apply_3level_regime(regime_df, regime_col="regime", out_col="regime_3")
+
+        regime_df = apply_3level_regime(
+            regime_df, regime_col="regime", out_col="regime_3"
+        )
 
     return regime_df
 
@@ -122,7 +121,7 @@ def compute_rebalance_scores_with_alpha(
     rebalance_dates: pd.Series,
     cv_folds: pd.DataFrame,
     market_regime_df: pd.DataFrame,
-    regime_alpha: Dict[str, float],
+    regime_alpha: dict[str, float],
     score_source: str = "score_total",
 ) -> pd.DataFrame:
     """
@@ -142,9 +141,15 @@ def compute_rebalance_scores_with_alpha(
     # 리밸런싱 날짜 매핑 (phase 포함)
     cv_folds = cv_folds.copy()
     cv_folds["test_end"] = pd.to_datetime(cv_folds["test_end"])
-    cv_folds["phase"] = cv_folds["segment"].map({"dev": "dev", "holdout": "holdout"}).fillna("dev")
+    cv_folds["phase"] = (
+        cv_folds["segment"].map({"dev": "dev", "holdout": "holdout"}).fillna("dev")
+    )
 
-    rebal_map = cv_folds[["test_end", "phase"]].rename(columns={"test_end": "date"}).drop_duplicates("date")
+    rebal_map = (
+        cv_folds[["test_end", "phase"]]
+        .rename(columns={"test_end": "date"})
+        .drop_duplicates("date")
+    )
 
     # 리밸런싱 날짜로 필터링
     r_short = r_short[r_short["date"].isin(rebalance_dates)].copy()
@@ -161,18 +166,26 @@ def compute_rebalance_scores_with_alpha(
         on=key,
         how="outer",
         suffixes=("_short", "_long"),
-        validate="one_to_one"
+        validate="one_to_one",
     )
 
     # 정규화: score_total 사용 (높을수록 좋음)
     if score_source == "rank_total":
         # rank_total을 사용: 낮은 rank가 좋으므로 -rank로 변환
-        r["score_short_norm"] = -pd.to_numeric(r["rank_total_short"], errors="coerce").fillna(0)
-        r["score_long_norm"] = -pd.to_numeric(r["rank_total_long"], errors="coerce").fillna(0)
+        r["score_short_norm"] = -pd.to_numeric(
+            r["rank_total_short"], errors="coerce"
+        ).fillna(0)
+        r["score_long_norm"] = -pd.to_numeric(
+            r["rank_total_long"], errors="coerce"
+        ).fillna(0)
     else:
         # score_total을 사용: 높은 score가 좋음
-        r["score_short_norm"] = pd.to_numeric(r["score_total_short"], errors="coerce").fillna(0)
-        r["score_long_norm"] = pd.to_numeric(r["score_total_long"], errors="coerce").fillna(0)
+        r["score_short_norm"] = pd.to_numeric(
+            r["score_total_short"], errors="coerce"
+        ).fillna(0)
+        r["score_long_norm"] = pd.to_numeric(
+            r["score_total_long"], errors="coerce"
+        ).fillna(0)
 
     # 시장 국면 데이터와 병합
     market_regime_df = market_regime_df.copy()
@@ -181,7 +194,9 @@ def compute_rebalance_scores_with_alpha(
 
     regime_col = "regime_3" if "regime_3" in market_regime_df.columns else "regime"
     if regime_col == "regime" and "regime" in market_regime_df.columns:
-        market_regime_df["regime_3"] = market_regime_df["regime"].apply(map_regime_to_3level)
+        market_regime_df["regime_3"] = market_regime_df["regime"].apply(
+            map_regime_to_3level
+        )
         regime_col = "regime_3"
 
     # 국면 데이터가 없으면 기본값 사용
@@ -192,7 +207,7 @@ def compute_rebalance_scores_with_alpha(
             market_regime_df[["date", regime_col]],
             on="date",
             how="left",
-            validate="many_to_one"
+            validate="many_to_one",
         )
         # 결측값은 neutral로
         r[regime_col] = r[regime_col].fillna("neutral")
@@ -211,7 +226,8 @@ def compute_rebalance_scores_with_alpha(
 
     # 결합: score_ens = α * score_short + (1-α) * score_long
     r["score_ens"] = (
-        r["alpha_short"] * r["score_short_norm"] + r["alpha_long"] * r["score_long_norm"]
+        r["alpha_short"] * r["score_short_norm"]
+        + r["alpha_long"] * r["score_long_norm"]
     )
 
     # 재랭킹
@@ -224,7 +240,9 @@ def compute_rebalance_scores_with_alpha(
     # 실제로는 rebalance_scores에 이미 있으므로 merge 필요
 
     # 필수 컬럼만 남기기
-    result = r[["date", "ticker", "phase", "score_total", "rank_total", "score_ens"]].copy()
+    result = r[
+        ["date", "ticker", "phase", "score_total", "rank_total", "score_ens"]
+    ].copy()
 
     return result
 
@@ -232,11 +250,11 @@ def compute_rebalance_scores_with_alpha(
 def evaluate_alpha_combination(
     cfg: dict,
     artifacts: dict,
-    regime_alpha: Dict[str, float],
+    regime_alpha: dict[str, float],
     dev_dates: pd.Series,
     market_regime_df: pd.DataFrame,
     existing_scores: Optional[pd.DataFrame] = None,
-) -> Tuple[float, dict]:
+) -> tuple[float, dict]:
     """
     특정 α 조합에 대한 Dev 성과 평가 (최적화 버전)
 
@@ -252,9 +270,13 @@ def evaluate_alpha_combination(
                 existing_scores = load_artifact(base)
             else:
                 # MIDTERM 기준 데이터 확인
-                midterm_base = interim_dir / "ranking_20251223_164432" / "rebalance_scores.parquet"
+                midterm_base = (
+                    interim_dir / "ranking_20251223_164432" / "rebalance_scores.parquet"
+                )
                 if midterm_base.exists():
-                    existing_scores = load_artifact(midterm_base.parent / "rebalance_scores")
+                    existing_scores = load_artifact(
+                        midterm_base.parent / "rebalance_scores"
+                    )
 
         if existing_scores is None:
             logger.error("Cannot find existing rebalance_scores to extract true_short")
@@ -276,15 +298,20 @@ def evaluate_alpha_combination(
         existing_scores["date"] = pd.to_datetime(existing_scores["date"])
         true_cols = ["date", "ticker", "phase", "true_short"]
         if "true_short" in existing_scores.columns:
-            true_data = existing_scores[true_cols].drop_duplicates(["date", "ticker", "phase"])
+            true_data = existing_scores[true_cols].drop_duplicates(
+                ["date", "ticker", "phase"]
+            )
             recomputed_scores = recomputed_scores.merge(
-                true_data, on=["date", "ticker", "phase"], how="left", validate="many_to_one"
+                true_data,
+                on=["date", "ticker", "phase"],
+                how="left",
+                validate="many_to_one",
             )
 
         # Dev만 필터링
         dev_scores = recomputed_scores[
-            (recomputed_scores["phase"] == "dev") &
-            (recomputed_scores["date"].isin(dev_dates))
+            (recomputed_scores["phase"] == "dev")
+            & (recomputed_scores["date"].isin(dev_dates))
         ].copy()
 
         if len(dev_scores) == 0:
@@ -292,7 +319,10 @@ def evaluate_alpha_combination(
             return -999.0, {}
 
         # true_short가 없으면 기본값 사용 (경고)
-        if "true_short" not in dev_scores.columns or dev_scores["true_short"].isna().all():
+        if (
+            "true_short" not in dev_scores.columns
+            or dev_scores["true_short"].isna().all()
+        ):
             logger.warning("true_short not found, cannot compute accurate metrics")
             return -999.0, {}
 
@@ -340,7 +370,9 @@ def evaluate_alpha_combination(
         return net_sharpe, metrics
 
     except Exception as e:
-        logger.error(f"Error evaluating alpha combination {regime_alpha}: {e}", exc_info=True)
+        logger.error(
+            f"Error evaluating alpha combination {regime_alpha}: {e}", exc_info=True
+        )
         return -999.0, {}
 
 
@@ -349,8 +381,8 @@ def grid_search_regime_alpha(
     artifacts: dict,
     dev_dates: pd.Series,
     market_regime_df: pd.DataFrame,
-    alpha_candidates: List[float] = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
-) -> Tuple[Dict[str, float], List[dict]]:
+    alpha_candidates: list[float] = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+) -> tuple[dict[str, float], list[dict]]:
     """
     그리드 서치를 통한 국면별 최적 α 학습
 
@@ -370,7 +402,9 @@ def grid_search_regime_alpha(
     # 3단계 국면 컬럼 확인
     regime_col = "regime_3" if "regime_3" in market_regime_df.columns else "regime"
     if regime_col == "regime" and "regime" in market_regime_df.columns:
-        market_regime_df["regime_3"] = market_regime_df["regime"].apply(map_regime_to_3level)
+        market_regime_df["regime_3"] = market_regime_df["regime"].apply(
+            map_regime_to_3level
+        )
         regime_col = "regime_3"
 
     # Dev 날짜에 해당하는 국면 매핑
@@ -383,7 +417,7 @@ def grid_search_regime_alpha(
         dev_regimes = {date: "neutral" for date in dev_dates}
 
     regime_counts = pd.Series(dev_regimes.values()).value_counts()
-    logger.info(f"\nDev 국면 분포:")
+    logger.info("\nDev 국면 분포:")
     for regime, count in regime_counts.items():
         logger.info(f"  {regime}: {count} dates ({count/len(dev_dates)*100:.1f}%)")
 
@@ -400,7 +434,9 @@ def grid_search_regime_alpha(
     if artifact_exists(base):
         existing_scores = load_artifact(base)
     else:
-        midterm_base = interim_dir / "ranking_20251223_164432" / "rebalance_scores.parquet"
+        midterm_base = (
+            interim_dir / "ranking_20251223_164432" / "rebalance_scores.parquet"
+        )
         if midterm_base.exists():
             existing_scores = load_artifact(midterm_base.parent / "rebalance_scores")
 
@@ -416,7 +452,9 @@ def grid_search_regime_alpha(
             optimal_alphas[regime] = 0.5
             continue
 
-        logger.info(f"Evaluating {len(alpha_candidates)} alpha values for {len(regime_dates)} dates...")
+        logger.info(
+            f"Evaluating {len(alpha_candidates)} alpha values for {len(regime_dates)} dates..."
+        )
 
         best_sharpe = -999.0
         best_alpha = 0.5
@@ -444,12 +482,14 @@ def grid_search_regime_alpha(
             )
 
             logger.info(f"Sharpe: {net_sharpe:.4f}")
-            results_summary.append({
-                "regime": regime,
-                "alpha": alpha,
-                "net_sharpe": net_sharpe,
-                **metrics,
-            })
+            results_summary.append(
+                {
+                    "regime": regime,
+                    "alpha": alpha,
+                    "net_sharpe": net_sharpe,
+                    **metrics,
+                }
+            )
 
             if net_sharpe > best_sharpe:
                 best_sharpe = net_sharpe
@@ -457,13 +497,15 @@ def grid_search_regime_alpha(
                 best_metrics = metrics
 
         optimal_alphas[regime] = best_alpha
-        logger.info(f"\n  ✅ Best alpha for {regime}: {best_alpha:.1f} (Sharpe: {best_sharpe:.4f})")
+        logger.info(
+            f"\n  ✅ Best alpha for {regime}: {best_alpha:.1f} (Sharpe: {best_sharpe:.4f})"
+        )
         logger.info(f"  Metrics: {best_metrics}")
 
     logger.info(f"\n{'='*80}")
     logger.info("최적 α 학습 완료")
     logger.info(f"{'='*80}")
-    logger.info(f"Optimal regime_alpha:")
+    logger.info("Optimal regime_alpha:")
     for regime, alpha in optimal_alphas.items():
         logger.info(f"  {regime}: {alpha:.1f}")
 
@@ -476,7 +518,9 @@ def main():
 
     parser = argparse.ArgumentParser(description="국면별 α 자동 학습 (최적화 버전)")
     parser.add_argument("--config", type=str, default="configs/config.yaml")
-    parser.add_argument("--output", type=str, default="docs/regime_alpha_learning_results.json")
+    parser.add_argument(
+        "--output", type=str, default="docs/regime_alpha_learning_results.json"
+    )
     args = parser.parse_args()
 
     # 설정 로드

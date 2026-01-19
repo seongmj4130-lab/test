@@ -155,4 +155,3 @@
 
 **생성 스크립트**: `scripts/measure_ranking_hit_ratio.py`
 **결과 파일**: `artifacts/reports/ranking_hit_ratio_measurement.csv`
-

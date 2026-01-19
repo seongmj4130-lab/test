@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Track A 전체 파이프라인 실행 모듈
 
@@ -9,9 +8,6 @@ Track A: 랭킹 엔진 (Ranking Engine)
 """
 import logging
 from pathlib import Path
-from typing import Dict, Optional
-
-import pandas as pd
 
 from src.utils.config import get_path, load_config
 from src.utils.io import artifact_exists, load_artifact, save_artifact
@@ -23,7 +19,7 @@ def run_track_a_pipeline(
     config_path: str = "configs/config.yaml",
     force_rebuild: bool = False,
     run_ui_payload: bool = False,
-) -> Dict:
+) -> dict:
     """
     Track A 전체 파이프라인을 실행합니다.
 
@@ -69,7 +65,9 @@ def run_track_a_pipeline(
         logger.info(f"  ✓ 패널 데이터 로드: {len(artifacts['panel_merged_daily']):,}행")
     else:
         logger.warning("  ✗ 패널 데이터가 없습니다. L0~L3까지 실행이 필요합니다.")
-        logger.warning("  python -m src.tools.run_two_track_and_export --force-shared  (또는 DataCollectionPipeline) 를 먼저 실행하세요.")
+        logger.warning(
+            "  python -m src.tools.run_two_track_and_export --force-shared  (또는 DataCollectionPipeline) 를 먼저 실행하세요."
+        )
         raise FileNotFoundError("panel_merged_daily not found")
 
     # L4: CV 분할 (랭킹 엔진은 dataset_daily 사용 가능)
@@ -92,14 +90,18 @@ def run_track_a_pipeline(
     ranking_short_path = interim_dir / "ranking_short_daily"
     ranking_long_path = interim_dir / "ranking_long_daily"
 
-    if (artifact_exists(ranking_short_path) and
-        artifact_exists(ranking_long_path) and
-        not force_rebuild):
+    if (
+        artifact_exists(ranking_short_path)
+        and artifact_exists(ranking_long_path)
+        and not force_rebuild
+    ):
         artifacts["ranking_short_daily"] = load_artifact(ranking_short_path)
         artifacts["ranking_long_daily"] = load_artifact(ranking_long_path)
         artifacts_path["ranking_short"] = str(ranking_short_path)
         artifacts_path["ranking_long"] = str(ranking_long_path)
-        logger.info(f"  ✓ 캐시에서 로드: 단기 {len(artifacts['ranking_short_daily']):,}행, 장기 {len(artifacts['ranking_long_daily']):,}행")
+        logger.info(
+            f"  ✓ 캐시에서 로드: 단기 {len(artifacts['ranking_short_daily']):,}행, 장기 {len(artifacts['ranking_long_daily']):,}행"
+        )
     else:
         logger.info("  → 랭킹 엔진 재실행")
         # L8_short 실행
@@ -124,7 +126,9 @@ def run_track_a_pipeline(
         save_artifact(artifacts["ranking_long_daily"], ranking_long_path, force=True)
         artifacts_path["ranking_short"] = str(ranking_short_path)
         artifacts_path["ranking_long"] = str(ranking_long_path)
-        logger.info(f"  ✓ 생성 완료: 단기 {len(artifacts['ranking_short_daily']):,}행, 장기 {len(artifacts['ranking_long_daily']):,}행")
+        logger.info(
+            f"  ✓ 생성 완료: 단기 {len(artifacts['ranking_short_daily']):,}행, 장기 {len(artifacts['ranking_long_daily']):,}행"
+        )
 
     # L11: UI Payload Builder (선택적)
     # [개선안 41번] L11은 외부 API(지수/벤치마크 등) 의존이 있어 기본 OFF로 둔다.
@@ -174,12 +178,13 @@ def run_track_a_pipeline(
 
 
 if __name__ == "__main__":
-    import sys
     logging.basicConfig(
         level=logging.INFO,
         format="[%(asctime)s] [%(levelname)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     result = run_track_a_pipeline()
-    print(f"\n✅ 완료: 단기 랭킹 {len(result['ranking_short_daily']):,}행, 장기 랭킹 {len(result['ranking_long_daily']):,}행")
+    print(
+        f"\n✅ 완료: 단기 랭킹 {len(result['ranking_short_daily']):,}행, 장기 랭킹 {len(result['ranking_long_daily']):,}행"
+    )

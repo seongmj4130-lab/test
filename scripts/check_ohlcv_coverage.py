@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 ohlcv_daily 데이터의 전체 기간 coverage 확인
 """
@@ -14,7 +13,10 @@ print("=" * 80)
 
 # ohlcv_daily 로드
 ohlcv_path = data_dir / "ohlcv_daily"
-if not ohlcv_path.with_suffix(".parquet").exists() and not ohlcv_path.with_suffix(".csv").exists():
+if (
+    not ohlcv_path.with_suffix(".parquet").exists()
+    and not ohlcv_path.with_suffix(".csv").exists()
+):
     print("❌ ohlcv_daily 파일이 없습니다.")
     exit(1)
 
@@ -36,7 +38,7 @@ try:
     max_date = ohlcv["date"].max()
     date_range = (max_date - min_date).days
 
-    print(f"\n날짜 범위:")
+    print("\n날짜 범위:")
     print(f"  시작일: {min_date.strftime('%Y-%m-%d')}")
     print(f"  종료일: {max_date.strftime('%Y-%m-%d')}")
     print(f"  기간: {date_range:,}일 ({date_range/365.25:.1f}년)")
@@ -45,17 +47,19 @@ try:
     date_counts = ohlcv.groupby("date").size()
     unique_dates = sorted(ohlcv["date"].unique())
 
-    print(f"\n날짜별 Coverage:")
+    print("\n날짜별 Coverage:")
     print(f"  고유 날짜 수: {len(unique_dates):,}개")
     print(f"  평균 종목 수/일: {date_counts.mean():.0f}개")
     print(f"  최소 종목 수/일: {date_counts.min()}개")
     print(f"  최대 종목 수/일: {date_counts.max()}개")
 
     # 연속성 확인 (공휴일/주말 제외)
-    date_diffs = [(pd.to_datetime(unique_dates[i+1]) - pd.to_datetime(unique_dates[i])).days
-                  for i in range(len(unique_dates)-1)]
+    date_diffs = [
+        (pd.to_datetime(unique_dates[i + 1]) - pd.to_datetime(unique_dates[i])).days
+        for i in range(len(unique_dates) - 1)
+    ]
 
-    print(f"\n날짜 간격 분석:")
+    print("\n날짜 간격 분석:")
     print(f"  평균 간격: {pd.Series(date_diffs).mean():.1f}일")
     print(f"  중앙값 간격: {pd.Series(date_diffs).median():.1f}일")
     print(f"  최소 간격: {min(date_diffs)}일")
@@ -73,7 +77,7 @@ try:
     ohlcv["year"] = ohlcv["date"].dt.year
     year_counts = ohlcv.groupby("year")["date"].nunique()
 
-    print(f"\n연도별 Coverage:")
+    print("\n연도별 Coverage:")
     for year in sorted(year_counts.index):
         print(f"  {year}: {year_counts[year]:,}개 거래일")
 
@@ -88,14 +92,14 @@ try:
     # volume 컬럼 확인
     if "volume" in ohlcv.columns:
         volume_coverage = ohlcv["volume"].notna().sum() / len(ohlcv) * 100
-        print(f"\n거래량 데이터 Coverage:")
-        print(f"  volume 컬럼 존재: ✓")
+        print("\n거래량 데이터 Coverage:")
+        print("  volume 컬럼 존재: ✓")
         print(f"  volume 데이터 비율: {volume_coverage:.1f}%")
     else:
-        print(f"\n⚠️  volume 컬럼 없음 (거래량 지표 사용 불가)")
+        print("\n⚠️  volume 컬럼 없음 (거래량 지표 사용 불가)")
 
     # rebalance_dates와 비교
-    print(f"\n" + "=" * 80)
+    print("\n" + "=" * 80)
     print("rebalance_dates와 비교")
     print("=" * 80)
 
@@ -113,22 +117,25 @@ try:
             rebalance_dates = pd.to_datetime(cv["test_end"]).dropna().unique()
             rebalance_dates = sorted(rebalance_dates)
 
-            print(f"\nrebalance_dates 범위:")
+            print("\nrebalance_dates 범위:")
             print(f"  시작일: {rebalance_dates[0].strftime('%Y-%m-%d')}")
             print(f"  종료일: {rebalance_dates[-1].strftime('%Y-%m-%d')}")
             print(f"  총 {len(rebalance_dates)}개 리밸런싱 날짜")
 
             # rebalance_dates가 ohlcv 범위 내에 있는지 확인
             all_in_range = all(
-                (date >= min_date) and (date <= max_date)
-                for date in rebalance_dates
+                (date >= min_date) and (date <= max_date) for date in rebalance_dates
             )
 
             if all_in_range:
-                print(f"\n✓ 모든 rebalance_dates가 ohlcv 범위 내에 있습니다")
+                print("\n✓ 모든 rebalance_dates가 ohlcv 범위 내에 있습니다")
             else:
-                out_of_range = [d for d in rebalance_dates if (d < min_date) or (d > max_date)]
-                print(f"\n❌ {len(out_of_range)}개 rebalance_dates가 ohlcv 범위를 벗어났습니다")
+                out_of_range = [
+                    d for d in rebalance_dates if (d < min_date) or (d > max_date)
+                ]
+                print(
+                    f"\n❌ {len(out_of_range)}개 rebalance_dates가 ohlcv 범위를 벗어났습니다"
+                )
                 print(f"  예시: {out_of_range[:5]}")
 
             # 각 rebalance_date에 대해 lookback_days=60일 데이터가 있는지 확인
@@ -137,24 +144,30 @@ try:
             for rebal_date in rebalance_dates[:10]:  # 처음 10개만 확인
                 lookback_start = rebal_date - pd.Timedelta(days=lookback_days)
                 period_data = ohlcv[
-                    (ohlcv["date"] >= lookback_start) &
-                    (ohlcv["date"] <= rebal_date)
+                    (ohlcv["date"] >= lookback_start) & (ohlcv["date"] <= rebal_date)
                 ]
                 if len(period_data) == 0:
                     coverage_issues.append(rebal_date)
 
             if coverage_issues:
-                print(f"\n⚠️  {len(coverage_issues)}개 rebalance_date에서 lookback_days={lookback_days} 데이터 부족")
+                print(
+                    f"\n⚠️  {len(coverage_issues)}개 rebalance_date에서 lookback_days={lookback_days} 데이터 부족"
+                )
             else:
-                print(f"\n✓ 샘플 rebalance_dates에서 lookback_days={lookback_days} 데이터 충분")
+                print(
+                    f"\n✓ 샘플 rebalance_dates에서 lookback_days={lookback_days} 데이터 충분"
+                )
 
-    print(f"\n" + "=" * 80)
+    print("\n" + "=" * 80)
     print("결론")
     print("=" * 80)
-    print(f"ohlcv_daily 데이터는 {min_date.strftime('%Y-%m-%d')}부터 {max_date.strftime('%Y-%m-%d')}까지")
+    print(
+        f"ohlcv_daily 데이터는 {min_date.strftime('%Y-%m-%d')}부터 {max_date.strftime('%Y-%m-%d')}까지"
+    )
     print(f"총 {len(unique_dates):,}개 거래일에 대해 데이터가 확보되어 있습니다.")
 
 except Exception as e:
     print(f"❌ 오류 발생: {e}")
     import traceback
+
     traceback.print_exc()

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 현재까지 모든 설정과 코드를 백업하는 스크립트
 """
@@ -30,19 +29,15 @@ def create_backup():
         "configs/config.yaml",
         "configs/features_short_v1.yaml",
         "configs/features_long_v1.yaml",
-
         # 코드 파일들
         "src",
         "scripts",
-
         # 산출물들
         "artifacts",
-
         # 주요 Python 파일들
         "analyze_track_a_performance.py",
         "enable_all_features.py",
         "backup_final_state.py",
-
         # README 및 문서
         "README.md",
     ]
@@ -130,7 +125,7 @@ cp -r {backup_dir}/* /path/to/target/
 """
 
     info_file = backup_dir / "BACKUP_INFO.md"
-    with open(info_file, 'w', encoding='utf-8') as f:
+    with open(info_file, "w", encoding="utf-8") as f:
         f.write(backup_info)
 
     print(f"\n📄 백업 정보 파일 생성: {info_file}")
@@ -147,6 +142,7 @@ cp -r {backup_dir}/* /path/to/target/
 
     return backup_dir
 
+
 def get_dir_size(path):
     """디렉토리 크기 계산"""
     total_size = 0
@@ -159,11 +155,12 @@ def get_dir_size(path):
                 pass
 
     # 크기 포맷팅
-    for unit in ['B', 'KB', 'MB', 'GB']:
+    for unit in ["B", "KB", "MB", "GB"]:
         if total_size < 1024.0:
             return f"{total_size:.1f} {unit}"
         total_size /= 1024.0
     return f"{total_size:.1f} TB"
+
 
 if __name__ == "__main__":
     backup_path = create_backup()

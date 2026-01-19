@@ -1,8 +1,3 @@
-import os
-
-import pandas as pd
-
-
 def analyze_conservative_changes_impact():
     """보수적 변경사항이 Track A 성과지표에 미친 영향을 분석"""
 
@@ -11,53 +6,53 @@ def analyze_conservative_changes_impact():
 
     # 보수적 변경사항 요약
     conservative_changes = {
-        'config_changes': {
-            'cost_bps': '10.0 → 50.0 (5배 증가)',
-            'slippage_bps': '5.0 → 30.0 (6배 증가)',
-            'top_k': '12 → 3 (4배 축소)',
-            'volatility_adjustment_min': '0.5 → 0.1 (더 엄격)',
-            'volatility_adjustment_max': '1.0 → 0.5 (더 엄격)',
-            'risk_scaling_enabled': 'true → false',
-            'smart_buffer_enabled': 'true → false',
-            'regime.enabled': 'true → false'
+        "config_changes": {
+            "cost_bps": "10.0 → 50.0 (5배 증가)",
+            "slippage_bps": "5.0 → 30.0 (6배 증가)",
+            "top_k": "12 → 3 (4배 축소)",
+            "volatility_adjustment_min": "0.5 → 0.1 (더 엄격)",
+            "volatility_adjustment_max": "1.0 → 0.5 (더 엄격)",
+            "risk_scaling_enabled": "true → false",
+            "smart_buffer_enabled": "true → false",
+            "regime.enabled": "true → false",
         },
-        'track_b_impact': {
-            'bt20_short': {
-                'sharpe': '0.914 → 0.650 (-29%)',
-                'cagr': '13.4% → 8.5% (-37%)',
-                'mdd': '-4.4% → -8.5% (-93%)'
+        "track_b_impact": {
+            "bt20_short": {
+                "sharpe": "0.914 → 0.650 (-29%)",
+                "cagr": "13.4% → 8.5% (-37%)",
+                "mdd": "-4.4% → -8.5% (-93%)",
             },
-            'bt20_ens': {
-                'sharpe': '0.751 → 0.520 (-31%)',
-                'cagr': '10.4% → 6.5% (-38%)',
-                'mdd': '-6.7% → -11.0% (-64%)'
+            "bt20_ens": {
+                "sharpe": "0.751 → 0.520 (-31%)",
+                "cagr": "10.4% → 6.5% (-38%)",
+                "mdd": "-6.7% → -11.0% (-64%)",
             },
-            'bt120_long': {
-                'sharpe': '0.695 → 0.480 (-31%)',
-                'cagr': '8.7% → 5.5% (-37%)',
-                'mdd': '-5.2% → -9.5% (-83%)'
+            "bt120_long": {
+                "sharpe": "0.695 → 0.480 (-31%)",
+                "cagr": "8.7% → 5.5% (-37%)",
+                "mdd": "-5.2% → -9.5% (-83%)",
             },
-            'bt120_ens': {
-                'sharpe': '0.594 → 0.420 (-29%)',
-                'cagr': '7.0% → 4.5% (-36%)',
-                'mdd': '-5.4% → -9.0% (-67%)'
-            }
-        }
+            "bt120_ens": {
+                "sharpe": "0.594 → 0.420 (-29%)",
+                "cagr": "7.0% → 4.5% (-36%)",
+                "mdd": "-5.4% → -9.0% (-67%)",
+            },
+        },
     }
 
     print("\n📊 보수적 변경사항 적용 내역")
     print("-" * 50)
-    for param, change in conservative_changes['config_changes'].items():
+    for param, change in conservative_changes["config_changes"].items():
         print(f"• {param}: {change}")
 
     print("\n🎯 Track B 성과지표 변화 (백테스트)")
     print("-" * 50)
-    for strategy, metrics in conservative_changes['track_b_impact'].items():
+    for strategy, metrics in conservative_changes["track_b_impact"].items():
         strategy_name = {
-            'bt20_short': 'BT20 단기',
-            'bt20_ens': 'BT20 앙상블',
-            'bt120_long': 'BT120 장기',
-            'bt120_ens': 'BT120 앙상블'
+            "bt20_short": "BT20 단기",
+            "bt20_ens": "BT20 앙상블",
+            "bt120_long": "BT120 장기",
+            "bt120_ens": "BT120 앙상블",
         }[strategy]
         print(f"\n{strategy_name}:")
         for metric, change in metrics.items():
@@ -73,7 +68,7 @@ def analyze_conservative_changes_impact():
         "1. Track A (hit_ratio, ic, icir)는 모델 학습 단계(L5)의 결과",
         "2. 보수적 변경사항은 백테스트 단계(L7) 파라미터 조정",
         "3. 모델 재학습이 없으면 Track A 성과지표는 변하지 않음",
-        "4. 보수적 변경사항 적용 후 모델을 재학습해야 Track A 변화 확인 가능"
+        "4. 보수적 변경사항 적용 후 모델을 재학습해야 Track A 변화 확인 가능",
     ]
 
     for reason in reasons:
@@ -84,23 +79,59 @@ def analyze_conservative_changes_impact():
 
     # 현재 Track A 성과지표 출력
     track_a_current = {
-        'bt20_short': {'hit_ratio_dev': 57.3, 'hit_ratio_holdout': 43.5, 'ic_dev': -0.025, 'ic_holdout': -0.010, 'icir_dev': -0.180, 'icir_holdout': -0.070},
-        'bt20_ens': {'hit_ratio_dev': 52.0, 'hit_ratio_holdout': 48.0, 'ic_dev': -0.025, 'ic_holdout': -0.010, 'icir_dev': -0.180, 'icir_holdout': -0.070},
-        'bt120_long': {'hit_ratio_dev': 50.5, 'hit_ratio_holdout': 49.2, 'ic_dev': -0.025, 'ic_holdout': -0.010, 'icir_dev': -0.180, 'icir_holdout': -0.070},
-        'bt120_ens': {'hit_ratio_dev': 51.2, 'hit_ratio_holdout': 47.8, 'ic_dev': -0.025, 'ic_holdout': -0.010, 'icir_dev': -0.180, 'icir_holdout': -0.070}
+        "bt20_short": {
+            "hit_ratio_dev": 57.3,
+            "hit_ratio_holdout": 43.5,
+            "ic_dev": -0.025,
+            "ic_holdout": -0.010,
+            "icir_dev": -0.180,
+            "icir_holdout": -0.070,
+        },
+        "bt20_ens": {
+            "hit_ratio_dev": 52.0,
+            "hit_ratio_holdout": 48.0,
+            "ic_dev": -0.025,
+            "ic_holdout": -0.010,
+            "icir_dev": -0.180,
+            "icir_holdout": -0.070,
+        },
+        "bt120_long": {
+            "hit_ratio_dev": 50.5,
+            "hit_ratio_holdout": 49.2,
+            "ic_dev": -0.025,
+            "ic_holdout": -0.010,
+            "icir_dev": -0.180,
+            "icir_holdout": -0.070,
+        },
+        "bt120_ens": {
+            "hit_ratio_dev": 51.2,
+            "hit_ratio_holdout": 47.8,
+            "ic_dev": -0.025,
+            "ic_holdout": -0.010,
+            "icir_dev": -0.180,
+            "icir_holdout": -0.070,
+        },
     }
 
     strategy_names = {
-        'bt20_short': 'BT20 단기',
-        'bt20_ens': 'BT20 앙상블',
-        'bt120_long': 'BT120 장기',
-        'bt120_ens': 'BT120 앙상블'
+        "bt20_short": "BT20 단기",
+        "bt20_ens": "BT20 앙상블",
+        "bt120_long": "BT120 장기",
+        "bt120_ens": "BT120 앙상블",
     }
 
-    print("전략".ljust(12), "Hit Ratio Dev".rjust(12), "Hit Ratio Hold".rjust(14), "IC Dev".rjust(8), "IC Hold".rjust(8), "ICIR Dev".rjust(10), "ICIR Hold".rjust(10))
+    print(
+        "전략".ljust(12),
+        "Hit Ratio Dev".rjust(12),
+        "Hit Ratio Hold".rjust(14),
+        "IC Dev".rjust(8),
+        "IC Hold".rjust(8),
+        "ICIR Dev".rjust(10),
+        "ICIR Hold".rjust(10),
+    )
     print("-" * 90)
 
-    for strategy in ['bt20_short', 'bt20_ens', 'bt120_long', 'bt120_ens']:
+    for strategy in ["bt20_short", "bt20_ens", "bt120_long", "bt120_ens"]:
         data = track_a_current[strategy]
         name = strategy_names[strategy]
         hit_dev = f"{data.get('hit_ratio_dev', 0):.1f}%"
@@ -110,7 +141,9 @@ def analyze_conservative_changes_impact():
         icir_dev = f"{data.get('icir_dev', 0):.3f}"
         icir_hold = f"{data.get('icir_holdout', 0):.3f}"
 
-        print(f"{name:<12} {hit_dev:>12} {hit_hold:>14} {ic_dev:>8} {ic_hold:>8} {icir_dev:>10} {icir_hold:>10}")
+        print(
+            f"{name:<12} {hit_dev:>12} {hit_hold:>14} {ic_dev:>8} {ic_hold:>8} {icir_dev:>10} {icir_hold:>10}"
+        )
 
     print("\n💡 Track A 성과지표를 변경하려면:")
     print("-" * 50)
@@ -119,7 +152,7 @@ def analyze_conservative_changes_impact():
         "2. 피쳐 엔지니어링 개선",
         "3. 정규화 파라미터 조정 (ridge_alpha)",
         "4. 피쳐 가중치 재조정",
-        "5. 타겟 변환 방법 변경"
+        "5. 타겟 변환 방법 변경",
     ]
 
     for rec in recommendations:
@@ -131,6 +164,7 @@ def analyze_conservative_changes_impact():
     print("• Track A (모델링) 성과 = 보수적 변경사항과 무관")
     print("• Track A 변경을 위해서는 모델 재학습 필요")
     print("• 현재 Track A 성과지표는 최적화된 상태 유지")
+
 
 def create_conservative_impact_report():
     """보수적 변경사항 영향 보고서 생성"""
@@ -206,10 +240,17 @@ def create_conservative_impact_report():
 Track A 성과지표를 변경하려면 모델 재학습이 필요하며, 이는 보수적 백테스트 전략과는 별개의 작업입니다.
 """
 
-    with open("artifacts/reports/conservative_changes_track_a_impact_analysis.md", "w", encoding="utf-8") as f:
+    with open(
+        "artifacts/reports/conservative_changes_track_a_impact_analysis.md",
+        "w",
+        encoding="utf-8",
+    ) as f:
         f.write(report)
 
-    print("✅ 보고서 저장: artifacts/reports/conservative_changes_track_a_impact_analysis.md")
+    print(
+        "✅ 보고서 저장: artifacts/reports/conservative_changes_track_a_impact_analysis.md"
+    )
+
 
 if __name__ == "__main__":
     analyze_conservative_changes_impact()

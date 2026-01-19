@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # [개선안 36번] 팩터셋(그룹) 기여도 계산 최소 테스트 (합=score_total_calc 검증)
 from __future__ import annotations
 
@@ -38,7 +37,9 @@ def main():
     }
 
     cfg = ContributionConfig(normalization_method="zscore")
-    contrib = compute_group_contributions_for_day(df, feature_weights=feature_weights, group_map=None, cfg=cfg)
+    contrib = compute_group_contributions_for_day(
+        df, feature_weights=feature_weights, group_map=None, cfg=cfg
+    )
 
     # group_contrib__* 합 == score_total_calc
     group_cols = [c for c in contrib.columns if c.startswith("group_contrib__")]
@@ -46,7 +47,9 @@ def main():
     score = contrib["score_total_calc"].to_numpy()
 
     if not np.allclose(recon, score, atol=1e-10):
-        raise AssertionError(f"sum(group_contrib)!=score_total_calc. max_gap={np.max(np.abs(recon-score))}")
+        raise AssertionError(
+            f"sum(group_contrib)!=score_total_calc. max_gap={np.max(np.abs(recon-score))}"
+        )
 
     print("[OK] group contribution sum matches score_total_calc")
 

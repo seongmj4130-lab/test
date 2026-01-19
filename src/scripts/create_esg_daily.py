@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # src/scripts/create_esg_daily.py
 # ESG 데이터를 통합하여 esg_daily.parquet 생성
 # - 동적 코스피 유니버스 기준 필터링
@@ -51,8 +50,8 @@ def main():
     print(f"  - 종목 수: {universe['ticker'].nunique():,}개")
 
     # 유니버스 데이터 정리
-    universe['date'] = pd.to_datetime(universe['date'])
-    universe['ticker'] = universe['ticker'].astype(str).str.zfill(6)
+    universe["date"] = pd.to_datetime(universe["date"])
+    universe["ticker"] = universe["ticker"].astype(str).str.zfill(6)
 
     # 3. ESG CSV 파일 읽기
     print("\n[2/4] ESG CSV 파일 읽기 중...")
@@ -68,22 +67,22 @@ def main():
             print(f"  - 진행 중: {i}/{len(csv_files)} 파일 처리 완료")
 
         try:
-            df = pd.read_csv(csv_file, encoding='utf-8')
+            df = pd.read_csv(csv_file, encoding="utf-8")
 
             # 컬럼명 확인
-            if '일자' not in df.columns or 'ticker' not in df.columns:
+            if "일자" not in df.columns or "ticker" not in df.columns:
                 print(f"    경고: {csv_file.name} - 필수 컬럼 누락, 스킵")
                 continue
 
             # 컬럼명 표준화
-            df = df.rename(columns={'일자': 'date'})
+            df = df.rename(columns={"일자": "date"})
 
             # 날짜 변환
-            df['date'] = pd.to_datetime(df['date'], format='%Y%m%d', errors='coerce')
-            df = df.dropna(subset=['date'])
+            df["date"] = pd.to_datetime(df["date"], format="%Y%m%d", errors="coerce")
+            df = df.dropna(subset=["date"])
 
             # ticker 정리
-            df['ticker'] = df['ticker'].astype(str).str.zfill(6)
+            df["ticker"] = df["ticker"].astype(str).str.zfill(6)
 
             dfs.append(df)
 
@@ -101,49 +100,49 @@ def main():
 
     # 5. 기간 필터링 (2016/01/01 이후)
     print("\n[4/4] 필터링 중...")
-    cutoff_date = pd.to_datetime('2016-01-01')
-    esg_all = esg_all[esg_all['date'] >= cutoff_date].copy()
+    cutoff_date = pd.to_datetime("2016-01-01")
+    esg_all = esg_all[esg_all["date"] >= cutoff_date].copy()
     print(f"  - 기간 필터링 후: {len(esg_all):,}행 (2016-01-01 이후)")
 
     # 6. 동적 유니버스 필터링
     # 유니버스는 월말 기준이므로, 각 ESG 데이터의 날짜가 속한 월의 유니버스와 매칭
-    esg_all['ym'] = esg_all['date'].dt.to_period('M').astype(str)
-    universe['ym'] = universe['date'].dt.to_period('M').astype(str)
+    esg_all["ym"] = esg_all["date"].dt.to_period("M").astype(str)
+    universe["ym"] = universe["date"].dt.to_period("M").astype(str)
 
     # 각 월별로 유니버스에 포함된 ticker만 필터링
-    universe_by_ym = universe.groupby('ym')['ticker'].apply(set).to_dict()
+    universe_by_ym = universe.groupby("ym")["ticker"].apply(set).to_dict()
 
     def is_in_universe(row):
-        ym = row['ym']
-        ticker = row['ticker']
+        ym = row["ym"]
+        ticker = row["ticker"]
         if ym not in universe_by_ym:
             return False
         return ticker in universe_by_ym[ym]
 
     before_universe_filter = len(esg_all)
-    esg_all['in_universe'] = esg_all.apply(is_in_universe, axis=1)
-    esg_all = esg_all[esg_all['in_universe']].copy()
-    esg_all = esg_all.drop(columns=['in_universe', 'ym'])
+    esg_all["in_universe"] = esg_all.apply(is_in_universe, axis=1)
+    esg_all = esg_all[esg_all["in_universe"]].copy()
+    esg_all = esg_all.drop(columns=["in_universe", "ym"])
 
     print(f"  - 유니버스 필터링 후: {len(esg_all):,}행")
     print(f"  - 제거된 행: {before_universe_filter - len(esg_all):,}행")
 
     # 7. 최종 정리
     # 컬럼 순서 정리
-    cols = ['date', 'ticker']
-    if 'pred_label' in esg_all.columns:
-        cols.append('pred_label')
-    if 'ESG_Label' in esg_all.columns:
-        cols.append('ESG_Label')
+    cols = ["date", "ticker"]
+    if "pred_label" in esg_all.columns:
+        cols.append("pred_label")
+    if "ESG_Label" in esg_all.columns:
+        cols.append("ESG_Label")
     cols.extend([c for c in esg_all.columns if c not in cols])
 
     esg_all = esg_all[cols].copy()
-    esg_all = esg_all.sort_values(['date', 'ticker']).reset_index(drop=True)
+    esg_all = esg_all.sort_values(["date", "ticker"]).reset_index(drop=True)
 
     # 8. 저장
     print(f"\n[저장] {output_path}")
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    esg_all.to_parquet(output_path, index=False, engine='pyarrow')
+    esg_all.to_parquet(output_path, index=False, engine="pyarrow")
 
     # 9. 요약 정보 출력
     print("\n" + "=" * 60)
@@ -155,13 +154,13 @@ def main():
     print(f"종목 수: {esg_all['ticker'].nunique():,}개")
     print(f"컬럼: {list(esg_all.columns)}")
 
-    if 'pred_label' in esg_all.columns:
-        print(f"\npred_label 분포:")
-        print(esg_all['pred_label'].value_counts().to_string())
+    if "pred_label" in esg_all.columns:
+        print("\npred_label 분포:")
+        print(esg_all["pred_label"].value_counts().to_string())
 
-    if 'ESG_Label' in esg_all.columns:
-        print(f"\nESG_Label 분포:")
-        print(esg_all['ESG_Label'].value_counts().to_string())
+    if "ESG_Label" in esg_all.columns:
+        print("\nESG_Label 분포:")
+        print(esg_all["ESG_Label"].value_counts().to_string())
 
 
 if __name__ == "__main__":

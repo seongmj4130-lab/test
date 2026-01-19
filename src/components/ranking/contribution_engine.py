@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 # [개선안 36번] Track A Holdout 단일 일자 랭킹 Top10 + 팩터셋(그룹) 기여도 Top3 분석 유틸
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -45,7 +44,11 @@ def infer_feature_group(feature: str) -> str:
         return "profitability"
     if f in {"equity", "total_liabilities", "debt_ratio"}:
         return "value"
-    if "esg" in f or f.endswith("_score") or f in {"environmental_score", "social_score", "governance_score"}:
+    if (
+        "esg" in f
+        or f.endswith("_score")
+        or f in {"environmental_score", "social_score", "governance_score"}
+    ):
         return "other"
     if (
         "momentum" in f
@@ -57,7 +60,7 @@ def infer_feature_group(feature: str) -> str:
     return "other"
 
 
-def load_group_map_from_yaml(config_path: Path) -> Dict[str, List[str]]:
+def load_group_map_from_yaml(config_path: Path) -> dict[str, list[str]]:
     """
     [개선안 36번] feature_groups*.yaml에서 {group -> features} 로드
     """
@@ -68,8 +71,8 @@ def load_group_map_from_yaml(config_path: Path) -> Dict[str, List[str]]:
 def compute_group_contributions_for_day(
     day_df: pd.DataFrame,
     *,
-    feature_weights: Dict[str, float],
-    group_map: Optional[Dict[str, List[str]]] = None,
+    feature_weights: dict[str, float],
+    group_map: Optional[dict[str, list[str]]] = None,
     cfg: Optional[ContributionConfig] = None,
 ) -> pd.DataFrame:
     """
@@ -101,7 +104,9 @@ def compute_group_contributions_for_day(
 
     unique_dates = out[cfg.date_col].dropna().unique()
     if len(unique_dates) != 1:
-        raise ValueError(f"day_df must contain exactly one date. got={len(unique_dates)} dates")
+        raise ValueError(
+            f"day_df must contain exactly one date. got={len(unique_dates)} dates"
+        )
 
     # 피처 컬럼은 '가중치 파일에 존재' AND 'day_df에 존재' 조건으로 결정
     feature_cols = [f for f in feature_weights.keys() if f in out.columns]
@@ -114,7 +119,7 @@ def compute_group_contributions_for_day(
         if out[cfg.sector_col].notna().sum() > 0:
             actual_sector_col = cfg.sector_col
 
-    normalized: Dict[str, pd.Series] = {}
+    normalized: dict[str, pd.Series] = {}
     for feat in feature_cols:
         normalized[feat] = normalize_feature_cross_sectional(
             out,
@@ -125,13 +130,13 @@ def compute_group_contributions_for_day(
         ).fillna(0.0)
 
     # 그룹 매핑 준비
-    feature_to_group: Dict[str, str] = {}
+    feature_to_group: dict[str, str] = {}
     if group_map:
         for g, feats in group_map.items():
             for f in feats:
                 feature_to_group[str(f)] = str(g)
 
-    groups: List[str] = []
+    groups: list[str] = []
     for feat in feature_cols:
         g = feature_to_group.get(feat) if feature_to_group else None
         if g is None:

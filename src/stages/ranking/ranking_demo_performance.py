@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # src/stages/ranking/ranking_demo_performance.py
 # [개선안 16번] 트랙(A/B/공통) 폴더 재정리: 기존 import 경로 호환 래퍼
 

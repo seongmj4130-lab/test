@@ -3,10 +3,11 @@
 실제 KOSPI200 데이터로 최종 수정 분석 결과
 """
 
+
 def main():
-    print("="*80)
+    print("=" * 80)
     print("🔍 실제 KOSPI200 데이터로 수정된 벤치마크 비교 분석 결과")
-    print("="*80)
+    print("=" * 80)
 
     print("\n🏆 실제 벤치마크 데이터 (수정)")
     print("-" * 60)
@@ -26,9 +27,9 @@ def main():
 
     # 전략 성과 데이터
     strategies = {
-        'bt20_short': {'cagr': 1.04, 'sharpe': 0.87, 'mdd': -28.5, 'period': '80일'},
-        'bt20_ens': {'cagr': 0.33, 'sharpe': 0.42, 'mdd': -40.4, 'period': '80일'},
-        'bt120_long': {'cagr': 0.91, 'sharpe': 0.85, 'mdd': -0.15, 'period': '120일'}
+        "bt20_short": {"cagr": 1.04, "sharpe": 0.87, "mdd": -28.5, "period": "80일"},
+        "bt20_ens": {"cagr": 0.33, "sharpe": 0.42, "mdd": -40.4, "period": "80일"},
+        "bt120_long": {"cagr": 0.91, "sharpe": 0.85, "mdd": -0.15, "period": "120일"},
     }
 
     kospi_return = 4.5
@@ -41,11 +42,11 @@ def main():
         print(f"  • MDD: {perf['mdd']:.1f}%")
 
         # 실제 KOSPI200 대비
-        excess_kospi = perf['cagr'] - kospi_return
+        excess_kospi = perf["cagr"] - kospi_return
         print(f"  • KOSPI200 대비 초과수익: {excess_kospi:+.2f}%")
 
         # 실제 퀀트 평균 대비
-        excess_quant = perf['cagr'] - quant_avg_return
+        excess_quant = perf["cagr"] - quant_avg_return
         print(f"  • 퀀트 평균 대비 초과수익: {excess_quant:+.2f}%")
 
     print("\n💼 실무 평가 (실제 데이터 기반)")
@@ -84,10 +85,11 @@ def main():
     print("4. 실무 적용: 연구/교육 목적 우수, 실전 투자 비추천")
     print("5. 개선 방향: Alpha 증폭 or Live 환경 비용 최적화 필요")
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("📊 결론: 탁월한 리스크관리 vs 부족한 절대수익률")
     print("🔄 방향: HOLDOUT 환경 특성 고려 + 전략 고도화 필요")
-    print("="*80)
+    print("=" * 80)
+
 
 if __name__ == "__main__":
     main()

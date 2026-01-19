@@ -5,7 +5,6 @@
 
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 
@@ -16,8 +15,8 @@ def analyze_final_performance():
     print("=" * 60)
 
     # 최신 결과 파일 로드
-    results_dir = Path('results')
-    csv_files = list(results_dir.glob('dynamic_period_backtest_clean_*.csv'))
+    results_dir = Path("results")
+    csv_files = list(results_dir.glob("dynamic_period_backtest_clean_*.csv"))
     latest_file = max(csv_files, key=lambda x: x.stat().st_mtime)
 
     df = pd.read_csv(latest_file)
@@ -25,16 +24,22 @@ def analyze_final_performance():
     print()
 
     # 전략별 평균 성과 계산
-    strategy_summary = df.groupby('strategy').agg({
-        'sharpe': 'mean',
-        'CAGR (%)': 'mean',
-        'Total Return (%)': 'mean',
-        'MDD (%)': 'mean',
-        'calmar': 'mean',
-        'Hit Ratio (%)': 'mean',
-        'avg_turnover': 'mean',
-        'profit_factor': 'mean'
-    }).round(3)
+    strategy_summary = (
+        df.groupby("strategy")
+        .agg(
+            {
+                "sharpe": "mean",
+                "CAGR (%)": "mean",
+                "Total Return (%)": "mean",
+                "MDD (%)": "mean",
+                "calmar": "mean",
+                "Hit Ratio (%)": "mean",
+                "avg_turnover": "mean",
+                "profit_factor": "mean",
+            }
+        )
+        .round(3)
+    )
 
     print("📊 전략별 평균 성과 (업계표준 비용 적용):")
     print(strategy_summary)
@@ -42,62 +47,69 @@ def analyze_final_performance():
 
     # 실무 평가 기준
     evaluation_criteria = {
-        'cagr': {'excellent': 0.15, 'good': 0.10, 'acceptable': 0.05, 'poor': 0.0},
-        'sharpe': {'excellent': 1.0, 'good': 0.5, 'acceptable': 0.2, 'poor': 0.0},
-        'mdd': {'excellent': -5, 'good': -10, 'acceptable': -15, 'poor': -20},
-        'profit_factor': {'excellent': 1.5, 'good': 1.3, 'acceptable': 1.1, 'poor': 1.0}
+        "cagr": {"excellent": 0.15, "good": 0.10, "acceptable": 0.05, "poor": 0.0},
+        "sharpe": {"excellent": 1.0, "good": 0.5, "acceptable": 0.2, "poor": 0.0},
+        "mdd": {"excellent": -5, "good": -10, "acceptable": -15, "poor": -20},
+        "profit_factor": {
+            "excellent": 1.5,
+            "good": 1.3,
+            "acceptable": 1.1,
+            "poor": 1.0,
+        },
     }
 
     # 전략별 평가
     print("🎯 실무 평가 결과:")
     print("=" * 40)
 
-    for strategy in df['strategy'].unique():
-        strategy_data = df[df['strategy'] == strategy]
-        avg_performance = strategy_data[['CAGR (%)', 'sharpe', 'MDD (%)', 'profit_factor']].mean()
+    for strategy in df["strategy"].unique():
+        strategy_data = df[df["strategy"] == strategy]
+        avg_performance = strategy_data[
+            ["CAGR (%)", "sharpe", "MDD (%)", "profit_factor"]
+        ].mean()
 
         print(f"\n{strategy} 전략 평가:")
 
         # CAGR 평가
-        cagr = avg_performance['CAGR (%)']
-        if cagr >= evaluation_criteria['cagr']['excellent']:
+        cagr = avg_performance["CAGR (%)"]
+        if cagr >= evaluation_criteria["cagr"]["excellent"]:
             cagr_grade = "⭐ 우수 (15%+)"
-        elif cagr >= evaluation_criteria['cagr']['good']:
+        elif cagr >= evaluation_criteria["cagr"]["good"]:
             cagr_grade = "✅ 양호 (10%+)"
-        elif cagr >= evaluation_criteria['cagr']['acceptable']:
+        elif cagr >= evaluation_criteria["cagr"]["acceptable"]:
             cagr_grade = "⚠️ 보통 (5%+)"
         else:
             cagr_grade = "❌ 미흡 (0% 미만)"
 
         # Sharpe 평가
-        sharpe = avg_performance['sharpe']
-        if sharpe >= evaluation_criteria['sharpe']['excellent']:
+        sharpe = avg_performance["sharpe"]
+        if sharpe >= evaluation_criteria["sharpe"]["excellent"]:
             sharpe_grade = "⭐ 우수 (1.0+)"
-        elif sharpe >= evaluation_criteria['sharpe']['good']:
+        elif sharpe >= evaluation_criteria["sharpe"]["good"]:
             sharpe_grade = "✅ 양호 (0.5+)"
-        elif sharpe >= evaluation_criteria['sharpe']['acceptable']:
+        elif sharpe >= evaluation_criteria["sharpe"]["acceptable"]:
             sharpe_grade = "⚠️ 보통 (0.2+)"
         else:
             sharpe_grade = "❌ 미흡 (0.0 미만)"
 
         # MDD 평가
-        mdd = avg_performance['MDD (%)']
-        if abs(mdd) <= abs(evaluation_criteria['mdd']['excellent']):
+        mdd = avg_performance["MDD (%)"]
+        if abs(mdd) <= abs(evaluation_criteria["mdd"]["excellent"]):
             mdd_grade = "⭐ 우수 (5% 미만)"
-        elif abs(mdd) <= abs(evaluation_criteria['mdd']['good']):
+        elif abs(mdd) <= abs(evaluation_criteria["mdd"]["good"]):
             mdd_grade = "✅ 양호 (10% 미만)"
-        elif abs(mdd) <= abs(evaluation_criteria['mdd']['acceptable']):
+        elif abs(mdd) <= abs(evaluation_criteria["mdd"]["acceptable"]):
             mdd_grade = "⚠️ 보통 (15% 미만)"
         else:
             mdd_grade = "❌ 미흡 (20% 초과)"
 
         # Profit Factor 평가
-        pf = avg_performance['profit_factor']
-        if pf >= evaluation_criteria['profit_factor']['excellent']:
+        pf = avg_performance["profit_factor"]
+        if pf >= evaluation_criteria["profit_factor"]["excellent"]:
             pf_grade = "⭐ 우수 (1.5+)"
-        elif pf >= evaluation_criteria['profit_factor']['good']:
+        elif pf >= evaluation_criteria["profit_factor"]["good"]:
             pf_grade = "✅ 양호 (1.3+)"
-        elif pf >= evaluation_criteria['profit_factor']['acceptable']:
+        elif pf >= evaluation_criteria["profit_factor"]["acceptable"]:
             pf_grade = "⚠️ 보통 (1.1+)"
         else:
             pf_grade = "❌ 미흡 (1.0 미만)"
@@ -111,9 +123,9 @@ def analyze_final_performance():
     print("\n🏆 종합 평가:")
     print("=" * 30)
 
-    overall_cagr = df['CAGR (%)'].mean()
-    overall_sharpe = df['sharpe'].mean()
-    overall_mdd = df['MDD (%)'].mean()
+    overall_cagr = df["CAGR (%)"].mean()
+    overall_sharpe = df["sharpe"].mean()
+    overall_mdd = df["MDD (%)"].mean()
 
     print(".2f")
     print(".2f")
@@ -138,6 +150,7 @@ def analyze_final_performance():
     print("2. 전략 로직 재검토 (단기/장기 특성 반영)")
     print("3. 데이터 품질 검증 (L6 레이블링 정확도)")
     print("4. 백테스트 방법론 검증 (과적합 여부)")
+
 
 if __name__ == "__main__":
     analyze_final_performance()

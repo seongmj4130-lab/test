@@ -6,10 +6,11 @@ import numpy as np
 import pandas as pd
 
 # 스타일 설정
-plt.style.use('default')
-plt.rcParams['figure.figsize'] = (12, 8)
-plt.rcParams['font.family'] = 'Malgun Gothic' if os.name == 'nt' else 'AppleGothic'
-plt.rcParams['axes.unicode_minus'] = False
+plt.style.use("default")
+plt.rcParams["figure.figsize"] = (12, 8)
+plt.rcParams["font.family"] = "Malgun Gothic" if os.name == "nt" else "AppleGothic"
+plt.rcParams["axes.unicode_minus"] = False
+
 
 def create_final_presentation_report():
     """최종 발표용 종합 성과지표 보고서 생성"""
@@ -32,6 +33,7 @@ def create_final_presentation_report():
     print("   • artifacts/reports/final_presentation_report.md")
     print("   • results/presentation_log_returns_comparison.png")
     print("   • results/presentation_track_a_b_comparison.png")
+
 
 def create_executive_summary():
     """Executive Summary 생성"""
@@ -102,6 +104,7 @@ KOSPI200 종목을 대상으로 한 **4가지 퀀트 투자 전략**의 개발 �
 """
     return summary
 
+
 def create_track_a_section():
     """Track A 섹션 생성"""
 
@@ -161,6 +164,7 @@ def create_track_a_section():
 """
 
     return track_a_content
+
 
 def create_track_b_section():
     """Track B 섹션 생성"""
@@ -228,12 +232,13 @@ def create_track_b_section():
 
     return track_b_content
 
+
 def create_log_returns_comparison_chart():
     """KOSPI vs 4가지 전략 로그 수익률 비교 그래프 생성"""
 
     # 샘플 데이터 생성 (실제 데이터 기반으로 시뮬레이션)
     np.random.seed(42)
-    dates = pd.date_range('2023-01-01', '2024-12-31', freq='M')
+    dates = pd.date_range("2023-01-01", "2024-12-31", freq="M")
 
     # KOSPI200 로그 수익률 (실제 패턴 기반)
     kospi_returns = np.random.normal(0.005, 0.08, len(dates))  # 약 6% 연간 수익률
@@ -241,17 +246,17 @@ def create_log_returns_comparison_chart():
 
     # 전략별 로그 수익률 (실제 백테스트 결과 기반)
     strategies = {
-        'BT20 단기': {'mean': 0.011, 'std': 0.12, 'base_return': 0.134},  # CAGR 13.4%
-        'BT20 앙상블': {'mean': 0.008, 'std': 0.10, 'base_return': 0.104},  # CAGR 10.4%
-        'BT120 장기': {'mean': 0.007, 'std': 0.09, 'base_return': 0.087},  # CAGR 8.7%
-        'BT120 앙상블': {'mean': 0.006, 'std': 0.08, 'base_return': 0.07}   # CAGR 7.0%
+        "BT20 단기": {"mean": 0.011, "std": 0.12, "base_return": 0.134},  # CAGR 13.4%
+        "BT20 앙상블": {"mean": 0.008, "std": 0.10, "base_return": 0.104},  # CAGR 10.4%
+        "BT120 장기": {"mean": 0.007, "std": 0.09, "base_return": 0.087},  # CAGR 8.7%
+        "BT120 앙상블": {"mean": 0.006, "std": 0.08, "base_return": 0.07},  # CAGR 7.0%
     }
 
     strategy_returns = {}
     strategy_cumulative = {}
 
     for name, params in strategies.items():
-        returns = np.random.normal(params['mean'], params['std'], len(dates))
+        returns = np.random.normal(params["mean"], params["std"], len(dates))
         strategy_returns[name] = returns
         strategy_cumulative[name] = np.exp(np.cumsum(returns)) * 100
 
@@ -259,56 +264,96 @@ def create_log_returns_comparison_chart():
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
 
     # 누적 로그 수익률 그래프
-    colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57']
-    ax1.plot(dates, kospi_cumulative, label='KOSPI200', color=colors[0], linewidth=3, alpha=0.8)
+    colors = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FECA57"]
+    ax1.plot(
+        dates,
+        kospi_cumulative,
+        label="KOSPI200",
+        color=colors[0],
+        linewidth=3,
+        alpha=0.8,
+    )
 
     for i, (name, cumulative) in enumerate(strategy_cumulative.items(), 1):
-        ax1.plot(dates, cumulative, label=name, color=colors[i], linewidth=2.5, alpha=0.9)
+        ax1.plot(
+            dates, cumulative, label=name, color=colors[i], linewidth=2.5, alpha=0.9
+        )
 
-    ax1.set_title('KOSPI200 vs 4가지 전략: 로그 수익률 비교 (2023-2024)', fontsize=16, fontweight='bold', pad=20)
-    ax1.set_ylabel('누적 로그 수익률 (기준: 100)', fontsize=12)
-    ax1.legend(loc='upper left', fontsize=11)
+    ax1.set_title(
+        "KOSPI200 vs 4가지 전략: 로그 수익률 비교 (2023-2024)",
+        fontsize=16,
+        fontweight="bold",
+        pad=20,
+    )
+    ax1.set_ylabel("누적 로그 수익률 (기준: 100)", fontsize=12)
+    ax1.legend(loc="upper left", fontsize=11)
     ax1.grid(True, alpha=0.3)
 
     # 기간별 수익률 바 차트
     quarterly_returns = pd.DataFrame(strategy_returns, index=dates)
-    quarterly_returns['KOSPI200'] = kospi_returns
-    quarterly_returns = quarterly_returns.resample('Q').sum()
+    quarterly_returns["KOSPI200"] = kospi_returns
+    quarterly_returns = quarterly_returns.resample("Q").sum()
 
-    strategies_list = ['KOSPI200', 'BT20 단기', 'BT20 앙상블', 'BT120 장기', 'BT120 앙상블']
+    strategies_list = [
+        "KOSPI200",
+        "BT20 단기",
+        "BT20 앙상블",
+        "BT120 장기",
+        "BT120 앙상블",
+    ]
     quarterly_returns_mean = quarterly_returns[strategies_list].mean()
 
-    bars = ax2.bar(range(len(strategies_list)), quarterly_returns_mean * 100,
-                   color=colors[:len(strategies_list)], alpha=0.8, width=0.6)
+    bars = ax2.bar(
+        range(len(strategies_list)),
+        quarterly_returns_mean * 100,
+        color=colors[: len(strategies_list)],
+        alpha=0.8,
+        width=0.6,
+    )
 
-    ax2.set_title('분기별 평균 수익률 비교', fontsize=14, fontweight='bold', pad=20)
-    ax2.set_ylabel('평균 수익률 (%)', fontsize=12)
+    ax2.set_title("분기별 평균 수익률 비교", fontsize=14, fontweight="bold", pad=20)
+    ax2.set_ylabel("평균 수익률 (%)", fontsize=12)
     ax2.set_xticks(range(len(strategies_list)))
-    ax2.set_xticklabels(strategies_list, rotation=45, ha='right')
-    ax2.grid(True, alpha=0.3, axis='y')
+    ax2.set_xticklabels(strategies_list, rotation=45, ha="right")
+    ax2.grid(True, alpha=0.3, axis="y")
 
     # 값 표시
     for bar, value in zip(bars, quarterly_returns_mean * 100):
         height = bar.get_height()
-        ax2.text(bar.get_x() + bar.get_width()/2., height + 0.5,
-                f'{value:.1f}%', ha='center', va='bottom', fontsize=10, fontweight='bold')
+        ax2.text(
+            bar.get_x() + bar.get_width() / 2.0,
+            height + 0.5,
+            f"{value:.1f}%",
+            ha="center",
+            va="bottom",
+            fontsize=10,
+            fontweight="bold",
+        )
 
     plt.tight_layout()
-    plt.savefig('results/presentation_log_returns_comparison.png', dpi=300, bbox_inches='tight')
+    plt.savefig(
+        "results/presentation_log_returns_comparison.png", dpi=300, bbox_inches="tight"
+    )
     plt.close()
 
     # 통계 요약 생성
-    summary_stats = pd.DataFrame({
-        '전략': strategies_list,
-        '평균_수익률': quarterly_returns_mean * 100,
-        '누적_수익률': [kospi_cumulative[-1] - 100] + [cumulative[-1] - 100 for cumulative in strategy_cumulative.values()],
-        '샤프_비율': [0.5, 0.914, 0.751, 0.695, 0.594],  # 실제 값 사용
-        '최대_손실': [-15, -4.4, -6.7, -5.2, -5.4]  # 실제 값 사용
-    })
+    summary_stats = pd.DataFrame(
+        {
+            "전략": strategies_list,
+            "평균_수익률": quarterly_returns_mean * 100,
+            "누적_수익률": [kospi_cumulative[-1] - 100]
+            + [cumulative[-1] - 100 for cumulative in strategy_cumulative.values()],
+            "샤프_비율": [0.5, 0.914, 0.751, 0.695, 0.594],  # 실제 값 사용
+            "최대_손실": [-15, -4.4, -6.7, -5.2, -5.4],  # 실제 값 사용
+        }
+    )
 
-    summary_stats.to_csv('results/log_returns_summary_stats.csv', index=False, encoding='utf-8-sig')
+    summary_stats.to_csv(
+        "results/log_returns_summary_stats.csv", index=False, encoding="utf-8-sig"
+    )
 
     return summary_stats
+
 
 def create_final_recommendations():
     """최종 권고사항 생성"""
@@ -402,6 +447,7 @@ def create_final_recommendations():
 
     return recommendations
 
+
 def compile_final_report():
     """최종 보고서 컴파일"""
 
@@ -413,7 +459,7 @@ def compile_final_report():
     # 그래프 생성 및 통계
     stats = create_log_returns_comparison_chart()
 
-    report_content += f"""
+    report_content += """
 ## 📊 로그 수익률 비교 분석
 
 ### 전략별 통계 요약
@@ -428,10 +474,13 @@ def compile_final_report():
     report_content += create_final_recommendations()
 
     # 보고서 저장
-    with open("artifacts/reports/final_presentation_report.md", "w", encoding="utf-8") as f:
+    with open(
+        "artifacts/reports/final_presentation_report.md", "w", encoding="utf-8"
+    ) as f:
         f.write(report_content)
 
     print("✅ 최종 발표 보고서 저장 완료!")
+
 
 if __name__ == "__main__":
     compile_final_report()

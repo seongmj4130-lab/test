@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # [Dual Horizon 전략] L8_short/L8_long 분리 실행
 """
 [L8_short/L8_long] 단기/장기 랭킹 분리 생성
@@ -10,9 +9,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Optional
 
-import numpy as np
 import pandas as pd
 
 # ranking 모듈 import를 위한 경로 추가
@@ -20,8 +17,7 @@ src_dir = Path(__file__).resolve().parent.parent
 if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
 
-from src.components.ranking.regime_strategy import load_regime_weights
-from src.components.ranking.score_engine import _pick_feature_cols, build_ranking_daily
+from src.components.ranking.score_engine import build_ranking_daily
 
 
 def run_L8_short_rank_engine(
@@ -44,12 +40,18 @@ def run_L8_short_rank_engine(
     l8_short = cfg.get("l8_short", {}) or {}
     l5 = cfg.get("l5", {}) or {}
     normalization_method = l8_short.get("normalization_method", "percentile")
-    feature_groups_config = l8_short.get("feature_groups_config", "configs/feature_groups_short.yaml")
-    feature_weights_config = l8_short.get("feature_weights_config", "configs/feature_weights_short.yaml")
+    feature_groups_config = l8_short.get(
+        "feature_groups_config", "configs/feature_groups_short.yaml"
+    )
+    feature_weights_config = l8_short.get(
+        "feature_weights_config", "configs/feature_weights_short.yaml"
+    )
     use_sector_relative = l8_short.get("use_sector_relative", True)
     sector_col = l8_short.get("sector_col", "sector_name")
     # [L8-L5 통일] L5 피처 리스트 사용
-    feature_list_short = l5.get("feature_list_short") or l8_short.get("feature_list_short")
+    feature_list_short = l5.get("feature_list_short") or l8_short.get(
+        "feature_list_short"
+    )
 
     # 입력 데이터 확인
     dataset_daily = artifacts.get("dataset_daily")
@@ -61,8 +63,12 @@ def run_L8_short_rank_engine(
 
         if sector_col not in input_df.columns and panel_merged_daily is not None:
             if sector_col in panel_merged_daily.columns:
-                sector_info = panel_merged_daily[["date", "ticker", sector_col]].drop_duplicates(["date", "ticker"])
-                input_df = input_df.merge(sector_info, on=["date", "ticker"], how="left")
+                sector_info = panel_merged_daily[
+                    ["date", "ticker", sector_col]
+                ].drop_duplicates(["date", "ticker"])
+                input_df = input_df.merge(
+                    sector_info, on=["date", "ticker"], how="left"
+                )
                 warns.append(f"[L8_short] {sector_col}을 panel_merged_daily에서 병합")
     elif panel_merged_daily is not None and len(panel_merged_daily) > 0:
         input_df = panel_merged_daily.copy()
@@ -85,7 +91,9 @@ def run_L8_short_rank_engine(
 
     # in_universe 확인
     if "in_universe" not in input_df.columns:
-        warns.append("[L8_short] 'in_universe' column not found. All rows will be treated as in_universe=True.")
+        warns.append(
+            "[L8_short] 'in_universe' column not found. All rows will be treated as in_universe=True."
+        )
         input_df["in_universe"] = True
     else:
         input_df["in_universe"] = input_df["in_universe"].fillna(False).astype(bool)
@@ -98,22 +106,33 @@ def run_L8_short_rank_engine(
         if feature_list_path.exists():
             try:
                 import yaml
-                with open(feature_list_path, 'r', encoding='utf-8') as f:
+
+                with open(feature_list_path, encoding="utf-8") as f:
                     feature_config = yaml.safe_load(f) or {}
                 feature_cols = feature_config.get("features", [])
-                warns.append(f"[L8_short] 피처 리스트 로드 완료: {len(feature_cols)}개 피처")
+                warns.append(
+                    f"[L8_short] 피처 리스트 로드 완료: {len(feature_cols)}개 피처"
+                )
             except Exception as e:
                 warns.append(f"[L8_short] 피처 리스트 로드 실패: {e}")
         else:
-            warns.append(f"[L8_short] 피처 리스트 파일을 찾을 수 없음: {feature_list_path}")
+            warns.append(
+                f"[L8_short] 피처 리스트 파일을 찾을 수 없음: {feature_list_path}"
+            )
 
     # [bt20 앙상블 적용] 단기 전략에도 앙상블 적용하여 성과 개선
     # bt20/bt120 모두 앙상블 적용
     horizon_name = "short"  # 현재 함수는 short
-    ensemble_weights = cfg.get("track_a_final_config", {}).get("ensemble_weights", {}).get(horizon_name, {})
+    ensemble_weights = (
+        cfg.get("track_a_final_config", {})
+        .get("ensemble_weights", {})
+        .get(horizon_name, {})
+    )
 
     # 단기 전략에도 앙상블 적용 (성과 개선)
-    apply_ensemble = bool(ensemble_weights and any(w > 0 for w in ensemble_weights.values()))
+    apply_ensemble = bool(
+        ensemble_weights and any(w > 0 for w in ensemble_weights.values())
+    )
 
     if apply_ensemble:
         warns.append(f"[L8_{horizon_name}] 앙상블 적용: {ensemble_weights}")
@@ -127,19 +146,26 @@ def run_L8_short_rank_engine(
         if weights_path.exists():
             try:
                 import yaml
-                with open(weights_path, 'r', encoding='utf-8') as f:
+
+                with open(weights_path, encoding="utf-8") as f:
                     weights_data = yaml.safe_load(f)
                 feature_weights = weights_data.get("feature_weights", {})
-                warns.append(f"[L8_short] 피처 가중치 로드 완료: {len(feature_weights)}개 피처")
+                warns.append(
+                    f"[L8_short] 피처 가중치 로드 완료: {len(feature_weights)}개 피처"
+                )
             except Exception as e:
-                warns.append(f"[L8_short] 피처 가중치 로드 실패: {e}. feature_groups 사용.")
+                warns.append(
+                    f"[L8_short] 피처 가중치 로드 실패: {e}. feature_groups 사용."
+                )
 
     # feature_groups 설정 파일 경로
     feature_groups_path = None
     if feature_groups_config:
         feature_groups_path = base_dir / feature_groups_config
         if not feature_groups_path.exists():
-            warns.append(f"[L8_short] Feature groups config not found: {feature_groups_path}. Using equal weights.")
+            warns.append(
+                f"[L8_short] Feature groups config not found: {feature_groups_path}. Using equal weights."
+            )
             feature_groups_path = None
 
     # sector_name 확인
@@ -149,7 +175,9 @@ def run_L8_short_rank_engine(
             actual_sector_col = sector_col
             warns.append(f"[L8_short] sector-relative 정규화 사용: {sector_col}")
         else:
-            warns.append(f"[L8_short] {sector_col} 컬럼이 모두 NaN이어서 전체 시장 기준 정규화 사용")
+            warns.append(
+                f"[L8_short] {sector_col} 컬럼이 모두 NaN이어서 전체 시장 기준 정규화 사용"
+            )
 
     # ranking_short_daily 생성
     try:
@@ -179,9 +207,13 @@ def run_L8_short_rank_engine(
                         )
                         ensemble_rankings[model_name] = model_ranking
                         total_weight += weight
-                        warns.append(f"[L8_short] {model_name} 모델 랭킹 생성 완료 (가중치: {weight})")
+                        warns.append(
+                            f"[L8_short] {model_name} 모델 랭킹 생성 완료 (가중치: {weight})"
+                        )
                     except Exception as e:
-                        warns.append(f"[L8_short] {model_name} 모델 랭킹 생성 실패: {e}")
+                        warns.append(
+                            f"[L8_short] {model_name} 모델 랭킹 생성 실패: {e}"
+                        )
 
             if ensemble_rankings and total_weight > 0:
                 # 가중 결합
@@ -190,13 +222,21 @@ def run_L8_short_rank_engine(
                     weight = ensemble_weights[model_name]
                     if ranking_short_daily is None:
                         ranking_short_daily = ranking.copy()
-                        ranking_short_daily['score_total'] = ranking_short_daily['score_total'] * weight
+                        ranking_short_daily["score_total"] = (
+                            ranking_short_daily["score_total"] * weight
+                        )
                     else:
-                        ranking_short_daily['score_total'] += ranking['score_total'] * weight
+                        ranking_short_daily["score_total"] += (
+                            ranking["score_total"] * weight
+                        )
 
                 # 정규화
-                ranking_short_daily['score_total'] = ranking_short_daily['score_total'] / total_weight
-                warns.append(f"[L8_short] 앙상블 결합 완료: {len(ensemble_rankings)}개 모델, 총 가중치 {total_weight}")
+                ranking_short_daily["score_total"] = (
+                    ranking_short_daily["score_total"] / total_weight
+                )
+                warns.append(
+                    f"[L8_short] 앙상블 결합 완료: {len(ensemble_rankings)}개 모델, 총 가중치 {total_weight}"
+                )
             else:
                 # 앙상블 실패 시 기본 모델 사용
                 warns.append("[L8_short] 앙상블 실패, 기본 모델 사용")
@@ -231,9 +271,15 @@ def run_L8_short_rank_engine(
 
         # sector_name 추가
         if actual_sector_col and actual_sector_col in input_df.columns:
-            sector_info = input_df[["date", "ticker", actual_sector_col]].drop_duplicates(["date", "ticker"])
-            ranking_short_daily = ranking_short_daily.merge(sector_info, on=["date", "ticker"], how="left")
-            warns.append(f"[L8_short] {actual_sector_col}을 ranking_short_daily에 병합 완료")
+            sector_info = input_df[
+                ["date", "ticker", actual_sector_col]
+            ].drop_duplicates(["date", "ticker"])
+            ranking_short_daily = ranking_short_daily.merge(
+                sector_info, on=["date", "ticker"], how="left"
+            )
+            warns.append(
+                f"[L8_short] {actual_sector_col}을 ranking_short_daily에 병합 완료"
+            )
     except Exception as e:
         raise RuntimeError(f"Failed to build ranking_short_daily: {e}") from e
 
@@ -245,7 +291,14 @@ def run_L8_short_rank_engine(
     ranking_short_daily["score_total_short"] = ranking_short_daily["score_total"]
     ranking_short_daily["rank_total_short"] = ranking_short_daily["rank_total"]
 
-    output_cols = ["date", "ticker", "score_total", "rank_total", "score_total_short", "rank_total_short"]
+    output_cols = [
+        "date",
+        "ticker",
+        "score_total",
+        "rank_total",
+        "score_total_short",
+        "rank_total_short",
+    ]
     if "in_universe" in ranking_short_daily.columns:
         output_cols.append("in_universe")
     if actual_sector_col and actual_sector_col in ranking_short_daily.columns:
@@ -256,9 +309,13 @@ def run_L8_short_rank_engine(
     # 중복 키 확인
     dup = ranking_short_daily_final.duplicated(subset=["date", "ticker"]).sum()
     if dup > 0:
-        raise ValueError(f"ranking_short_daily has duplicate (date, ticker) keys: {dup}")
+        raise ValueError(
+            f"ranking_short_daily has duplicate (date, ticker) keys: {dup}"
+        )
 
-    warns.append(f"[L8_short] 완료: {len(ranking_short_daily_final):,}행, {ranking_short_daily_final['date'].nunique()}개 날짜")
+    warns.append(
+        f"[L8_short] 완료: {len(ranking_short_daily_final):,}행, {ranking_short_daily_final['date'].nunique()}개 날짜"
+    )
 
     return {
         "ranking_short_daily": ranking_short_daily_final,
@@ -285,8 +342,12 @@ def run_L8_long_rank_engine(
     l8_long = cfg.get("l8_long", {}) or {}
     l5 = cfg.get("l5", {}) or {}
     normalization_method = l8_long.get("normalization_method", "percentile")
-    feature_groups_config = l8_long.get("feature_groups_config", "configs/feature_groups_long.yaml")
-    feature_weights_config = l8_long.get("feature_weights_config", "configs/feature_weights_long.yaml")
+    feature_groups_config = l8_long.get(
+        "feature_groups_config", "configs/feature_groups_long.yaml"
+    )
+    feature_weights_config = l8_long.get(
+        "feature_weights_config", "configs/feature_weights_long.yaml"
+    )
     use_sector_relative = l8_long.get("use_sector_relative", True)
     sector_col = l8_long.get("sector_col", "sector_name")
     # [L8-L5 통일] L5 피처 리스트 사용
@@ -302,8 +363,12 @@ def run_L8_long_rank_engine(
 
         if sector_col not in input_df.columns and panel_merged_daily is not None:
             if sector_col in panel_merged_daily.columns:
-                sector_info = panel_merged_daily[["date", "ticker", sector_col]].drop_duplicates(["date", "ticker"])
-                input_df = input_df.merge(sector_info, on=["date", "ticker"], how="left")
+                sector_info = panel_merged_daily[
+                    ["date", "ticker", sector_col]
+                ].drop_duplicates(["date", "ticker"])
+                input_df = input_df.merge(
+                    sector_info, on=["date", "ticker"], how="left"
+                )
                 warns.append(f"[L8_long] {sector_col}을 panel_merged_daily에서 병합")
     elif panel_merged_daily is not None and len(panel_merged_daily) > 0:
         input_df = panel_merged_daily.copy()
@@ -326,7 +391,9 @@ def run_L8_long_rank_engine(
 
     # in_universe 확인
     if "in_universe" not in input_df.columns:
-        warns.append("[L8_long] 'in_universe' column not found. All rows will be treated as in_universe=True.")
+        warns.append(
+            "[L8_long] 'in_universe' column not found. All rows will be treated as in_universe=True."
+        )
         input_df["in_universe"] = True
     else:
         input_df["in_universe"] = input_df["in_universe"].fillna(False).astype(bool)
@@ -339,18 +406,27 @@ def run_L8_long_rank_engine(
         if feature_list_path.exists():
             try:
                 import yaml
-                with open(feature_list_path, 'r', encoding='utf-8') as f:
+
+                with open(feature_list_path, encoding="utf-8") as f:
                     feature_config = yaml.safe_load(f) or {}
                 feature_cols = feature_config.get("features", [])
-                warns.append(f"[L8_long] 피처 리스트 로드 완료: {len(feature_cols)}개 피처")
+                warns.append(
+                    f"[L8_long] 피처 리스트 로드 완료: {len(feature_cols)}개 피처"
+                )
             except Exception as e:
                 warns.append(f"[L8_long] 피처 리스트 로드 실패: {e}")
         else:
-            warns.append(f"[L8_long] 피처 리스트 파일을 찾을 수 없음: {feature_list_path}")
+            warns.append(
+                f"[L8_long] 피처 리스트 파일을 찾을 수 없음: {feature_list_path}"
+            )
 
     # [앙상블 적용] 앙상블 가중치 로드
-    ensemble_weights_long = cfg.get("track_a_final_config", {}).get("ensemble_weights", {}).get("long", {})
-    apply_ensemble_long = bool(ensemble_weights_long and any(w > 0 for w in ensemble_weights_long.values()))
+    ensemble_weights_long = (
+        cfg.get("track_a_final_config", {}).get("ensemble_weights", {}).get("long", {})
+    )
+    apply_ensemble_long = bool(
+        ensemble_weights_long and any(w > 0 for w in ensemble_weights_long.values())
+    )
     if apply_ensemble_long:
         warns.append(f"[L8_long] 앙상블 적용: {ensemble_weights_long}")
     else:
@@ -363,19 +439,26 @@ def run_L8_long_rank_engine(
         if weights_path.exists():
             try:
                 import yaml
-                with open(weights_path, 'r', encoding='utf-8') as f:
+
+                with open(weights_path, encoding="utf-8") as f:
                     weights_data = yaml.safe_load(f)
                 feature_weights = weights_data.get("feature_weights", {})
-                warns.append(f"[L8_long] 피처 가중치 로드 완료: {len(feature_weights)}개 피처")
+                warns.append(
+                    f"[L8_long] 피처 가중치 로드 완료: {len(feature_weights)}개 피처"
+                )
             except Exception as e:
-                warns.append(f"[L8_long] 피처 가중치 로드 실패: {e}. feature_groups 사용.")
+                warns.append(
+                    f"[L8_long] 피처 가중치 로드 실패: {e}. feature_groups 사용."
+                )
 
     # feature_groups 설정 파일 경로
     feature_groups_path = None
     if feature_groups_config:
         feature_groups_path = base_dir / feature_groups_config
         if not feature_groups_path.exists():
-            warns.append(f"[L8_long] Feature groups config not found: {feature_groups_path}. Using equal weights.")
+            warns.append(
+                f"[L8_long] Feature groups config not found: {feature_groups_path}. Using equal weights."
+            )
             feature_groups_path = None
 
     # sector_name 확인
@@ -385,7 +468,9 @@ def run_L8_long_rank_engine(
             actual_sector_col = sector_col
             warns.append(f"[L8_long] sector-relative 정규화 사용: {sector_col}")
         else:
-            warns.append(f"[L8_long] {sector_col} 컬럼이 모두 NaN이어서 전체 시장 기준 정규화 사용")
+            warns.append(
+                f"[L8_long] {sector_col} 컬럼이 모두 NaN이어서 전체 시장 기준 정규화 사용"
+            )
 
     # ranking_long_daily 생성
     try:
@@ -415,7 +500,9 @@ def run_L8_long_rank_engine(
                         )
                         ensemble_rankings_long[model_name] = model_ranking
                         total_weight_long += weight
-                        warns.append(f"[L8_long] {model_name} 모델 랭킹 생성 완료 (가중치: {weight})")
+                        warns.append(
+                            f"[L8_long] {model_name} 모델 랭킹 생성 완료 (가중치: {weight})"
+                        )
                     except Exception as e:
                         warns.append(f"[L8_long] {model_name} 모델 랭킹 생성 실패: {e}")
 
@@ -426,13 +513,21 @@ def run_L8_long_rank_engine(
                     weight = ensemble_weights_long[model_name]
                     if ranking_long_daily is None:
                         ranking_long_daily = ranking.copy()
-                        ranking_long_daily['score_total'] = ranking_long_daily['score_total'] * weight
+                        ranking_long_daily["score_total"] = (
+                            ranking_long_daily["score_total"] * weight
+                        )
                     else:
-                        ranking_long_daily['score_total'] += ranking['score_total'] * weight
+                        ranking_long_daily["score_total"] += (
+                            ranking["score_total"] * weight
+                        )
 
                 # 정규화
-                ranking_long_daily['score_total'] = ranking_long_daily['score_total'] / total_weight_long
-                warns.append(f"[L8_long] 앙상블 결합 완료: {len(ensemble_rankings_long)}개 모델, 총 가중치 {total_weight_long}")
+                ranking_long_daily["score_total"] = (
+                    ranking_long_daily["score_total"] / total_weight_long
+                )
+                warns.append(
+                    f"[L8_long] 앙상블 결합 완료: {len(ensemble_rankings_long)}개 모델, 총 가중치 {total_weight_long}"
+                )
             else:
                 # 앙상블 실패 시 기본 모델 사용
                 warns.append("[L8_long] 앙상블 실패, 기본 모델 사용")
@@ -467,9 +562,15 @@ def run_L8_long_rank_engine(
 
         # sector_name 추가
         if actual_sector_col and actual_sector_col in input_df.columns:
-            sector_info = input_df[["date", "ticker", actual_sector_col]].drop_duplicates(["date", "ticker"])
-            ranking_long_daily = ranking_long_daily.merge(sector_info, on=["date", "ticker"], how="left")
-            warns.append(f"[L8_long] {actual_sector_col}을 ranking_long_daily에 병합 완료")
+            sector_info = input_df[
+                ["date", "ticker", actual_sector_col]
+            ].drop_duplicates(["date", "ticker"])
+            ranking_long_daily = ranking_long_daily.merge(
+                sector_info, on=["date", "ticker"], how="left"
+            )
+            warns.append(
+                f"[L8_long] {actual_sector_col}을 ranking_long_daily에 병합 완료"
+            )
     except Exception as e:
         raise RuntimeError(f"Failed to build ranking_long_daily: {e}") from e
 
@@ -481,7 +582,14 @@ def run_L8_long_rank_engine(
     ranking_long_daily["score_total_long"] = ranking_long_daily["score_total"]
     ranking_long_daily["rank_total_long"] = ranking_long_daily["rank_total"]
 
-    output_cols = ["date", "ticker", "score_total", "rank_total", "score_total_long", "rank_total_long"]
+    output_cols = [
+        "date",
+        "ticker",
+        "score_total",
+        "rank_total",
+        "score_total_long",
+        "rank_total_long",
+    ]
     if "in_universe" in ranking_long_daily.columns:
         output_cols.append("in_universe")
     if actual_sector_col and actual_sector_col in ranking_long_daily.columns:
@@ -494,7 +602,9 @@ def run_L8_long_rank_engine(
     if dup > 0:
         raise ValueError(f"ranking_long_daily has duplicate (date, ticker) keys: {dup}")
 
-    warns.append(f"[L8_long] 완료: {len(ranking_long_daily_final):,}행, {ranking_long_daily_final['date'].nunique()}개 날짜")
+    warns.append(
+        f"[L8_long] 완료: {len(ranking_long_daily_final):,}행, {ranking_long_daily_final['date'].nunique()}개 날짜"
+    )
 
     return {
         "ranking_long_daily": ranking_long_daily_final,
