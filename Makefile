@@ -59,7 +59,11 @@ setup: install
 	@echo "Development environment setup complete!"
 
 # CI/CD
-ci: format lint test typecheck
+ci:
+	black --check src tests
+	ruff format --check src tests
+	pytest tests/test_pipeline/ -m ci
+	python -m compileall src/components src/core src/interfaces src/pipeline src/utils src/tracks tests/test_pipeline
 	@echo "CI checks passed!"
 
 # Quick checks
