@@ -1,0 +1,40 @@
+description: 'IC 기반 최적화 - 단기 모델 (20일): technical 강화, value/profitability 축소'
+feature_weights:
+  equity: 0.03
+  total_liabilities: 0.03
+  net_income: 0.03
+  debt_ratio: 0.03
+  debt_ratio_sector_z: 0.03
+  roe: 0.05
+  roe_sector_z: 0.05
+  volatility_60d: 0.03
+  volatility_20d: 0.03
+  volatility: 0.03
+  downside_volatility_60d: 0.03
+  price_momentum_60d: 0.03
+  price_momentum_20d: 0.03
+  price_momentum: 0.03
+  momentum_rank: 0.03
+  momentum_3m: 0.03
+  momentum_6m: 0.03
+  momentum_reversal: 0.03
+  max_drawdown_60d: 0.03
+  volume: 0.03
+  volume_ratio: 0.03
+  turnover: 0.03
+  close: 0.03
+  high: 0.03
+  low: 0.03
+  open: 0.03
+  ret_daily: 0.03
+  in_universe: 0.1
+group_weights:
+  value: 0.15
+  profitability: 0.1
+  technical: 0.6
+  other: 0.1
+  news: 0.05
+metadata:
+  total_weight: 1.0
+  n_groups: 5
+  n_features: 28

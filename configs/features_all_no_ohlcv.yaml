@@ -1,0 +1,264 @@
+features:
+- debt_ratio
+- downside_volatility_60d
+- environmental_score
+- equity
+- esg_score
+- governance_score
+- max_drawdown_60d
+- momentum_3m
+- momentum_6m
+- momentum_rank
+- momentum_reversal
+- net_income
+- news_conviction
+- news_sentiment
+- news_sentiment_ewm20
+- news_sentiment_ewm5
+- news_sentiment_surprise
+- news_volume
+- price_momentum
+- price_momentum_20d
+- price_momentum_60d
+- ret_daily
+- roe
+- social_score
+- total_liabilities
+- turnover
+- volatility
+- volatility_20d
+- volatility_60d
+- volume_ratio
+feature_count: 30
+include_ohlcv: false
+feature_info:
+- name: debt_ratio
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - &id001 !!python/object/apply:numpy.dtype
+    args:
+    - f8
+    - false
+    - true
+    state: !!python/tuple
+    - 3
+    - <
+    - null
+    - null
+    - null
+    - -1
+    - -1
+    - 0
+  - !!binary |
+    uB6F61F4MUA=
+  dtype: float64
+- name: downside_volatility_60d
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    PQrXo3A99j8=
+  dtype: float64
+- name: environmental_score
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    CtejcD2KU0A=
+  dtype: float64
+- name: equity
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    uB6F61F4MUA=
+  dtype: float64
+- name: esg_score
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    CtejcD2KU0A=
+  dtype: float64
+- name: governance_score
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    CtejcD2KU0A=
+  dtype: float64
+- name: max_drawdown_60d
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    hetRuB6FBUA=
+  dtype: float64
+- name: momentum_3m
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    w/UoXI/CEUA=
+  dtype: float64
+- name: momentum_6m
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    ZmZmZmbmIUA=
+  dtype: float64
+- name: momentum_rank
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    PQrXo3A99j8=
+  dtype: float64
+- name: momentum_reversal
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    PQrXo3A99j8=
+  dtype: float64
+- name: net_income
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    cT0K16NwMUA=
+  dtype: float64
+- name: news_conviction
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    AAAAAAAgTUA=
+  dtype: float64
+- name: news_sentiment
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    AAAAAAAgTUA=
+  dtype: float64
+- name: news_sentiment_ewm20
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    AAAAAAAgTUA=
+  dtype: float64
+- name: news_sentiment_ewm5
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    AAAAAAAgTUA=
+  dtype: float64
+- name: news_sentiment_surprise
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    AAAAAAAgTUA=
+  dtype: float64
+- name: news_volume
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    AAAAAAAgTUA=
+  dtype: float64
+- name: price_momentum
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    PQrXo3A99j8=
+  dtype: float64
+- name: price_momentum_20d
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    PQrXo3A99j8=
+  dtype: float64
+- name: price_momentum_60d
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    j8L1KFyPEEA=
+  dtype: float64
+- name: ret_daily
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    7FG4HoXrsT8=
+  dtype: float64
+- name: roe
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    XI/C9SjcMUA=
+  dtype: float64
+- name: social_score
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    CtejcD2KU0A=
+  dtype: float64
+- name: total_liabilities
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    zczMzMwMMUA=
+  dtype: float64
+- name: turnover
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    AAAAAAAAAAA=
+  dtype: int64
+- name: volatility
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    FK5H4XoU5j8=
+  dtype: float64
+- name: volatility_20d
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    FK5H4XoU5j8=
+  dtype: float64
+- name: volatility_60d
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    j8L1KFyPAEA=
+  dtype: float64
+- name: volume_ratio
+  missing_pct: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    UrgehetRAEA=
+  dtype: float64
+estimated_groups:
+  technical:
+  - downside_volatility_60d
+  - max_drawdown_60d
+  - momentum_3m
+  - momentum_6m
+  - momentum_rank
+  - momentum_reversal
+  - news_volume
+  - price_momentum
+  - price_momentum_20d
+  - price_momentum_60d
+  - ret_daily
+  - turnover
+  - volatility
+  - volatility_20d
+  - volatility_60d
+  - volume_ratio
+  value:
+  - equity
+  profitability:
+  - net_income
+  - roe
+  news:
+  - news_conviction
+  - news_sentiment
+  - news_sentiment_ewm20
+  - news_sentiment_ewm5
+  - news_sentiment_surprise
+  esg:
+  - environmental_score
+  - esg_score
+  - governance_score
+  - social_score
+  other:
+  - debt_ratio
+  - total_liabilities

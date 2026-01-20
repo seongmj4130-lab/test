@@ -1,0 +1,48 @@
+version: v3
+horizon: 120
+count: 19
+created_date: '2025-12-31'
+updated_date: '2026-01-01'
+description: |
+  Phase 7 Step 3 장기 모델용 고정 피처 리스트 (Dual Horizon 강화)
+  - Core 공통: 12개
+  - Long 전용: 7개 (재무/ESG/뉴스 장기 중심)
+selection_criteria:
+  method: minimal_separation_core_plus_long_only
+  target_count: 19
+  structure:
+    core_common: 12
+    long_only: 7
+  note: "[Phase 7 Step 3] 장기 전용 피처 7개 확보 완료 (현상태로 진행, 재무 변화율 피처는 향후 추가 가능)"
+features:
+# [Phase 6 v2] 최소 분리 컨셉: Core 공통 + Long 전용
+# Core 공통 피처 (12개) - short와 동일
+- volatility_60d
+- volatility_20d
+- volatility
+- momentum_rank
+- downside_volatility_60d
+- price_momentum_60d
+- price_momentum
+- momentum_6m
+- max_drawdown_60d
+- turnover
+- net_income
+- roe
+# Long 전용 피처 (7개) - 장기 성격 강화 (재무/ESG/뉴스 장기 중심)
+# [Phase 7 Step 3] 재무 중심 (2개)
+- total_liabilities  # 재무 규모/레버리지
+- debt_ratio  # 재무 안정성
+# [Phase 7 Step 3] ESG 피처 (4개) - 장기 관점에서 중요
+- esg_score  # 종합 ESG 점수
+- environmental_score  # 환경 점수
+- social_score  # 사회 점수
+- governance_score  # 지배구조 점수
+# [Phase 7 Step 3] 뉴스 장기 피처 (1개)
+- news_sentiment_ewm20  # 뉴스 감성 장기 트렌드 (20일 EWM)
+# [참고] 재무 변화율 피처는 향후 추가 가능 (현재 데이터에 없음):
+#   - net_income_change (YoY 변화율)
+#   - sales_change (YoY 변화율)
+#   - equity_change (YoY 변화율)
+#   - operating_income_change (YoY 변화율)
+#   등 (L2/L3 단계에서 계산 필요, 현상태로 진행)

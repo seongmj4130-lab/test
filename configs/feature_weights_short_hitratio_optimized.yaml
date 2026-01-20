@@ -1,0 +1,39 @@
+description: '[L8-L5 통일] Hit Ratio 최적화 - L5 단기 피처 22개만 사용 (OHLCV 제거, News 가중치 증가)'
+feature_weights:
+  # Core 공통 (12개) - [단기 피처 미세 조정] Core 공통 피처 가중치 약간 감소
+  volatility_60d: 0.021
+  volatility_20d: 0.021
+  volatility: 0.021
+  momentum_rank: 0.021
+  downside_volatility_60d: 0.021
+  price_momentum_60d: 0.021
+  price_momentum: 0.021
+  momentum_6m: 0.021
+  max_drawdown_60d: 0.021
+  turnover: 0.021
+  net_income: 0.032
+  roe: 0.062
+  # Short 전용 (6개) - [단기 피처 미세 조정] 단기 전용 피처 가중치 증가
+  price_momentum_20d: 0.025
+  momentum_3m: 0.025
+  momentum_reversal: 0.025
+  ret_daily: 0.025
+  volume_ratio: 0.025
+  equity: 0.035
+  # News 감성 (4개) - [Hit Ratio 개선] 가중치 추가 증가
+  news_sentiment: 0.10
+  news_sentiment_ewm5: 0.10
+  news_sentiment_surprise: 0.10
+  news_volume: 0.10
+group_weights:
+  value: 0.16
+  profitability: 0.12
+  technical: 0.44
+  other: 0.1
+  news: 0.14  # [Hit Ratio 개선] News 가중치 유지
+metadata:
+  total_weight: 1.0
+  n_groups: 5
+  n_features: 22
+  optimization_target: hit_ratio_50pct_l5_unified
+  note: '[L8-L5 통일] L5 단기 피처 22개와 동일, OHLCV 제거됨, News 가중치 0.10, 단기 전용 피처 가중치 증가 (0.022→0.025)'

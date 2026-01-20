@@ -1,0 +1,49 @@
+description: '[Phase 1.4 XGBoost 학습] 개별 피처 가중치 (Objective Score=0.8849)'
+horizon: long
+hyperparameters:
+  colsample_bytree: 0.8
+  learning_rate: 0.1
+  max_depth: 6
+  n_estimators: 100
+  reg_alpha: 0.0
+  reg_lambda: 1.0
+  subsample: 0.8
+metadata:
+  objective_score: 0.8849160436140713
+  hit_ratio: 0.8194444444444444
+  ic_mean: 0.6841086189007295
+  icir: 5.928903031709301
+  optimization_date: '20260108_173210'
+  feature_count: 30
+  non_zero_feature_count: 30
+feature_weights:
+  debt_ratio: 0.03184086657430021
+  downside_volatility_60d: 0.021409258952609245
+  environmental_score: 0.016119935610372328
+  equity: 0.03243655536200832
+  esg_score: 0.020390108988968356
+  governance_score: 0.018799454820930605
+  max_drawdown_60d: 0.030210213966488455
+  momentum_3m: 0.027560398356520473
+  momentum_6m: 0.024497714433011193
+  momentum_rank: 0.05706193362400667
+  momentum_reversal: 0.10798356843828506
+  net_income: 0.028793242136008996
+  news_conviction: 0.015714601696052682
+  news_sentiment: 0.016612242009947042
+  news_sentiment_ewm20: 0.019535065504690818
+  news_sentiment_ewm5: 0.019761320998746328
+  news_sentiment_surprise: 0.028932437600492144
+  news_volume: 0.01850040157044
+  price_momentum: 0.1980415773704541
+  price_momentum_20d: 0.021062924320204547
+  price_momentum_60d: 0.01584103059137261
+  ret_daily: 0.020734437552655693
+  roe: 0.03081266788101314
+  social_score: 0.020666663349916715
+  total_liabilities: 0.032699940822462956
+  turnover: 0.03267023535922761
+  volatility: 0.0163583579018854
+  volatility_20d: 0.020013443044591978
+  volatility_60d: 0.022475267477738193
+  volume_ratio: 0.03246413368459814

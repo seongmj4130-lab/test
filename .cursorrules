@@ -1,0 +1,470 @@
+================================================================================
+.cursorrules - Cursor AI를 위한 프로젝트 규칙
+================================================================================
+
+# 프로젝트 개요
+이 프로젝트는 KOSPI200 주식을 대상으로 한 **퀀트 투자 전략** 백테스팅 시스템입니다.
+
+## 프로젝트 구조
+C:\Users\seong\OneDrive\바탕 화면\bootcamp\03_code
+├── configs/
+│ └── config.yaml # ⭐ 모든 파라미터 정의 (가장 중요!)
+├── src/
+│ └── stages/
+│ ├── l0_universe.py # KOSPI200 유니버스 구성
+│ ├── l1_ohlcv.py # OHLCV 데이터 전처리
+│ ├── l2_fundamentals_dart.py # 재무 데이터 병합
+│ ├── l3_panel_merge.py # 패널 데이터 병합
+│ ├── l4_walkforward_split.py # Walk-Forward CV 분할
+│ ├── l5_train_models.py # Ridge 모델 학습
+│ ├── l6_scoring.py # 스코어 생성
+│ └── l7_backtest.py # 백테스트 실행
+├── data/
+│ ├── raw/
+│ ├── external/
+│ ├── interim/ # 중간 산출물 (.parquet)
+│ └── processed/ # 최종 산출물
+└── artifacts/
+├── models/
+└── reports/
+
+## 현재 성과
+- Sharpe Ratio: 0.50 (목표: 0.90)
+- MDD: -11.17% (목표: -5%)
+- 수익률: 15.98% over 2023-2024
+
+## 최종 수치셋 정의 (필수 준수)
+**참고 문서**: `docs/FINAL_METRICS_DEFINITION.md`
+
+모든 Phase 보고서와 백테스트 결과는 다음 수치셋을 필수로 포함해야 합니다:
+
+### 1. 핵심 성과 (Headline Metrics)
+- **Net Sharpe Ratio**: 목표 Dev ≥ 0.50, Holdout ≥ 0.50
+- **Net Total Return**: 비용 차감 누적 수익률
+- **Net CAGR**: 목표 Dev ≥ 10%, Holdout ≥ 15%
+- **Net MDD**: 목표 Dev ≤ -30%, Holdout ≤ -10%
+- **Calmar Ratio**: 목표 Dev ≥ 0.33, Holdout ≥ 1.5
+
+### 2. 모델 예측력 (Alpha Quality)
+- **IC (Information Coefficient)**: 목표 ≥ 0.03
+- **Rank IC**: 목표 ≥ 0.04
+- **ICIR**: 목표 ≥ 0.5
+- **Long/Short Alpha**: 목표 > 0
+
+### 3. 운용 안정성 (Operational Viability)
+- **Avg Turnover**: 목표 ≤ 500%
+- **Hit Ratio**: 목표 ≥ 55%
+- **Profit Factor**: 목표 ≥ 1.5
+- **Avg Trade Duration**: 목표 3~20일
+
+### 4. 국면별 성과 (Regime Robustness)
+- Bull, Bear, Neutral 국면별 성과 보고 필수
+
+**보고 형식**: 모든 Phase 보고서는 Dev/Holdout 구간별로 위 4개 카테고리 모두 포함
+
+## 12개월 개선 로드맵
+Phase 1 (Month 1-3): 거래비용, 변동성 타게팅
+Phase 2 (Month 4-6): Long/Short, 추가 피처
+Phase 3 (Month 7-12): 섹터 중립화, 매크로 필터, AutoML
+
+================================================================================
+# Cursor AI 행동 규칙
+================================================================================
+
+## Rule 1: config.yaml 우선 확인
+모든 수정 전에 **config.yaml을 먼저 읽고 현재 설정값을 파악**하라.
+- l4: CV 파라미터 (step_days, embargo_days 등)
+- l5: 모델 파라미터 (ridge_alpha, target_transform)
+- l6: 가중치 (weight_short, weight_long)
+- l7: 백테스트 (holding_days, top_k, cost_bps)
+
+## Rule 2: 파일 수정 시 주석 추가
+모든 코드 수정에 "# [개선안 N번] 수정사항" 형태의 주석 추가.
+예시:
+```python
+# [개선안 1번] 거래비용 반영 (cost_bps=0.0 → 10.0)
+cost_bps = cfg.get('l7', {}).get('cost_bps', 10.0)
+```
+
+## Rule 3: 백테스트 재실행
+코드 수정 후 자동으로 아래 명령어 제안:
+```bash
+python src/run_backtest.py # L7만 재실행 (빠름)
+python src/run_all.py # 전체 재실행 (시간 오래)
+```
+
+## Rule 4: 결과 비교
+수정 전후 성과를 자동으로 비교 표 생성:
+| 지표 | 수정 전 | 수정 후 | 개선도 |
+|------|--------|--------|--------|
+| Sharpe | 0.50 | 0.55 | +10% |
+| MDD | -11.17% | -10.17% | +0.9% |
+
+**최종 수치셋 기준**: `docs/FINAL_METRICS_DEFINITION.md`의 모든 지표 포함 필수
+- 핵심 성과: Net Sharpe, Net Total Return, Net CAGR, Net MDD, Calmar Ratio
+- 모델 예측력: IC, Rank IC, ICIR, Long/Short Alpha
+- 운용 안정성: Avg Turnover, Hit Ratio, Profit Factor, Avg Trade Duration
+- 국면별 성과: Bull/Bear/Neutral 구간별 성과
+
+## Rule 5: 의존성 확인
+Phase 2+ 작업 시 Phase 1 완료 여부 확인:
+- "Phase 2 시작 전에 Phase 1이 완료되었나요?"
+- "config.yaml에서 cost_bps가 10.0 이상인가요?"
+
+## Rule 6: 에러 처리
+코드 작성 시 예상 에러 사전 처리:
+```python
+try:
+    config = yaml.safe_load(open('configs/config.yaml'))
+except FileNotFoundError:
+    raise ValueError("config.yaml을 찾을 수 없습니다. 경로 확인 필요.")
+```
+
+## Rule 7: 문서화
+모든 함수에 다음 형식의 docstring 추가:
+```python
+def get_volatility_scale(prices, window=60):
+    """
+    [개선안 2번] 변동성 기반 포지션 스케일 계산
+
+    Args:
+        prices: 시장 가격 시계열
+        window: 변동성 계산 기간 (기본 60일)
+
+    Returns:
+        scale: 포지션 곱하기 팩터 (0.5~1.5)
+
+    Example:
+        scale = get_volatility_scale(market_prices)
+        positions *= scale
+    """
+```
+
+## Rule 8: Git 메시지
+커밋 메시지 형식:
+```
+[개선안 N번] 제목 (Sharpe +X%, MDD -Y%)
+
+상세 설명:
+
+수정 파일: src/stages/l7_backtest.py
+
+변경 라인: 150~180
+
+기대 효과: Sharpe 0.50 → 0.55
+```
+
+## Rule 9: 테스트 우선
+코드 수정 시 "테스트 케이스"부터 작성:
+```python
+def test_volatility_targeting():
+    # Given
+    prices = generate_mock_prices(vol=0.15) # 15% 변동성
+
+    # When
+    scale = get_volatility_scale(prices)
+
+    # Then
+    assert 0.9 <= scale <= 1.1  # 안정적
+
+    # 고변동성 테스트
+    prices_high = generate_mock_prices(vol=0.30)
+    scale_high = get_volatility_scale(prices_high)
+    assert scale_high < scale  # 포지션 축소
+```
+
+## Rule 10: 성과 검증
+Phase별 완료 후 필수 검증:
+- [ ] config.yaml 파라미터 수정 완료
+- [ ] 코드 수정 & 테스트 통과
+- [ ] 전체 CV 재실행 (L7 또는 L0~L7)
+- [ ] 성과 개선 확인 (Sharpe, MDD)
+- [ ] 주석 및 문서화 완료
+- [ ] Git 커밋 완료
+
+## Rule 11: 최종 수치셋 보고 (필수)
+모든 Phase 완료 후 `docs/FINAL_METRICS_DEFINITION.md` 기준으로 보고서 생성:
+- [ ] 핵심 성과 테이블 (5개 지표) 포함
+- [ ] 모델 예측력 테이블 (4개 지표) 포함
+- [ ] 운용 안정성 테이블 (4개 지표) 포함
+- [ ] 국면별 성과 테이블 (3개 국면 × 4개 지표) 포함
+- [ ] Dev / Holdout 구간 모두 보고
+- [ ] 목표 수준 대비 달성 여부 표시
+- [ ] 이전 Phase 대비 개선도 표시
+
+================================================================================
+# 사용 예시 (사용자가 Cursor에 요청)
+================================================================================
+
+사용자 요청 1:
+"개선안 1번 구현해줘 (거래비용 반영)"
+
+Cursor의 동작:
+1. config.yaml에서 "l7.cost_bps: 0.0" 확인
+2. "cost_bps를 10.0으로 변경하려고 합니다. 맞나요?" 확인
+3. l7_backtest.py에 비용 반영 로직 추가
+4. 테스트 케이스 작성 및 실행
+5. 성과 개선 표 자동 생성
+6. "Sharpe 0.50 → 0.55로 개선되었습니다!" 보고
+
+사용자 요청 2:
+"개선안 2, 3번 함께 구현해줘 (변동성+슬리피지)"
+
+Cursor의 동작:
+1. Phase 1 작업 확인 (개선안 1번 완료?)
+2. 개선안 2, 3번 의존성 확인 (독립적임)
+3. 병렬로 두 파일 수정 시작
+4. 통합 테스트 케이스 작성
+5. 누적 성과 개선 예상 → "Sharpe 0.50 → 0.60"
+
+사용자 요청 3:
+"개선안 4번 구현 가능해? (Long/Short)"
+
+Cursor의 동작:
+1. Phase 2 체크 → "Phase 1이 완료되어야 합니다"
+2. 현재 상태 확인: cost_bps, vol_targeting, slippage 완료?
+3. 미완료시: "먼저 개선안 1~3을 완료해주세요"
+4. 완료시: Long/Short 구현 시작
+   - l6.yaml weight_short, weight_long 수정
+   - l7_backtest.py 포지션 로직 수정
+   - CV 재실행 필요성 안내
+
+================================================================================
+# 주요 파일별 수정 포인트
+================================================================================
+
+### config.yaml - 가장 먼저 수정!
+```yaml
+l4: # CV 파라미터
+  holding_days: 20
+  embargo_days: 20
+
+l5: # 모델
+  ridge_alpha: 1.0 # 튜닝 가능
+
+l6: # 점수 결합
+  weight_short: 1.0
+  weight_long: 0.0 # → 개선안 4번에서 0.5로 변경
+
+l7: # 백테스트
+  cost_bps: 0.0 # → 개선안 1번에서 10.0으로 변경
+  top_k: 20 # → 개선안 4번에서 10으로 변경
+  holding_days: 20
+```
+
+### src/stages/l7_backtest.py - 주요 수정 대상
+- 거래비용 반영: cost_bps 적용 (개선안 1)
+- 변동성 타게팅: position *= vol_scale (개선안 2)
+- 슬리피지: slippage_bps 추가 (개선안 3)
+- Long/Short: 상위/하위 포지션 분리 (개선안 4)
+- 동적 리밸런싱: rebalance_freq 조정 (개선안 7)
+
+### src/stages/l5_train_models.py - 피처 관련
+- 피처 추가: _pick_feature_cols() 확장 (개선안 5)
+- AutoML: alpha 그리드 서치 (개선안 10)
+
+### src/stages/l6_scoring.py - 스코어 결합
+- Long/Short 가중치: 개선안 4번
+- 매크로 필터: VIX 신호 추가 (개선안 9)
+
+================================================================================
+# 개선안별 상세 가이드
+================================================================================
+
+## Phase 1 - 개선안 1번: 거래비용 반영
+**Rank 1, Priority 95**
+
+목표: cost_bps 거래비용 반영으로 현실성 있는 백테스트
+
+단계:
+1. config.yaml에서:
+   - l7.cost_bps: 0.0 → 10.0 변경
+
+2. src/stages/l7_backtest.py에서:
+   - cost_bps를 포트폴리오 비용 계산에 반영
+   - 예: daily_cost = position_value * cost_bps / 10000
+
+3. 변경 후:
+   - 전체 시뮬레이션 재실행 (python src/run_backtest.py)
+   - 성과 개선도 비교 테이블 생성
+   - 예상: Sharpe 0.50 → 0.55, 수익률 -2~3%
+
+테스트:
+- 비용 계산이 제대로 적용되는지 확인
+- 포지션 변경 시에만 비용 발생하는지 확인
+- 음수 비용 방지
+
+문서화:
+- 모든 수정사항에 주석 추가
+- docstring 업데이트
+- git commit 메시지 작성
+
+예상 시간: 1시간
+예상 코드 변경: 20~30줄
+
+## Phase 1 - 개선안 2번: 변동성 타게팅
+**Rank 2, Priority 88**
+
+목표: 변동성 높을 때 자동으로 포지션 축소 (리스크 관리)
+
+구현:
+1. 새 함수 생성: get_volatility_scale()
+   - 입력: 시장 가격 시계열 (window=60일)
+   - 출력: 포지션 스케일 팩터 (0.5~1.5)
+   - 공식: target_vol (15%) / current_vol
+
+2. l7_backtest.py에서:
+   - 매일 변동성 계산
+   - positions *= vol_scale
+
+3. 테스트:
+   - 고변동성 기간 (VIX>30): scale < 1.0 (축소)
+   - 저변동성 기간 (VIX<15): scale ≥ 1.0 (정상/확대)
+
+기대 효과:
+- Sharpe: 0.55 → 0.65 (+18%)
+- MDD: -10.17% → -9.17%
+
+예상 시간: 3일
+예상 코드 변경: 50줄
+
+## Phase 1 - 개선안 3번: 슬리피지
+**Rank 3, Priority 72**
+
+목표: 시장 임팩트 비용(슬리피지) 추가 반영
+
+구현:
+1. config.yaml에 추가:
+   slippage_bps: 5.0  # 추가 5bp의 시장임팩트
+
+2. l7_backtest.py에서:
+   total_cost_bps = cost_bps + slippage_bps
+
+3. 거래량 기반 동적 조정 (선택):
+   - if daily_turnover > 5%: slippage 1.5배
+   - if daily_turnover < 1%: slippage 0.5배
+
+기대 효과:
+- 더욱 현실적인 PnL
+- Sharpe: 0.60 → 0.62 (부가 효과)
+
+예상 시간: 2일
+예상 코드 변경: 20줄
+
+## Phase 2 - 개선안 4번: Long/Short
+**Rank 4, Priority 92**
+
+⚠️ 필수 선행작업 확인:
+- Phase 1 (개선안 1~3)이 완료되었나요? Y/N
+
+Long/Short 전략 구현:
+
+1. config.yaml 수정:
+   ```yaml
+   l6:
+     weight_short: 1.0   # 유지
+     weight_long: 0.5    # 0.0 → 0.5로 변경 (50/50 가중치)
+
+   l7:
+     top_k: 20 → 10로 변경 (상위 10개 롱, 하위 10개 숏)
+   ```
+
+2. src/stages/l6_scoring.py에서:
+   score_ens = weight_long * score_long + weight_short * score_short
+
+3. src/stages/l7_backtest.py에서:
+   - rank 상위 10: positions = +1.0/10 (롱)
+   - rank 하위 10: positions = -1.0/10 (숏)
+   - 나머지: positions = 0
+
+4. 재계산:
+   - L6, L7만 재실행 가능 (CV 불필요)
+   - python src/run_backtest.py
+
+기대 효과:
+- Sharpe: 0.62 → 0.75 (+21%)
+- MDD: -9.17% → -6.17% (33% 개선)
+- 하락장 수익성 향상
+
+리스크:
+- 숏 포지션 비용 증가 (차입료)
+- 극단적 공매도 규제 확인 필요
+
+예상 시간: 10일 (통합 테스트 포함)
+예상 코드 변경: 80줄
+
+## Phase 2 - 개선안 5번: 추가 피처
+**Rank 5, Priority 85**
+
+목표: 피처를 11개 → 16개로 확대 (모멘텀, 품질)
+
+추가 피처 목록:
+1. momentum_3m: 3개월 모멘텀 (추세강도)
+   = (현재가 - 90일전) / 90일전 * 100
+
+2. momentum_6m: 6개월 모멘텀
+   = (현재가 - 180일전) / 180일전 * 100
+
+3. per: PER (가치 여부)
+   = 시가총액 / 순이익
+
+4. pbr: PBR
+   = 시가총액 / 순자산
+
+5. volatility_60d: 60일 변동성
+   = std(수익률) * sqrt(252)
+
+구현:
+1. src/stages/l0_universe.py 또는 l1_ohlcv.py:
+   - 5개 피처 계산 로직 추가 (50줄)
+   - NaN 처리: median impute
+
+2. src/stages/l5_train_models.py:
+   - _pick_feature_cols() 자동으로 16개 감지
+   - 변경 불필요 (이미 동적)
+
+3. 전체 CV 재실행:
+   - python src/run_all.py (시간 오래)
+   - 또는 L0~L5만 재실행
+
+4. 피처 중요도 분석:
+   - permutation_importance 계산
+   - 불필요한 피처 제거 검토
+
+기대 효과:
+- Sharpe: 0.75 → 0.83 (+11%)
+- 모멘텀/품질 팩터 이점
+
+주의:
+- 과적합 위험: Purged K-Fold 검증 필수
+- 멀티콜리니어리티 확인
+
+예상 시간: 14일 (CV 재실행 + 분석)
+예상 코드 변경: 100줄
+
+================================================================================
+# 추가 참고사항
+================================================================================
+
+## 실행 스크립트
+- `python src/run_all.py`: 전체 파이프라인 실행 (L0~L7)
+- `python src/run_backtest.py`: L7만 재실행 (빠름)
+- `python src/stages/l4_walkforward_split.py`: CV 분할만 재실행
+
+## 데이터 경로
+- Raw data: `data/raw/`
+- Interim: `data/interim/` (중간 산출물, .parquet)
+- Processed: `data/processed/` (최종 산출물)
+- Models: `artifacts/models/`
+- Reports: `artifacts/reports/`
+
+## 검증 체크리스트
+모든 개선안 구현 후:
+1. config.yaml 파라미터 변경 확인
+2. 코드 수정 및 주석 추가 확인
+3. 테스트 케이스 통과 확인
+4. 백테스트 재실행 및 성과 비교
+5. 문서화 완료 확인
+6. Git 커밋 완료
+
+================================================================================

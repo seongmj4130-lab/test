@@ -1,0 +1,459 @@
+paths:
+  base_dir: C:/Users/seong/OneDrive/Desktop/bootcamp/03_code
+  data_raw: '{base_dir}/data/raw'
+  data_ext: '{base_dir}/data/external'
+  data_interim: '{base_dir}/data/interim'
+  data_processed: '{base_dir}/data/processed'
+  artifacts_models: '{base_dir}/artifacts/models'
+  artifacts_reports: '{base_dir}/artifacts/reports'
+run:
+  timezone: Asia/Seoul
+  save_formats:
+  - parquet
+  - csv
+  write_meta: true
+  fail_on_validation_error: true
+  skip_if_exists: false
+secrets: null
+params:
+  start_date: '2016-01-01'
+  end_date: '2024-12-31'
+  index_code: '1028'
+  anchor_ticker: 005930
+  fundamental_lag_days: 90
+  filter_k200_members_only: false
+l2:
+  disclosure_lag_days: 1
+  fallback_lag_days: 90
+l3:
+  filter_k200_members_only: true
+  fundamentals_effective_date_col: effective_date
+news:
+  enabled: true
+  source_path: data/external/news_sentiment_daily.parquet
+  lag_days: 1
+  shrink_k: 5
+l1b:
+  enabled: true
+  sleep_sec: 0.1
+  log_every: 50
+l4:
+  drop_non_universe_before_save: true
+  holdout_years: 2
+  step_days: 20
+  test_window_days: 20
+  embargo_days: 20
+  horizon_short: 20
+  horizon_long: 120
+  rolling_train_years_short: 3
+  rolling_train_years_long: 5
+  inner_cv_k: 5
+  market_neutral: false
+l5:
+  model_type: ensemble  # [앙상블 모드 활성화] 보고서 최적 가중치 적용
+  target_transform: cs_rank
+  cs_rank_center: true
+  ridge_alpha: 8.0  # [최종 픽스] 8.0 (과적합 방지 강화, Hit Ratio 50% 목표 달성)
+  export_feature_importance: true
+  metrics_extra:
+  - r2_oos
+  tune_alpha: false
+  alpha_grid:
+  - 0.1
+  - 0.3
+  - 1.0
+  - 3.0
+  - 10.0
+  tune_metric: ic_rank
+  alpha_test_mode: false
+  alpha_test_values:
+  - 0.01
+  - 0.1
+  - 1.0
+  - 10.0
+  feature_list_short: configs/features_short_v1.yaml
+  feature_list_long: configs/features_long_v1.yaml
+  filter_features_by_ic: true  # [Hit Ratio 최적화] IC 필터링 활성화 (과적합 감소)
+  use_rank_ic: true
+  min_feature_ic: -0.1  # [최종 픽스] 모든 피처 사용 (음수 IC 포함, -0.1 이하만 제거)
+  feature_ic_file: artifacts/reports/feature_ic_dev.csv
+  # [피쳐 가중치 적용] horizon별 피쳐 가중치 파일
+  feature_weights_config_short: configs/feature_weights_short_hitratio_optimized.yaml  # [최종 픽스] L5 단기 피처 22개, News 0.10, 단기 전용 0.025
+  feature_weights_config_long: configs/feature_weights_long_ic_optimized.yaml  # [최종 픽스] L5 장기 피처 19개, News 0.03, ESG 포함
+l6:
+  weight_short: 0.5
+  weight_long: 0.5
+  invert_score_sign: false
+l7:
+  holding_days: 20
+  top_k: 12
+  cost_bps: 10.0
+  slippage_bps: 0.0  # [개선안 3번] 슬리피지(시장임팩트) 비용 bps (기본 0.0, 필요 시 5.0 등)
+  buffer_k: 15
+  weighting: equal
+  score_col: score_ens
+  return_col: ""  # [동적 Return] 빈 값으로 설정하여 holding_days에 따라 동적 선택
+  rebalance_interval: 1
+  smart_buffer_enabled: true
+  smart_buffer_stability_threshold: 0.7
+  volatility_adjustment_enabled: true
+  volatility_lookback_days: 60
+  target_volatility: 0.15
+  volatility_adjustment_max: 1.2
+  volatility_adjustment_min: 0.7
+  risk_scaling_enabled: true
+  risk_scaling_bear_multiplier: 0.8
+  risk_scaling_neutral_multiplier: 1.0
+  risk_scaling_bull_multiplier: 1.0
+  signal_source: model
+  ranking_score_source: score_total
+  diversify:
+    enabled: false
+    group_col: sector_name
+    max_names_per_group: 4
+  regime:
+    enabled: true
+    lookback_days: 60
+    threshold_pct: 0.0
+    neutral_band: 0.05  # [개선안 27번] neutral 구간 폭(±5%). threshold_pct=0.0의 과민 분류(bull/bear 쏠림) 방지
+    top_k_bull_strong: 10
+    top_k_bull_weak: 12
+    top_k_bear_strong: 30
+    top_k_bear_weak: 30
+    top_k_neutral: 20
+    exposure_bull_strong: 1.5
+    exposure_bull_weak: 1.2
+    exposure_bear_strong: 0.7
+    exposure_bear_weak: 0.9
+    exposure_neutral: 1.0
+    top_k_bull: 15
+    top_k_bear: 30
+    exposure_bull: 1.0
+    exposure_bear: 1.0
+l7_bt20_ens:
+  holding_days: 100
+  top_k: 15
+  cost_bps: 10.0
+  slippage_bps: 0.0
+  buffer_k: 20
+  weighting: equal  # [단기 전략 개선] softmax → equal (안정성 확보)
+  softmax_temperature: 0.5
+  score_col: score_ens  # [수정] L6R에서 생성된 단기+장기 결합 점수 사용
+  return_col: ""  # [동적 Return] 빈 값으로 설정하여 holding_days에 따라 동적 선택
+  rebalance_interval: 20  # [backtest_settings_mapping.md] holding_days와 동일
+  smart_buffer_enabled: true
+  smart_buffer_stability_threshold: 0.7
+  volatility_adjustment_enabled: true
+  volatility_lookback_days: 60
+  target_volatility: 0.15
+  volatility_adjustment_max: 1.2
+  volatility_adjustment_min: 0.7
+  risk_scaling_enabled: true
+  risk_scaling_bear_multiplier: 0.8  # [개선안 33번] 원복 (bt20_ens는 L6R/캐시 영향이 커서 별도 튜닝 필요)
+  risk_scaling_neutral_multiplier: 1.0
+  risk_scaling_bull_multiplier: 1.0
+  signal_source: model
+  ranking_score_source: score_total
+  diversify:
+    enabled: false
+    group_col: sector_name
+    max_names_per_group: 4
+  regime:
+    enabled: false  # [실험] 국면 기반 조정 비활성화로 top_k 고정
+l7_bt20_short:
+  holding_days: 20
+  top_k: 12
+  cost_bps: 10.0
+  slippage_bps: 0.0
+  buffer_k: 15
+  weighting: equal
+  score_col: score_total_short  # [수정] 단기 랭킹만 사용 (보고서 의도)
+  return_col: ""  # [동적 Return] 빈 값으로 설정하여 holding_days에 따라 동적 선택
+  rebalance_interval: 20  # [backtest_settings_mapping.md] holding_days와 동일
+  smart_buffer_enabled: true
+  smart_buffer_stability_threshold: 0.7
+  volatility_adjustment_enabled: true
+  volatility_lookback_days: 60
+  target_volatility: 0.15
+  volatility_adjustment_max: 1.2
+  volatility_adjustment_min: 0.7
+  risk_scaling_enabled: true
+  risk_scaling_bear_multiplier: 0.8
+  risk_scaling_neutral_multiplier: 1.0
+  risk_scaling_bull_multiplier: 1.0
+  signal_source: model
+  ranking_score_source: score_total
+  diversify:
+    enabled: false
+    group_col: sector_name
+    max_names_per_group: 4
+  regime:
+    enabled: false  # [실험] 국면 기반 조정 비활성화로 top_k 고정
+    exposure_bull_weak: 1.2
+    exposure_bear_strong: 0.6  # [개선안 30번] bear 방어 강화(노출 축소)
+    exposure_bear_weak: 0.8    # [개선안 30번] bear 방어 강화(노출 축소)
+    exposure_neutral: 1.0
+    top_k_bull: 15
+    top_k_bear: 30  # [개선안 31번] (3단계 bear) 기존값 복원 (그리드서치로 최적점 재탐색 예정)
+    exposure_bull: 1.0
+    exposure_bear: 1.0  # [개선안 31번] 기존값 복원 (그리드서치로 최적점 재탐색 예정)
+l7_bt120_ens:
+  holding_days: 100  # [오버래핑 트랜치] 100일 기간수익률로 평가 (테스트)
+  top_k: 20
+  cost_bps: 10.0
+  slippage_bps: 0.0
+  buffer_k: 15
+  weighting: equal
+  score_col: score_ens  # 단기:장기 5:5 결합
+  return_col: ""  # [동적 Return] 빈 값으로 설정하여 holding_days에 따라 동적 선택  # [오버래핑 트랜치] 월별 PnL(20일 fwd)로 계산
+  rebalance_interval: 20  # [backtest_settings_mapping.md] 월별 리밸런싱(신규 트랜치 추가)
+  overlapping_tranches_enabled: true  # [필수] 오버래핑 트랜치 모드
+  tranche_holding_days: 120  # 각 트랜치 보유 기간(캘린더 day)
+  tranche_max_active: 4  # 월별 4트랜치(동시 보유 최대 4개)
+  tranche_allocation_mode: fixed_equal  # 각 트랜치에 1/4 자본 고정 배분
+  smart_buffer_enabled: true
+  smart_buffer_stability_threshold: 0.7
+  volatility_adjustment_enabled: true
+  volatility_lookback_days: 60
+  target_volatility: 0.15
+  volatility_adjustment_max: 1.2
+  volatility_adjustment_min: 0.6
+  risk_scaling_enabled: true
+  risk_scaling_bear_multiplier: 0.7
+  risk_scaling_neutral_multiplier: 0.9
+  risk_scaling_bull_multiplier: 1.0
+  signal_source: model
+  ranking_score_source: score_total
+  diversify:
+    enabled: false
+    group_col: sector_name
+    max_names_per_group: 4
+  regime:
+    enabled: true
+    lookback_days: 60
+    threshold_pct: 0.0
+    neutral_band: 0.05  # [개선안 27번] neutral 구간 폭(±5%)
+    top_k_bull_strong: 12
+    top_k_bull_weak: 15
+    top_k_bear_strong: 30
+    top_k_bear_weak: 30
+    top_k_neutral: 20
+    exposure_bull_strong: 1.3
+    exposure_bull_weak: 1.0
+    exposure_bear_strong: 0.7
+    exposure_bear_weak: 0.9
+    exposure_neutral: 1.0
+    top_k_bull: 15
+    top_k_bear: 30
+    exposure_bull: 1.0
+    exposure_bear: 1.0
+l7_bt120_long:
+  holding_days: 20  # [오버래핑 트랜치] 월별(20일) 기간수익률로 평가
+  top_k: 15
+  cost_bps: 10.0
+  slippage_bps: 0.0
+  buffer_k: 15
+  weighting: equal
+  score_col: score_total_long  # 장기 랭킹만 사용
+  return_col: ""  # [동적 Return] 빈 값으로 설정하여 holding_days에 따라 동적 선택  # [오버래핑 트랜치] 월별 PnL(20일 fwd)로 계산
+  rebalance_interval: 20  # [backtest_settings_mapping.md] 월별 리밸런싱(신규 트랜치 추가)
+  overlapping_tranches_enabled: true  # [필수] 오버래핑 트랜치 모드
+  tranche_holding_days: 120  # 각 트랜치 보유 기간(캘린더 day)
+  tranche_max_active: 4  # 월별 4트랜치(동시 보유 최대 4개)
+  tranche_allocation_mode: fixed_equal  # 각 트랜치에 1/4 자본 고정 배분
+  smart_buffer_enabled: true
+  smart_buffer_stability_threshold: 0.7
+  volatility_adjustment_enabled: true
+  volatility_lookback_days: 60
+  target_volatility: 0.15
+  volatility_adjustment_max: 1.2
+  volatility_adjustment_min: 0.6
+  risk_scaling_enabled: true
+  risk_scaling_bear_multiplier: 0.7
+  risk_scaling_neutral_multiplier: 0.9
+  risk_scaling_bull_multiplier: 1.0
+  signal_source: model
+  ranking_score_source: score_total
+  diversify:
+    enabled: false
+    group_col: sector_name
+    max_names_per_group: 4
+  regime:
+    enabled: true
+    lookback_days: 60
+    threshold_pct: 0.0
+    neutral_band: 0.05  # [개선안 27번] neutral 구간 폭(±5%)
+    top_k_bull_strong: 12
+    top_k_bull_weak: 15
+    top_k_bear_strong: 30
+    top_k_bear_weak: 30
+    top_k_neutral: 20
+    exposure_bull_strong: 1.3
+    exposure_bull_weak: 1.0
+    exposure_bear_strong: 0.7
+    exposure_bear_weak: 0.9
+    exposure_neutral: 1.0
+    top_k_bull: 15
+    top_k_bear: 30
+    exposure_bull: 1.0
+    exposure_bear: 1.0
+l7b:
+  top_k_grid:
+  - 10
+  - 20
+  - 30
+  cost_bps_grid:
+  - 0.0
+  - 10.0
+  - 20.0
+  weighting_grid:
+  - equal
+  buffer_k_grid:
+  - 0
+  - 10
+  - 20
+  - 30
+l8:
+  normalization_method: zscore  # [최종 픽스] zscore 정규화 (정규화 방법 비교 결과 최고 성과: 50.28% Hit Ratio)
+  feature_groups_config: configs/feature_groups.yaml
+  feature_weights_config: configs/feature_weights_optimized.yaml
+  regime_aware_weights_config: configs/feature_weights_regime_detailed.yaml
+  use_sector_relative: true
+  sector_col: sector_name
+  enforce_group_balance: true
+l8_short:
+  normalization_method: zscore  # [최종 픽스] zscore 정규화 (정규화 방법 비교 결과 최고 성과: 50.28% Hit Ratio, 최종 Holdout 51.06%)
+  feature_groups_config: configs/feature_groups_short.yaml
+  feature_weights_config: configs/feature_weights_short_hitratio_optimized.yaml  # [최종 픽스] L5 단기 피처 22개, News 0.10, 단기 전용 0.025
+  use_sector_relative: true
+  sector_col: sector_name
+l8_long:
+  normalization_method: zscore  # [최종 픽스] zscore 정규화 (정규화 방법 비교 결과 최고 성과: 50.28% Hit Ratio, 최종 Holdout 51.00%)
+  feature_groups_config: configs/feature_groups_long.yaml
+  feature_weights_config: configs/feature_weights_long_ic_optimized.yaml  # [최종 픽스] L5 장기 피처 19개, News 0.03, ESG 포함
+  use_sector_relative: true
+  sector_col: sector_name
+# ================================================================================
+# TRACK A 최종 설정 (2026-01-09 완료)
+# ================================================================================
+track_a_final_config:
+  # [Track A 최종 성과] Phase 3 백테스트 결과
+  final_performance:
+    bt120_long:  # 주요 목표 전략
+      holdout_sharpe: 0.6092        # 목표 0.6+ 달성 ✅
+      holdout_cagr: 0.0761         # 7.61%
+      holdout_mdd: -0.0590         # -5.90%
+      holdout_calmar: 1.2893       # 목표 0.5+ 달성 ✅
+      holdout_hit_ratio: 0.6087    # 60.87% (목표 55%+ 달성 ✅)
+      status: "목표 달성"           # ✅ SUCCESS
+
+    bt20_ens:  # 단기 앙상블
+      holdout_sharpe: 0.6138
+      holdout_cagr: 0.0844
+      holdout_mdd: -0.0813
+      holdout_calmar: 1.0384
+
+    bt20_short:  # 단기 전략
+      holdout_sharpe: 0.5934
+      holdout_cagr: 0.0804
+      holdout_mdd: -0.0629
+      holdout_calmar: 1.2778
+
+    bt120_ens:  # 장기 앙상블
+      holdout_sharpe: 0.5677
+      holdout_cagr: 0.0667
+      holdout_mdd: -0.0545
+      holdout_calmar: 1.2244
+
+  # [앙상블 가중치] 과적합 개선된 최적 가중치 (IC Diff 최소화)
+  ensemble_weights:
+    short:  # 단기 전략 앙상블 (IC Diff 0.0371, LOW 위험)
+      grid: 0.30      # Grid Search: 30% (안정성)
+      ridge: 0.60     # Ridge: 60% (Holdout 우수성)
+      xgboost: 0.10   # XGBoost: 10% (성과, 낮은 가중치로 과적합 완화)
+      rf: 0.00        # Random Forest: 0% (예측력 낮아 제외)
+    long:   # 장기 전략 앙상블 (IC Diff 0.0557, MEDIUM 위험)
+      grid: 0.05      # Grid Search: 5% (안정성)
+      ridge: 0.15     # Ridge: 15% (Holdout 우수성)
+      xgboost: 0.80   # XGBoost: 80% (성과 우선)
+      rf: 0.00        # Random Forest: 0% (예측력 낮아 제외)
+
+  # [사용 모델 및 파일] Track A 최종 구성
+  models_used:
+    - grid_search: "피처 그룹별 가중치 최적화 (L8 단계)"
+    - ridge: "개별 피처 가중치 자동 학습 (L5 단계)"
+    - xgboost: "앙상블 ML 모델 (L5 단계)"
+    - random_forest: "개선된 ML 모델 (IC=0 문제 해결)"
+
+  # [피처 가중치 파일] 각 모델별 최적 가중치
+  feature_weights_files:
+    grid_short: "configs/feature_groups_short_optimized_grid_20260108_173603.yaml"
+    grid_long: "configs/feature_groups_long_optimized_grid_20260108_145118.yaml"
+    ridge_short: "configs/feature_weights_short_ridge_20260108_151428.yaml"
+    ridge_long: "configs/feature_weights_long_ridge_*.yaml"  # 파일 없음
+    xgboost_short: "configs/feature_weights_short_xgboost_20260108_185541.yaml"
+    xgboost_long: "configs/feature_weights_long_xgboost_20260108_185557.yaml"
+    rf_short: "configs/feature_weights_short_rf_20260108_204232.yaml"
+    rf_long: "configs/feature_weights_long_rf_20260108_204254.yaml"
+
+  # [과적합 위험도] Track A 모델별 평가
+  overfitting_analysis:
+    grid_search:
+      short: "HIGH 위험 → MEDIUM 개선 (IC Diff 0.0721 → 0.0371)"
+      long: "HIGH 위험 → MEDIUM 개선 (IC Diff 0.7330 → 0.0557)"
+    ridge: "VERY_LOW 위험 (Holdout 우수)"
+    xgboost: "HIGH 위험 (Dev 우수, Holdout 저하)"
+    random_forest: "LOW 위험 (IC=0 문제 해결)"
+
+  # [권장사항]
+  recommendations:
+    - "bt120_long을 주요 전략으로 사용 (Sharpe 0.6092 달성)"
+    - "단기 전략은 bt20_ens 권장 (안정적 성과)"
+    - "실전 적용 시 과적합 모니터링 유지"
+    - "분기별 성과 리뷰 및 필요시 재최적화"
+
+  # [다음 단계] Phase 4 (Track B 최적화) - 조건부 실행
+  next_phase_condition: "bt120_long Sharpe < 0.6 시 실행 (현재 0.6092로 불필요)"
+
+# ================================================================================
+# 기존 L6R 설정 (하위 호환성 유지)
+# ================================================================================
+l6r:
+  alpha_short: 0.5  # bt20_ens, bt120_ens에서 단기:장기 5:5 결합 (bt20_short는 score_total_short 사용, bt120_long는 score_total_long 사용)
+  alpha_long: null  # alpha_short가 있으면 자동으로 1-alpha_short
+  # [rebalance_interval 개선] 리밸런싱 주기 설정
+  # 1: 월별 리밸런싱 (cv_folds_short.test_end 사용, 기본값)
+  # >1: 일별 랭킹 데이터에서 N일마다 필터링 (예: 20=20일마다, 120=120일마다)
+  rebalance_interval: 1
+  regime_alpha:
+    bull_strong: 0.6  # [Hit Ratio 최적화] Bull 시장에서 단기 랭킹 가중치 증가 (0.5 → 0.6)
+    bull_weak: 0.6    # [Hit Ratio 최적화] Bull 시장에서 단기 랭킹 가중치 증가 (0.7 → 0.6)
+    neutral: 0.5       # Neutral 시장은 기본값 유지
+    bear_weak: 0.4    # [Hit Ratio 최적화] Bear 시장에서 단기 랭킹 가중치 감소 (0.3 → 0.4)
+    bear_strong: 0.4  # [Hit Ratio 최적화] Bear 시장에서 단기 랭킹 가중치 감소 (0.2 → 0.4)
+baseline:
+  pipeline_baseline_tag: baseline_prerefresh_20251219_143636
+  ranking_baseline_tag: null
+l11:
+  top_k: 10
+  bottom_k: 10
+  top_k_perf: 20
+  benchmark_type: universe_mean
+  benchmark_types:
+  - universe_mean
+  - kospi200
+  - savings
+  savings_apr: 0.03
+l7c:
+  benchmark_types:
+  - universe_mean
+  - kospi200
+  - savings
+  savings_apr: 0.03
+l12: null
+leakage_control:
+  enable_purge: true
+  purge_days_short: 20
+  purge_days_long: 120
+  enable_embargo: false
+  embargo_days: 0

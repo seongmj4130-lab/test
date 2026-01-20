@@ -1,0 +1,38 @@
+feature_groups:
+  technical:
+    target_weight: 0.44
+    features:
+      - volatility_60d
+      - volatility_20d
+      - volatility
+      - downside_volatility_60d
+      - max_drawdown_60d
+      - price_momentum_60d
+      - price_momentum_20d
+      - price_momentum
+      - momentum_6m
+      - momentum_3m
+      - momentum_rank
+      - momentum_reversal
+      - ret_daily
+  value:
+    target_weight: 0.16
+    features:
+      - equity
+  profitability:
+    target_weight: 0.12
+    features:
+      - net_income
+      - roe
+  news:
+    target_weight: 0.14
+    features:
+      - news_sentiment
+      - news_sentiment_ewm5
+      - news_sentiment_surprise
+      - news_volume
+  other:
+    target_weight: 0.10
+    features:
+      - turnover
+      - volume_ratio

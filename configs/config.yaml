@@ -1,0 +1,526 @@
+alpha_amplification:
+  cost_bps_target: 1.0
+  expected_alpha_boost: 2.5-4.0%
+  phase: 1
+  top_k_reduction: 0.5
+baseline:
+  pipeline_baseline_tag: baseline_prerefresh_20251219_143636
+  ranking_baseline_tag: null
+benchmark_data:
+  kospi200:
+    annual_return_pct: 17.913790954358788
+    data_source: KRX 실제 데이터 (2023.01-2024.12)
+    last_updated: '2026-01-14'
+    mdd_pct: -12.0
+    sharpe_ratio: 0.28
+    total_return_pct: 39.03662097228224
+    volatility_annual: 16.0
+  quant_funds:
+    avg_annual_return: 6.5
+    avg_mdd: -6.0
+    avg_sharpe: 0.45
+    data_source: 한국 퀀트펀드 시장 보고서 (2023-2024)
+    last_updated: '2026-01-14'
+    top_annual_return: 12.0
+    top_mdd: -4.0
+    top_sharpe: 0.7
+cost_optimization:
+  methods:
+  - algorithmic_trading
+  - smart_routing
+  phase: 1
+  target_bps: 1.0
+evaluation:
+  weights:
+    cagr: 0.45
+    calmar: 0.05
+    change_reason: 과도한 Sharpe/MDD 의존성 제거, 절대 수익률 중심 평가
+    description: 수익률 중심 평가 시스템 (Sharpe/MDD 의존성 제거)
+    last_updated: '2025-01-14'
+    mdd: 0.1
+    sharpe: 0.1
+    total_return: 0.3
+holding_days_dynamic_params:
+  20:
+    buffer_k: 15
+    rebalance_interval: 20
+    regime_enabled: false
+    regime_type: 'false'
+    target_vol: 0.15
+    tranche_days: null
+  40:
+    buffer_k: 13
+    rebalance_interval: 10
+    regime_enabled: true
+    regime_type: semi
+    target_vol: 0.14
+    tranche_days: 40
+  60:
+    buffer_k: 12
+    rebalance_interval: 15
+    regime_enabled: true
+    regime_type: 'true'
+    target_vol: 0.135
+    tranche_days: 30
+  80:
+    buffer_k: 11
+    rebalance_interval: 20
+    regime_enabled: true
+    regime_type: 'true'
+    target_vol: 0.13
+    tranche_days: 40
+  100:
+    buffer_k: 10
+    rebalance_interval: 25
+    regime_enabled: true
+    regime_type: true_plus
+    target_vol: 0.125
+    tranche_days: 50
+  120:
+    buffer_k: 10
+    rebalance_interval: 20
+    regime_enabled: true
+    regime_type: 'true'
+    target_vol: 0.12
+    tranche_days: 120
+holdout_insights:
+  bear_months: 13
+  bull_months: 10
+  market_regime: balanced_bull_bear
+  strategy_adaptation:
+    bear_phase: quality_defensive
+    bull_phase: momentum_focused
+    volatile_phase: risk_reduction
+l0:
+  anchor_ticker: 005930
+  filter_k200_members_only: false
+  fundamental_lag_days: 90
+  index_code: '1028'
+l11:
+  benchmark_type: universe_mean
+  benchmark_types:
+  - universe_mean
+  - kospi200
+  - savings
+  bottom_k: 10
+  savings_apr: 0.03
+  top_k: 10
+  top_k_perf: 20
+l12: null
+l1b:
+  enabled: true
+  log_every: 50
+  sleep_sec: 0.1
+l2:
+  disclosure_lag_days: 1
+  fallback_lag_days: 90
+l3:
+  filter_k200_members_only: true
+  fundamentals_effective_date_col: effective_date
+l4:
+  drop_non_universe_before_save: true
+  embargo_days: 20
+  holdout_years: 2
+  horizon_long: 120
+  horizon_short: 20
+  inner_cv_k: 5
+  market_neutral: false
+  rolling_train_years_long: 5
+  rolling_train_years_short: 3
+  step_days: 20
+  test_window_days: 20
+l5:
+  alpha_grid:
+  - 0.1
+  - 0.3
+  - 1.0
+  - 3.0
+  - 10.0
+  alpha_test_mode: false
+  alpha_test_values:
+  - 0.01
+  - 0.1
+  - 1.0
+  - 10.0
+  cs_rank_center: true
+  export_feature_importance: true
+  feature_ic_file: artifacts/reports/feature_ic_dev.csv
+  feature_list_long: configs/features_long_v1.yaml
+  feature_list_short: configs/features_short_v1.yaml
+  feature_weights_config_long: configs/feature_weights_long_ic_optimized.yaml
+  feature_weights_config_short: configs/feature_weights_short_hitratio_optimized.yaml
+  filter_features_by_ic: true
+  metrics_extra:
+  - r2_oos
+  min_feature_ic: -0.05
+  model_type: ensemble
+  ridge_alpha: 0.01
+  target_transform: cs_rank
+  tune_alpha: false
+  tune_metric: ic_rank
+  use_rank_ic: true
+l6:
+  invert_score_sign: false
+  weight_long: 0.8
+  weight_short: 0.2
+l6r:
+  alpha_long: null
+  alpha_short: 0.4
+  rebalance_interval: 1
+  regime_alpha:
+    bear_strong: 0.4
+    bear_weak: 0.4
+    bull_strong: 0.6
+    bull_weak: 0.6
+    neutral: 0.5
+l7:
+  buffer_k: 15
+  cost_bps: 10.0
+  daily_backtest_enabled: false  # [개선안: 일별 mark-to-market 백테스트] 활성화 시 리밸런싱 사이에도 일별 수익률 계산
+  diversify:
+    enabled: false
+    group_col: sector_name
+    max_names_per_group: 4
+  holding_days: 20
+  ranking_score_source: score_total
+  rebalance_interval: 1
+  regime:
+    enabled: true
+    exposure_bear: 1.0
+    exposure_bear_strong: 0.6
+    exposure_bear_weak: 0.8
+    exposure_bull: 1.0
+    exposure_bull_strong: 1.2
+    exposure_bull_weak: 1.2
+    exposure_neutral: 1.0
+    lookback_days: 60
+    neutral_band: 0.05
+    threshold_pct: 0.0
+    top_k_bear: 30
+    top_k_bear_strong: 30
+    top_k_bear_weak: 30
+    top_k_bull: 15
+    top_k_bull_strong: 10
+    top_k_bull_weak: 12
+    top_k_neutral: 20
+  return_col: ''
+  risk_scaling_bear_multiplier: 0.8
+  risk_scaling_bull_multiplier: 1.0
+  risk_scaling_enabled: true
+  risk_scaling_neutral_multiplier: 1.0
+  score_col: score_ens
+  signal_source: model
+  slippage_bps: 0.0
+  smart_buffer_enabled: true
+  smart_buffer_stability_threshold: 0.7
+  target_volatility: 0.15
+  top_k: 12
+  volatility_adjustment_enabled: true
+  volatility_adjustment_max: 1.2
+  volatility_adjustment_min: 0.7
+  volatility_lookback_days: 60
+  weighting: equal
+l7_bt120_ens:
+  buffer_k: 15
+  cost_bps: 10.0
+  diversify:
+    enabled: false
+    group_col: sector_name
+    max_names_per_group: 4
+  holding_days: 100
+  overlapping_tranches_enabled: true
+  ranking_score_source: score_total
+  rebalance_interval: 20
+  regime:
+    enabled: true
+    exposure_bear: 1.0
+    exposure_bear_strong: 0.7
+    exposure_bear_weak: 0.9
+    exposure_bull: 1.0
+    exposure_bull_strong: 1.3
+    exposure_bull_weak: 1.0
+    exposure_neutral: 1.0
+    lookback_days: 60
+    neutral_band: 0.05
+    threshold_pct: 0.0
+    top_k_bear: 30
+    top_k_bear_strong: 30
+    top_k_bear_weak: 30
+    top_k_bull: 15
+    top_k_bull_strong: 12
+    top_k_bull_weak: 15
+    top_k_neutral: 20
+  return_col: ''
+  risk_scaling_bear_multiplier: 0.7
+  risk_scaling_bull_multiplier: 1.0
+  risk_scaling_enabled: true
+  risk_scaling_neutral_multiplier: 0.9
+  score_col: score_ens
+  signal_source: model
+  slippage_bps: 0.0
+  smart_buffer_enabled: true
+  smart_buffer_stability_threshold: 0.7
+  target_volatility: 0.15
+  top_k: 20
+  tranche_allocation_mode: fixed_equal
+  tranche_holding_days: 120
+  tranche_max_active: 4
+  volatility_adjustment_enabled: true
+  volatility_adjustment_max: 1.2
+  volatility_adjustment_min: 0.6
+  volatility_lookback_days: 60
+  weighting: equal
+l7_bt120_long:
+  buffer_k: 18
+  cost_bps: 1.0
+  diversify:
+    enabled: false
+    group_col: sector_name
+    max_names_per_group: 4
+  holding_days: 20
+  overlapping_tranches_enabled: true
+  ranking_score_source: score_total
+  rebalance_interval: 20
+  regime:
+    enabled: true
+    exposure_bear: 1.0
+    exposure_bear_strong: 0.7
+    exposure_bear_weak: 0.9
+    exposure_bull: 1.0
+    exposure_bull_strong: 1.3
+    exposure_bull_weak: 1.0
+    exposure_neutral: 1.0
+    lookback_days: 60
+    neutral_band: 0.05
+    threshold_pct: 0.0
+    top_k_bear: 30
+    top_k_bear_strong: 30
+    top_k_bear_weak: 30
+    top_k_bull: 15
+    top_k_bull_strong: 12
+    top_k_bull_weak: 15
+    top_k_neutral: 20
+  return_col: ''
+  risk_scaling_bear_multiplier: 0.6
+  risk_scaling_bull_multiplier: 1.0
+  risk_scaling_enabled: true
+  risk_scaling_neutral_multiplier: 0.9
+  score_col: score_total_long
+  signal_source: model
+  slippage_bps: 0.0
+  smart_buffer_enabled: true
+  smart_buffer_stability_threshold: 0.7
+  target_volatility: 0.15
+  top_k: 5
+  tranche_allocation_mode: fixed_equal
+  tranche_holding_days: 120
+  tranche_max_active: 4
+  volatility_adjustment_enabled: true
+  volatility_adjustment_max: 1.2
+  volatility_adjustment_min: 0.6
+  volatility_lookback_days: 60
+  weighting: equal
+l7_bt20_ens:
+  buffer_k: 8
+  cost_bps: 1.0
+  diversify:
+    enabled: false
+    group_col: sector_name
+    max_names_per_group: 4
+  holding_days: 100
+  ranking_score_source: score_total
+  rebalance_interval: 20
+  regime:
+    enabled: true
+  return_col: ''
+  risk_scaling_bear_multiplier: 0.8
+  risk_scaling_bull_multiplier: 1.0
+  risk_scaling_enabled: true
+  risk_scaling_neutral_multiplier: 1.0
+  score_col: score_ens
+  signal_source: model
+  slippage_bps: 0.0
+  smart_buffer_enabled: true
+  smart_buffer_stability_threshold: 0.7
+  softmax_temperature: 0.5
+  target_volatility: 0.21
+  top_k: 7
+  volatility_adjustment_enabled: true
+  volatility_adjustment_max: 1.2
+  volatility_adjustment_min: 0.7
+  volatility_lookback_days: 60
+  weighting: equal
+l7_bt20_short:
+  buffer_k: 5
+  cost_bps: 1.0
+  diversify:
+    enabled: false
+    group_col: sector_name
+    max_names_per_group: 4
+  holding_days: 20
+  ranking_score_source: score_total
+  rebalance_interval: 10
+  regime:
+    enabled: true
+    exposure_bear: 1.0
+    exposure_bear_strong: 0.6
+    exposure_bear_weak: 0.8
+    exposure_bull: 1.0
+    exposure_bull_weak: 1.2
+    exposure_neutral: 1.0
+    top_k_bear: 30
+    top_k_bull: 15
+  return_col: ''
+  risk_scaling_bear_multiplier: 0.8
+  risk_scaling_bull_multiplier: 1.0
+  risk_scaling_enabled: true
+  risk_scaling_neutral_multiplier: 1.0
+  score_col: score_total_short
+  signal_source: model
+  slippage_bps: 0.0
+  smart_buffer_enabled: true
+  smart_buffer_stability_threshold: 0.7
+  target_volatility: 0.18
+  top_k: 5
+  volatility_adjustment_enabled: true
+  volatility_adjustment_max: 1.2
+  volatility_adjustment_min: 0.7
+  volatility_lookback_days: 60
+  weighting: equal
+l7b:
+  buffer_k_grid:
+  - 0
+  - 10
+  - 20
+  - 30
+  cost_bps_grid:
+  - 0.0
+  - 10.0
+  - 20.0
+  top_k_grid:
+  - 10
+  - 20
+  - 30
+  weighting_grid:
+  - equal
+l7c:
+  benchmark_types:
+  - universe_mean
+  - kospi200
+  - savings
+  savings_apr: 0.03
+l8:
+  enforce_group_balance: true
+  feature_groups_config: configs/feature_groups.yaml
+  feature_weights_config: configs/feature_weights_optimized.yaml
+  normalization_method: zscore
+  regime_aware_weights_config: configs/feature_weights_regime_detailed.yaml
+  sector_col: sector_name
+  use_sector_relative: true
+l8_long:
+  feature_groups_config: configs/feature_groups_long.yaml
+  feature_weights_config: configs/feature_weights_long_ic_optimized.yaml
+  normalization_method: zscore
+  sector_col: sector_name
+  use_sector_relative: true
+l8_short:
+  feature_groups_config: configs/feature_groups_short.yaml
+  feature_weights_config: configs/feature_weights_short_hitratio_optimized.yaml
+  normalization_method: zscore
+  sector_col: sector_name
+  use_sector_relative: true
+leakage_control:
+  embargo_days: 0
+  enable_embargo: false
+  enable_purge: true
+  purge_days_long: 120
+  purge_days_short: 20
+news:
+  enabled: true
+  lag_days: 1
+  shrink_k: 5
+  source_path: data/external/news_sentiment_daily.parquet
+parameter_priority: config_first
+params:
+  end_date: '2024-12-31'
+  start_date: '2016-01-01'
+paths:
+  artifacts_models: '{base_dir}/artifacts/models'
+  artifacts_reports: '{base_dir}/artifacts/reports'
+  base_dir: C:/Users/seong/OneDrive/Desktop/bootcamp/000_code
+  data_ext: '{base_dir}/data/external'
+  data_interim: '{base_dir}/data/interim'
+  data_processed: '{base_dir}/data/processed'
+  data_raw: '{base_dir}/data/raw'
+  logs: '{base_dir}/logs'
+run:
+  fail_on_validation_error: true
+  save_formats:
+  - parquet
+  - csv
+  skip_if_exists: false
+  timezone: Asia/Seoul
+  write_meta: true
+secrets: null
+track_a_final_config:
+  ensemble_weights:
+    long:
+      grid: 0.02
+      rf: 0.03
+      ridge: 0.05
+      xgboost: 0.9
+    short:
+      grid: 0.1
+      rf: 0.1
+      ridge: 0.3
+      xgboost: 0.5
+  feature_weights_files:
+    grid_long: configs/feature_groups_long_optimized_grid_20260108_145118.yaml
+    grid_short: configs/feature_groups_short_optimized_grid_20260108_173603.yaml
+    rf_long: configs/feature_weights_long_rf_20260108_204254.yaml
+    rf_short: configs/feature_weights_short_rf_20260108_204232.yaml
+    ridge_long: configs/feature_weights_long_ridge_*.yaml
+    ridge_short: configs/feature_weights_short_ridge_20260108_151428.yaml
+    xgboost_long: configs/feature_weights_long_xgboost_20260108_185557.yaml
+    xgboost_short: configs/feature_weights_short_xgboost_20260108_185541.yaml
+  final_performance:
+    bt120_ens:
+      holdout_cagr: 0.0667
+      holdout_calmar: 1.2244
+      holdout_mdd: -0.0545
+      holdout_sharpe: 0.5677
+    bt120_long:
+      holdout_cagr: 0.0761
+      holdout_calmar: 1.2893
+      holdout_hit_ratio: 0.6087
+      holdout_mdd: -0.059
+      holdout_sharpe: 0.6092
+      status: 목표 달성
+    bt20_ens:
+      holdout_cagr: 0.0844
+      holdout_calmar: 1.0384
+      holdout_mdd: -0.0813
+      holdout_sharpe: 0.6138
+    bt20_short:
+      holdout_cagr: 0.0804
+      holdout_calmar: 1.2778
+      holdout_mdd: -0.0629
+      holdout_sharpe: 0.5934
+  models_used:
+  - grid_search: 피처 그룹별 가중치 최적화 (L8 단계)
+  - ridge: 개별 피처 가중치 자동 학습 (L5 단계)
+  - xgboost: 앙상블 ML 모델 (L5 단계)
+  - random_forest: 개선된 ML 모델 (IC=0 문제 해결)
+  next_phase_condition: bt120_long Sharpe < 0.6 시 실행 (현재 0.6092로 불필요)
+  overfitting_analysis:
+    grid_search:
+      long: HIGH 위험 → MEDIUM 개선 (IC Diff 0.7330 → 0.0557)
+      short: HIGH 위험 → MEDIUM 개선 (IC Diff 0.0721 → 0.0371)
+    random_forest: LOW 위험 (IC=0 문제 해결)
+    ridge: VERY_LOW 위험 (Holdout 우수)
+    xgboost: HIGH 위험 (Dev 우수, Holdout 저하)
+  recommendations:
+  - bt120_long을 주요 전략으로 사용 (Sharpe 0.6092 달성)
+  - 단기 전략은 bt20_ens 권장 (안정적 성과)
+  - 실전 적용 시 과적합 모니터링 유지
+  - 분기별 성과 리뷰 및 필요시 재최적화

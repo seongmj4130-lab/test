@@ -1,0 +1,34 @@
+version: v1
+horizon: 20
+count: 20
+created_date: '2025-12-31'
+updated_date: '2026-01-09'
+description: |
+  Phase 9 단기 모델용 고정 피처 리스트 (중복 제거 후)
+  - Core 공통: 11개 (중복 volatility 제거)
+  - Short 전용: 5개 (중복 price_momentum_20d 제거)
+  - News 감성: 4개
+features:
+# Core 공통 피처 (11개)
+- volatility_60d
+- volatility_20d
+- momentum_rank
+- downside_volatility_60d
+- price_momentum_60d
+- price_momentum
+- momentum_6m
+- max_drawdown_60d
+- turnover
+- net_income
+- roe
+# Short 전용 피처 (5개)
+- momentum_3m
+- momentum_reversal
+- ret_daily
+- volume_ratio
+- equity
+# News 감성 피처 (4개)
+- news_sentiment
+- news_sentiment_ewm5
+- news_sentiment_surprise
+- news_volume

@@ -1,0 +1,14 @@
+description: '[Phase 2 최적화] 그룹별 가중치 Grid Search 결과 (Objective Score: 0.2500)'
+feature_groups:
+  technical:
+    target_weight: -0.3333333333333333
+  value:
+    target_weight: -0.3333333333333333
+  profitability:
+    target_weight: -0.3333333333333333
+metadata:
+  objective_score: 0.25
+  hit_ratio: .nan
+  ic_mean: .nan
+  icir: .nan
+  optimization_date: '20260108_104332'

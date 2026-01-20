@@ -1,0 +1,49 @@
+description: '[Phase 1.5 RF 학습] 개별 피처 가중치 (Params={''n_estimators'': 100, ''max_depth'':
+  6, ''min_samples_split'': 2, ''min_samples_leaf'': 1, ''max_features'': ''sqrt''},
+  Objective Score=0.4500)'
+horizon: long
+hyperparameters:
+  n_estimators: 100
+  max_depth: 6
+  min_samples_split: 2
+  min_samples_leaf: 1
+  max_features: sqrt
+metadata:
+  objective_score: 0.44999999999999996
+  hit_ratio: 0.25
+  ic_mean: 2.5728028647268368e-17
+  icir: null
+  optimization_date: '20260108_184649'
+  feature_count: 30
+  non_zero_feature_count: 30
+feature_weights:
+  debt_ratio: 0.0664808998843914
+  downside_volatility_60d: 0.04527637514051732
+  environmental_score: 0.009081555608590215
+  equity: 0.03914581941562199
+  esg_score: 0.008528273428428492
+  governance_score: 0.007022801393296101
+  max_drawdown_60d: 0.09246652204216245
+  momentum_3m: 0.03568758923049767
+  momentum_6m: 0.030232894596205505
+  momentum_rank: 0.036355329343898714
+  momentum_reversal: 0.05929342945766835
+  net_income: 0.035480671610700495
+  news_conviction: 0.013388460118371921
+  news_sentiment: 0.009442017847157624
+  news_sentiment_ewm20: 0.02019876220723842
+  news_sentiment_ewm5: 0.01360414133414468
+  news_sentiment_surprise: 0.018959120043846332
+  news_volume: 0.020069748695684245
+  price_momentum: 0.05711898505966039
+  price_momentum_20d: 0.03805421785833448
+  price_momentum_60d: 0.02015917736786654
+  ret_daily: 0.05041987399624464
+  roe: 0.040379383762218696
+  social_score: 0.013452487977226181
+  total_liabilities: 0.0312569269444296
+  turnover: 0.04920589209268038
+  volatility: 0.035599838403188803
+  volatility_20d: 0.026829963869861993
+  volatility_60d: 0.036436607871441144
+  volume_ratio: 0.04037223339842523
